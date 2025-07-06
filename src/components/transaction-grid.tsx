@@ -10,17 +10,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { CustomDatePicker } from '@/components/ui/date-picker'
+import { TransactionForm } from '@/components/transaction-form'
+import { CSVUpload } from '@/components/csv-upload'
 import {
   Edit,
   Trash2,
   Filter,
   Search,
-  Calendar,
   Tag,
   Building2,
   User,
   ChevronDown,
   ChevronUp,
+  Plus,
+  Upload,
 } from 'lucide-react'
 import { formatCurrency, formatDate, parseLocalDate } from '@/lib/utils'
 
@@ -64,11 +68,11 @@ interface Transaction {
 }
 
 interface TransactionGridProps {
-  onEditTransaction: (transaction: Transaction) => void
   refreshTrigger?: number
+  onRefresh?: () => void
 }
 
-export function TransactionGrid({ onEditTransaction, refreshTrigger }: TransactionGridProps) {
+export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -88,6 +92,9 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
     search: '',
   })
   const [filtersExpanded, setFiltersExpanded] = useState(false)
+  const [showTransactionForm, setShowTransactionForm] = useState(false)
+  const [showCSVUpload, setShowCSVUpload] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
 
   const fetchTransactions = async () => {
     setLoading(true)
@@ -241,8 +248,84 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
     return count
   }
 
+  const handleTransactionSubmit = async (
+    transactionData: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>
+  ) => {
+    try {
+      const url = editingTransaction
+        ? `/api/transactions/${editingTransaction.id}`
+        : '/api/transactions'
+
+      const method = editingTransaction ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(transactionData),
+      })
+
+      if (response.ok) {
+        setShowTransactionForm(false)
+        setEditingTransaction(null)
+        fetchTransactions()
+        onRefresh?.()
+      }
+    } catch (error) {
+      console.error('Error saving transaction:', error)
+    }
+  }
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    // Transform transaction with nested objects to format expected by form
+    const formTransaction = {
+      ...transaction,
+      sourceId: transaction.sourceId || transaction.source?.id || '',
+      userId: transaction.userId || transaction.user?.id || '',
+      categoryId: transaction.categoryId || transaction.category?.id || '',
+      typeId: transaction.typeId || transaction.type?.id || '',
+    }
+    setEditingTransaction(formTransaction)
+    setShowTransactionForm(true)
+  }
+
+  const handleCSVUploadComplete = () => {
+    setShowCSVUpload(false)
+    fetchTransactions()
+    onRefresh?.()
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Page Header with Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Transactions</h2>
+          <p className="text-sm text-muted-foreground">Manage your financial transactions</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowCSVUpload(true)}
+            className="flex items-center gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            Upload CSV
+          </Button>
+          <Button
+            onClick={() => {
+              setEditingTransaction(null)
+              setShowTransactionForm(true)
+            }}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Transaction
+          </Button>
+        </div>
+      </div>
+
       <div className="bg-muted rounded-lg">
         {/* Filter Header - Mobile Toggle */}
         <div className="flex items-center justify-between p-4 lg:hidden">
@@ -404,35 +487,21 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
 
               {/* Date Filters */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-foreground flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  Start Date
-                </label>
-                <div className="relative">
-                  <Input
-                    type="date"
-                    value={filters.startDate}
-                    onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                    className="w-full pr-10"
-                  />
-                  <Calendar className="absolute right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                </div>
+                <label className="text-xs font-medium text-foreground">Start Date</label>
+                <CustomDatePicker
+                  value={filters.startDate}
+                  onChange={(date) => handleFilterChange('startDate', date)}
+                  placeholder="Select start date"
+                />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-foreground flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  End Date
-                </label>
-                <div className="relative">
-                  <Input
-                    type="date"
-                    value={filters.endDate}
-                    onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                    className="w-full pr-10"
-                  />
-                  <Calendar className="absolute right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                </div>
+                <label className="text-xs font-medium text-foreground">End Date</label>
+                <CustomDatePicker
+                  value={filters.endDate}
+                  onChange={(date) => handleFilterChange('endDate', date)}
+                  placeholder="Select end date"
+                />
               </div>
 
               {/* Clear Button */}
@@ -501,7 +570,7 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onEditTransaction(transaction)}
+                        onClick={() => handleEditTransaction(transaction)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -564,6 +633,22 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
           </div>
         )}
       </div>
+
+      <TransactionForm
+        transaction={editingTransaction ?? undefined}
+        open={showTransactionForm}
+        onClose={() => {
+          setShowTransactionForm(false)
+          setEditingTransaction(null)
+        }}
+        onSubmit={handleTransactionSubmit}
+      />
+
+      <CSVUpload
+        open={showCSVUpload}
+        onClose={() => setShowCSVUpload(false)}
+        onUploadComplete={handleCSVUploadComplete}
+      />
     </div>
   )
 }

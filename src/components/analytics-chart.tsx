@@ -12,7 +12,13 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Filter, ChartPie, TrendingUpDown } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import {
+  formatCurrency,
+  getDateRange,
+  getMonthName,
+  getCurrentYear,
+  getCurrentMonth,
+} from '@/lib/utils'
 
 interface AnalyticsData {
   name: string
@@ -64,63 +70,22 @@ export function AnalyticsChart() {
   const [groupBy, setGroupBy] = useState('category')
   const [timePeriod, setTimePeriod] = useState<TimePeriod>({
     type: 'month',
-    year: new Date().getFullYear(),
-    month: new Date().getMonth() + 1,
+    year: getCurrentYear(),
+    month: getCurrentMonth(),
   })
   const [typeFilter, setTypeFilter] = useState('all')
   const [types, setTypes] = useState<TransactionType[]>([])
   const [dateRanges, setDateRanges] = useState<DateRanges>({
     years: [],
-    currentYear: new Date().getFullYear(),
-    currentMonth: new Date().getMonth() + 1,
+    currentYear: getCurrentYear(),
+    currentMonth: getCurrentMonth(),
   })
   const [containerWidth, setContainerWidth] = useState(1000)
   const sankeyContainerRef = useRef<HTMLDivElement>(null)
 
   // Helper function to convert timePeriod to start/end dates
   const getDateRangeFromPeriod = (period: TimePeriod): { startDate: string; endDate: string } => {
-    if (period.type === 'all') {
-      return { startDate: '', endDate: '' }
-    }
-
-    if (period.type === 'year') {
-      const startDate = `${period.year}-01-01`
-      const endDate = `${period.year}-12-31`
-      return { startDate, endDate }
-    }
-
-    if (period.type === 'month') {
-      const year = period.year
-      const month = period.month.toString().padStart(2, '0')
-      const startDate = `${year}-${month}-01`
-
-      // Get last day of month
-      const lastDay = new Date(year, period.month, 0).getDate()
-      const endDate = `${year}-${month}-${lastDay.toString().padStart(2, '0')}`
-
-      return { startDate, endDate }
-    }
-
-    return { startDate: '', endDate: '' }
-  }
-
-  // Helper function to get month names
-  const getMonthName = (monthNumber: number): string => {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ]
-    return months[monthNumber - 1] || ''
+    return getDateRange(period.type, period.year, period.month)
   }
 
   const fetchAnalytics = async () => {
@@ -249,13 +214,7 @@ export function AnalyticsChart() {
       fetchSankeyData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    visualizationType,
-    groupBy,
-    timePeriod,
-    // Only include typeFilter for donut chart
-    ...(visualizationType === 'donut' ? [typeFilter] : []),
-  ])
+  }, [visualizationType, groupBy, timePeriod, typeFilter])
 
   const CustomTooltip = ({
     active,

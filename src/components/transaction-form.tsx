@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Calendar } from 'lucide-react'
+import { CustomDatePicker } from '@/components/ui/date-picker'
+import { formatDateForInput, parseLocalDate } from '@/lib/utils'
 
 interface Source {
   id: string
@@ -68,11 +69,11 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     sourceId: transaction?.sourceId || '',
     userId: transaction?.userId || '',
     transactionDate: transaction?.transactionDate
-      ? transaction.transactionDate.split('T')[0]
-      : new Date().toISOString().split('T')[0],
+      ? formatDateForInput(parseLocalDate(transaction.transactionDate))
+      : formatDateForInput(new Date()),
     postDate: transaction?.postDate
-      ? transaction.postDate.split('T')[0]
-      : new Date().toISOString().split('T')[0],
+      ? formatDateForInput(parseLocalDate(transaction.postDate))
+      : formatDateForInput(new Date()),
     description: transaction?.description || '',
     categoryId: transaction?.categoryId || '',
     typeId: transaction?.typeId || '',
@@ -96,11 +97,11 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
         sourceId: transaction.sourceId || '',
         userId: transaction.userId || '',
         transactionDate: transaction.transactionDate
-          ? transaction.transactionDate.split('T')[0]
-          : new Date().toISOString().split('T')[0],
+          ? formatDateForInput(parseLocalDate(transaction.transactionDate))
+          : formatDateForInput(new Date()),
         postDate: transaction.postDate
-          ? transaction.postDate.split('T')[0]
-          : new Date().toISOString().split('T')[0],
+          ? formatDateForInput(parseLocalDate(transaction.postDate))
+          : formatDateForInput(new Date()),
         description: transaction.description || '',
         categoryId: transaction.categoryId || '',
         typeId: transaction.typeId || '',
@@ -112,8 +113,8 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
       setFormData({
         sourceId: '',
         userId: '',
-        transactionDate: new Date().toISOString().split('T')[0],
-        postDate: new Date().toISOString().split('T')[0],
+        transactionDate: formatDateForInput(new Date()),
+        postDate: formatDateForInput(new Date()),
         description: '',
         categoryId: '',
         typeId: '',
@@ -229,31 +230,19 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="transactionDate">Transaction Date</Label>
-              <div className="relative">
-                <Input
-                  id="transactionDate"
-                  type="date"
-                  value={formData.transactionDate}
-                  onChange={(e) => handleInputChange('transactionDate', e.target.value)}
-                  className="pr-10"
-                  required
-                />
-                <Calendar className="absolute right-11 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
+              <CustomDatePicker
+                value={formData.transactionDate}
+                onChange={(date) => handleInputChange('transactionDate', date)}
+                placeholder="Select transaction date"
+              />
             </div>
             <div>
               <Label htmlFor="postDate">Post Date</Label>
-              <div className="relative">
-                <Input
-                  id="postDate"
-                  type="date"
-                  value={formData.postDate}
-                  onChange={(e) => handleInputChange('postDate', e.target.value)}
-                  className="pr-10"
-                  required
-                />
-                <Calendar className="absolute right-11 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
+              <CustomDatePicker
+                value={formData.postDate}
+                onChange={(date) => handleInputChange('postDate', date)}
+                placeholder="Select post date"
+              />
             </div>
           </div>
 

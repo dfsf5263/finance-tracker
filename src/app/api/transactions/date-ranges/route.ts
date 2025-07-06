@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getCurrentYear, getCurrentMonth } from '@/lib/utils'
 
 export async function GET() {
   try {
@@ -20,8 +21,8 @@ export async function GET() {
       // No transactions found
       return NextResponse.json({
         years: [],
-        currentYear: new Date().getFullYear(),
-        currentMonth: new Date().getMonth() + 1,
+        currentYear: getCurrentYear(),
+        currentMonth: getCurrentMonth(),
       })
     }
 
@@ -36,8 +37,8 @@ export async function GET() {
 
     return NextResponse.json({
       years,
-      currentYear: new Date().getFullYear(),
-      currentMonth: new Date().getMonth() + 1,
+      currentYear: getCurrentYear(),
+      currentMonth: getCurrentMonth(),
     })
   } catch (error) {
     console.error('Error fetching date ranges:', error)
