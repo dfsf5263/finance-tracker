@@ -3,12 +3,11 @@
 import { useRef, useEffect, useState } from 'react'
 import * as d3 from 'd3-selection'
 import { sankey, sankeyLinkHorizontal } from 'd3-sankey'
-import { scaleOrdinal } from 'd3-scale'
 import { formatCurrency } from '@/lib/utils'
 
 interface SankeyData {
-  nodes: Array<{ name: string }>
-  links: Array<{ source: number; target: number; value: number }>
+  nodes: Array<{ name: string; type: 'income' | 'user' | 'expense' }>
+  links: Array<{ source: number; target: number; value: number; type: 'income' | 'expense' }>
 }
 
 interface D3SankeyProps {
@@ -47,15 +46,29 @@ export function D3Sankey({ data, width, height, colors }: D3SankeyProps) {
     // Create main group
     const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`)
 
-    // Create color scale
-    const colorScale = scaleOrdinal<string>()
-      .domain(data.nodes.map((d) => d.name))
-      .range(colors)
+    // Create color scale based on node type
+    const getNodeColor = (node: { name: string; type: 'income' | 'user' | 'expense' }) => {
+      switch (node.type) {
+        case 'income':
+          return '#10b981' // Green for income
+        case 'expense':
+          return '#ef4444' // Red for expenses
+        case 'user':
+          return '#6366f1' // Blue for users
+        default:
+          return '#9ca3af' // Gray fallback
+      }
+    }
+
+    // Create link color function
+    const getLinkColor = (link: { type: 'income' | 'expense' }) => {
+      return link.type === 'income' ? '#10b981' : '#ef4444'
+    }
 
     // Create sankey layout
     const sankeyLayout = sankey<
-      { name: string },
-      { source: number; target: number; value: number }
+      { name: string; type: 'income' | 'user' | 'expense' },
+      { source: number; target: number; value: number; type: 'income' | 'expense' }
     >()
       .nodeWidth(15)
       .nodePadding(30)
@@ -79,7 +92,7 @@ export function D3Sankey({ data, width, height, colors }: D3SankeyProps) {
       .attr('class', 'link')
       .attr('d', sankeyLinkHorizontal())
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .attr('stroke', (d) => colorScale((d as any).source.name))
+      .attr('stroke', (d) => getLinkColor(d as any))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .attr('stroke-width', (d) => Math.max(1, (d as any).width))
       .attr('fill', 'none')
@@ -97,7 +110,7 @@ export function D3Sankey({ data, width, height, colors }: D3SankeyProps) {
             x: (event as any).clientX - rect.left,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             y: (event as any).clientY - rect.top,
-            content: `${link.source.name} → ${link.target.name}: ${formatCurrency(link.value)}`,
+            content: `${link.source.name} → ${link.target.name}: ${formatCurrency(link.value)} (${link.type === 'income' ? 'Income' : 'Expense'})`,
           })
         }
       })
@@ -126,7 +139,7 @@ export function D3Sankey({ data, width, height, colors }: D3SankeyProps) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .attr('width', (d) => (d as any).x1 - (d as any).x0)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .attr('fill', (d) => colorScale((d as any).name))
+      .attr('fill', (d) => getNodeColor(d as any))
       .attr('opacity', 0.9)
       .style('cursor', 'pointer')
       .on('mouseenter', function (event, d) {
@@ -185,6 +198,42 @@ export function D3Sankey({ data, width, height, colors }: D3SankeyProps) {
       .attr('fill', 'currentColor')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .text((d) => (d as any).name)
+
+    // Add legend
+    const legendData = [
+      { label: 'Income Sources', color: '#10b981' },
+      { label: 'Users', color: '#6366f1' },
+      { label: 'Expense Categories', color: '#ef4444' },
+    ]
+
+    const legend = svg.append('g').attr('class', 'legend').attr('transform', `translate(20, 20)`)
+
+    const legendItems = legend
+      .selectAll('.legend-item')
+      .data(legendData)
+      .enter()
+      .append('g')
+      .attr('class', 'legend-item')
+      .attr('transform', (d, i) => `translate(0, ${i * 25})`)
+
+    legendItems
+      .append('rect')
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('width', 18)
+      .attr('height', 18)
+      .attr('fill', (d) => d.color)
+      .attr('rx', 3)
+
+    legendItems
+      .append('text')
+      .attr('x', 25)
+      .attr('y', 9)
+      .attr('dy', '0.35em')
+      .attr('font-size', '14px')
+      .attr('font-weight', '500')
+      .attr('fill', 'currentColor')
+      .text((d) => d.label)
   }, [data, width, height, colors])
 
   return (

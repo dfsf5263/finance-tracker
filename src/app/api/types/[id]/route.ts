@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const type = await db.transactionType.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!type) {
@@ -18,8 +19,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const { name, isOutflow } = await request.json()
 
     if (!name) {
@@ -32,7 +34,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     const type = await db.transactionType.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     })
 
@@ -43,10 +45,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params
     await db.transactionType.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ message: 'Transaction type deleted successfully' })

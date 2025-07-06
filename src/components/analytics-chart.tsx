@@ -28,8 +28,8 @@ interface TransactionType {
 }
 
 interface SankeyData {
-  nodes: Array<{ name: string }>
-  links: Array<{ source: number; target: number; value: number }>
+  nodes: Array<{ name: string; type: 'income' | 'user' | 'expense' }>
+  links: Array<{ source: number; target: number; value: number; type: 'income' | 'expense' }>
 }
 
 const COLORS = [
@@ -259,8 +259,8 @@ export function AnalyticsChart() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="donut">Donut Chart</SelectItem>
-                <SelectItem value="sankey">Sankey Diagram</SelectItem>
+                <SelectItem value="donut">Breakdown</SelectItem>
+                <SelectItem value="sankey">Money Flow</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -419,7 +419,7 @@ export function AnalyticsChart() {
         <div className="grid grid-cols-1">
           <div className="bg-card p-6 rounded-lg border">
             <h3 className="text-lg font-semibold mb-4 text-foreground">
-              Transaction Flow: Source → User → Category
+              Money Flow: Income → Users → Expenses
             </h3>
             <div className="h-[600px]">
               <div className="w-full h-full flex justify-center">
