@@ -38,8 +38,8 @@ export function D3Sankey({ data, width, height, colors }: D3SankeyProps) {
     const svg = d3.select(svgRef.current)
     svg.selectAll('*').remove()
 
-    // Set up margins
-    const margin = { top: 20, right: 140, bottom: 20, left: 140 }
+    // Set up margins - increased for better label accommodation
+    const margin = { top: 20, right: 200, bottom: 20, left: 200 }
     const innerWidth = width - margin.left - margin.right
     const innerHeight = height - margin.top - margin.bottom
 
@@ -174,13 +174,19 @@ export function D3Sankey({ data, width, height, colors }: D3SankeyProps) {
         setTooltip((prev) => ({ ...prev, visible: false }))
       })
 
-    // Add labels
-    node
+    // Helper function to truncate text if needed
+    const truncateText = (text: string, maxLength: number = 20) => {
+      return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
+    }
+
+    // Add labels with improved positioning
+    const labelTexts = node
       .append('text')
       .attr('x', (d) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const node = d as any
-        return node.x0 < innerWidth / 2 ? node.x0 - 10 : node.x1 + 10
+        // Increase offset for better spacing
+        return node.x0 < innerWidth / 2 ? node.x0 - 15 : node.x1 + 15
       })
       .attr('y', (d) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -196,6 +202,13 @@ export function D3Sankey({ data, width, height, colors }: D3SankeyProps) {
       .attr('font-size', '13px')
       .attr('font-weight', '500')
       .attr('fill', 'currentColor')
+      .style('cursor', 'default')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .text((d) => truncateText((d as any).name))
+
+    // Add title elements for full text on hover
+    labelTexts
+      .append('title')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .text((d) => (d as any).name)
 

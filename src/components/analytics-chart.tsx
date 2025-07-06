@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { D3Sankey } from './d3-sankey'
 import {
@@ -57,6 +57,8 @@ export function AnalyticsChart() {
   })
   const [typeFilter, setTypeFilter] = useState('all')
   const [types, setTypes] = useState<TransactionType[]>([])
+  const [containerWidth, setContainerWidth] = useState(1000)
+  const sankeyContainerRef = useRef<HTMLDivElement>(null)
 
   const fetchAnalytics = async () => {
     setLoading(true)
@@ -124,6 +126,35 @@ export function AnalyticsChart() {
     }
     fetchTypes()
   }, [])
+
+  // Measure container width for responsive Sankey diagram
+  useEffect(() => {
+    const updateContainerWidth = () => {
+      if (sankeyContainerRef.current) {
+        const rect = sankeyContainerRef.current.getBoundingClientRect()
+        // Set minimum width of 800px, use container width minus padding
+        const availableWidth = Math.max(800, rect.width - 48) // 48px for padding
+        setContainerWidth(availableWidth)
+      }
+    }
+
+    // Initial measurement
+    updateContainerWidth()
+
+    // Create ResizeObserver to monitor container size changes
+    const resizeObserver = new ResizeObserver(updateContainerWidth)
+    if (sankeyContainerRef.current) {
+      resizeObserver.observe(sankeyContainerRef.current)
+    }
+
+    // Also listen to window resize as fallback
+    window.addEventListener('resize', updateContainerWidth)
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', updateContainerWidth)
+    }
+  }, [visualizationType])
 
   useEffect(() => {
     if (visualizationType === 'donut') {
@@ -283,24 +314,26 @@ export function AnalyticsChart() {
             </div>
           )}
 
-          <div>
-            <Label htmlFor="typeFilter" className="text-sm font-medium">
-              Filter by Type:
-            </Label>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="All types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All types</SelectItem>
-                {types.map((type) => (
-                  <SelectItem key={type.id} value={type.id}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {visualizationType === 'donut' && (
+            <div>
+              <Label htmlFor="typeFilter" className="text-sm font-medium">
+                Filter by Type:
+              </Label>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="All types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All types</SelectItem>
+                  {types.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-4">
@@ -421,9 +454,9 @@ export function AnalyticsChart() {
             <h3 className="text-lg font-semibold mb-4 text-foreground">
               Money Flow: Income → Users → Expenses
             </h3>
-            <div className="h-[600px]">
-              <div className="w-full h-full flex justify-center">
-                <D3Sankey data={sankeyData} width={1000} height={600} colors={COLORS} />
+            <div ref={sankeyContainerRef} className="h-[600px] overflow-x-auto">
+              <div className="w-full h-full flex justify-center min-w-[800px]">
+                <D3Sankey data={sankeyData} width={containerWidth} height={600} colors={COLORS} />
               </div>
             </div>
           </div>
