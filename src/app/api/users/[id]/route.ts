@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const user = await db.user.findUnique({
+    const user = await db.transactionUser.findUnique({
       where: { id },
     })
 
@@ -28,7 +28,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
-    const user = await db.user.update({
+    const user = await db.transactionUser.update({
       where: { id },
       data: { name },
     })
@@ -46,7 +46,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    await db.user.delete({
+    await db.transactionUser.delete({
       where: { id },
     })
 

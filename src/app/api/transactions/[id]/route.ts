@@ -8,7 +8,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const transaction = await db.transaction.findUnique({
       where: { id },
       include: {
-        source: true,
+        account: true,
         user: true,
         category: true,
         type: true,
@@ -31,7 +31,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params
     const body = await request.json()
     const {
-      sourceId,
+      accountId,
       userId,
       transactionDate,
       postDate,
@@ -45,7 +45,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const transaction = await db.transaction.update({
       where: { id },
       data: {
-        sourceId,
+        accountId,
         userId,
         transactionDate: new Date(transactionDate),
         postDate: new Date(postDate),
@@ -56,7 +56,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         memo,
       },
       include: {
-        source: true,
+        account: true,
         user: true,
         category: true,
         type: true,

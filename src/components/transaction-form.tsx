@@ -15,17 +15,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { CustomDatePicker } from '@/components/ui/date-picker'
 import { formatDateForInput, parseLocalDate } from '@/lib/utils'
 
-interface Source {
+interface Account {
   id: string
   name: string
 }
 
-interface User {
+interface TransactionUser {
   id: string
   name: string
 }
 
-interface Category {
+interface TransactionCategory {
   id: string
   name: string
 }
@@ -37,7 +37,7 @@ interface TransactionType {
 
 interface Transaction {
   id?: string
-  sourceId: string
+  accountId: string
   userId: string
   transactionDate: string
   postDate: string
@@ -46,9 +46,9 @@ interface Transaction {
   typeId: string
   amount: number
   memo?: string
-  source?: Source
-  user?: User
-  category?: Category
+  account?: Account
+  user?: TransactionUser
+  category?: TransactionCategory
   type?: TransactionType
 }
 
@@ -60,13 +60,13 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ transaction, open, onClose, onSubmit }: TransactionFormProps) {
-  const [sources, setSources] = useState<Source[]>([])
-  const [users, setUsers] = useState<User[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [users, setUsers] = useState<TransactionUser[]>([])
+  const [categories, setCategories] = useState<TransactionCategory[]>([])
   const [types, setTypes] = useState<TransactionType[]>([])
 
   const [formData, setFormData] = useState<Omit<Transaction, 'id'>>({
-    sourceId: transaction?.sourceId || '',
+    accountId: transaction?.accountId || '',
     userId: transaction?.userId || '',
     transactionDate: transaction?.transactionDate
       ? formatDateForInput(parseLocalDate(transaction.transactionDate))
@@ -83,7 +83,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
 
   useEffect(() => {
     if (open) {
-      fetchSources()
+      fetchAccounts()
       fetchUsers()
       fetchCategories()
       fetchTypes()
@@ -94,7 +94,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
   useEffect(() => {
     if (transaction) {
       setFormData({
-        sourceId: transaction.sourceId || '',
+        accountId: transaction.accountId || '',
         userId: transaction.userId || '',
         transactionDate: transaction.transactionDate
           ? formatDateForInput(parseLocalDate(transaction.transactionDate))
@@ -111,7 +111,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     } else {
       // Reset form for new transaction
       setFormData({
-        sourceId: '',
+        accountId: '',
         userId: '',
         transactionDate: formatDateForInput(new Date()),
         postDate: formatDateForInput(new Date()),
@@ -124,15 +124,15 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     }
   }, [transaction])
 
-  const fetchSources = async () => {
+  const fetchAccounts = async () => {
     try {
-      const response = await fetch('/api/sources')
+      const response = await fetch('/api/accounts')
       if (response.ok) {
         const data = await response.json()
-        setSources(data)
+        setAccounts(data)
       }
     } catch (error) {
-      console.error('Failed to fetch sources:', error)
+      console.error('Failed to fetch accounts:', error)
     }
   }
 
@@ -188,43 +188,42 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
           <DialogTitle>{transaction ? 'Edit Transaction' : 'Add New Transaction'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="source">Source</Label>
-              <Select
-                value={formData.sourceId}
-                onValueChange={(value) => handleInputChange('sourceId', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select source" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sources.map((source) => (
-                    <SelectItem key={source.id} value={source.id}>
-                      {source.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="user">User</Label>
-              <Select
-                value={formData.userId}
-                onValueChange={(value) => handleInputChange('userId', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select user" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label htmlFor="account">Account</Label>
+            <Select
+              value={formData.accountId}
+              onValueChange={(value) => handleInputChange('accountId', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select account" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map((account) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="user">User</Label>
+            <Select
+              value={formData.userId}
+              onValueChange={(value) => handleInputChange('userId', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select user" />
+              </SelectTrigger>
+              <SelectContent>
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -256,43 +255,42 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="category">Category</Label>
-              <Select
-                value={formData.categoryId}
-                onValueChange={(value) => handleInputChange('categoryId', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="type">Type</Label>
-              <Select
-                value={formData.typeId}
-                onValueChange={(value) => handleInputChange('typeId', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {types.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label htmlFor="category">Category</Label>
+            <Select
+              value={formData.categoryId}
+              onValueChange={(value) => handleInputChange('categoryId', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="type">Type</Label>
+            <Select
+              value={formData.typeId}
+              onValueChange={(value) => handleInputChange('typeId', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                {types.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>

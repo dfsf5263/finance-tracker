@@ -13,18 +13,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 1. `npm run format` - Format the code
 2. `npm run check` - Verify no linting or type errors
 
-## Architecture Overview
+## Project Overview
 
-This is a Next.js 15 personal website using the App Router with TypeScript and Tailwind CSS v4. The site integrates with a Postgres backend for data persistence via Prisma 6.
+This is a **Personal Finance Tracker** application built with Next.js 15 using the App Router, TypeScript, and a comprehensive shadcn/ui dashboard interface. The application enables users to track financial transactions, visualize spending patterns, and manage financial data through an intuitive dashboard interface.
 
-### Key Directories
-
-- `src/app/` - Next.js App Router pages and layouts
-- `src/components/` - Reusable UI components
-- `src/lib/` - Types and utilities
-- `prisma/` - Prisma configuration
-- `test/` - All test files and related data
-
-### Styling
-
-Uses Tailwind CSS v4 with PostCSS processing. Dark mode support is implemented via CSS custom properties in the root layout.
+**Key Features:**
+- Dashboard overview with financial metrics and quick actions
+- Transaction management with advanced filtering and CSV import
+- Split analytics with dedicated breakdown and money flow visualizations
+- Administrative interface for managing categories, sources, users, and transaction types
+- Responsive sidebar navigation with collapsible functionality
+- Dark/light mode support

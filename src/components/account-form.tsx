@@ -6,21 +6,21 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-interface Source {
+interface TransactionAccount {
   id?: string
   name: string
 }
 
-interface SourceFormProps {
-  source?: Source
+interface AccountFormProps {
+  account?: TransactionAccount
   open: boolean
   onClose: () => void
-  onSubmit: (source: Omit<Source, 'id'>) => void
+  onSubmit: (account: Omit<TransactionAccount, 'id'>) => void
 }
 
-export function SourceForm({ source, open, onClose, onSubmit }: SourceFormProps) {
-  const [formData, setFormData] = useState<Omit<Source, 'id'>>({
-    name: source?.name || '',
+export function AccountForm({ account, open, onClose, onSubmit }: AccountFormProps) {
+  const [formData, setFormData] = useState<Omit<TransactionAccount, 'id'>>({
+    name: account?.name || '',
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -36,7 +36,7 @@ export function SourceForm({ source, open, onClose, onSubmit }: SourceFormProps)
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{source ? 'Edit Source' : 'Add New Source'}</DialogTitle>
+          <DialogTitle>{account ? 'Edit Account' : 'Add New Account'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -53,7 +53,7 @@ export function SourceForm({ source, open, onClose, onSubmit }: SourceFormProps)
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">{source ? 'Update' : 'Create'} Source</Button>
+            <Button type="submit">{account ? 'Update' : 'Create'} Account</Button>
           </div>
         </form>
       </DialogContent>

@@ -21,10 +21,10 @@ export async function GET(request: NextRequest) {
     }
 
     const groupByField =
-      groupBy === 'user' ? 'userId' : groupBy === 'source' ? 'sourceId' : 'categoryId'
+      groupBy === 'user' ? 'userId' : groupBy === 'source' ? 'accountId' : 'categoryId'
 
     const aggregations = await db.transaction.groupBy({
-      by: [groupByField as 'userId' | 'sourceId' | 'categoryId'],
+      by: [groupByField as 'userId' | 'accountId' | 'categoryId'],
       where,
       _sum: {
         amount: true,
@@ -39,19 +39,19 @@ export async function GET(request: NextRequest) {
 
     let nameMap: { [key: string]: string } = {}
     if (groupBy === 'user') {
-      const users = await db.user.findMany({
+      const users = await db.transactionUser.findMany({
         where: { id: { in: ids } },
         select: { id: true, name: true },
       })
       nameMap = Object.fromEntries(users.map((user) => [user.id, user.name]))
     } else if (groupBy === 'source') {
-      const sources = await db.source.findMany({
+      const accounts = await db.transactionAccount.findMany({
         where: { id: { in: ids } },
         select: { id: true, name: true },
       })
-      nameMap = Object.fromEntries(sources.map((source) => [source.id, source.name]))
+      nameMap = Object.fromEntries(accounts.map((account) => [account.id, account.name]))
     } else {
-      const categories = await db.category.findMany({
+      const categories = await db.transactionCategory.findMany({
         where: { id: { in: ids } },
         select: { id: true, name: true },
       })

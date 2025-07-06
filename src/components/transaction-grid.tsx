@@ -27,18 +27,27 @@ import {
   Upload,
 } from 'lucide-react'
 import { formatCurrency, formatDate, parseLocalDate } from '@/lib/utils'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
 
-interface Source {
+interface Account {
   id: string
   name: string
 }
 
-interface User {
+interface TransactionUser {
   id: string
   name: string
 }
 
-interface Category {
+interface TransactionCategory {
   id: string
   name: string
 }
@@ -50,7 +59,7 @@ interface TransactionType {
 
 interface Transaction {
   id: string
-  sourceId: string
+  accountId: string
   userId: string
   transactionDate: string
   postDate: string
@@ -59,9 +68,9 @@ interface Transaction {
   typeId: string
   amount: number
   memo?: string
-  source?: Source
-  user?: User
-  category?: Category
+  account?: Account
+  user?: TransactionUser
+  category?: TransactionCategory
   type?: TransactionType
   createdAt: string
   updatedAt: string
@@ -78,14 +87,14 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [totalPages, setTotalPages] = useState(1)
-  const [categories, setCategories] = useState<Category[]>([])
+  const [categories, setCategories] = useState<TransactionCategory[]>([])
   const [types, setTypes] = useState<TransactionType[]>([])
-  const [sources, setSources] = useState<Source[]>([])
-  const [users, setUsers] = useState<User[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [users, setUsers] = useState<TransactionUser[]>([])
   const [filters, setFilters] = useState({
     category: 'all',
     type: 'all',
-    source: 'all',
+    account: 'all',
     user: 'all',
     startDate: '',
     endDate: '',
@@ -107,7 +116,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
       if (filters.category && filters.category !== 'all')
         params.append('category', filters.category)
       if (filters.type && filters.type !== 'all') params.append('type', filters.type)
-      if (filters.source && filters.source !== 'all') params.append('source', filters.source)
+      if (filters.account && filters.account !== 'all') params.append('account', filters.account)
       if (filters.user && filters.user !== 'all') params.append('user', filters.user)
       if (filters.startDate) params.append('startDate', filters.startDate)
       if (filters.endDate) params.append('endDate', filters.endDate)
@@ -121,7 +130,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
           filteredTransactions = filteredTransactions.filter(
             (t: Transaction) =>
               t.description.toLowerCase().includes(filters.search.toLowerCase()) ||
-              (t.source?.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+              (t.account?.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
               (t.user?.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
               (t.category?.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
               (t.type?.name || '').toLowerCase().includes(filters.search.toLowerCase())
@@ -162,15 +171,15 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     }
   }
 
-  const fetchSources = async () => {
+  const fetchAccounts = async () => {
     try {
-      const response = await fetch('/api/sources')
+      const response = await fetch('/api/accounts')
       if (response.ok) {
         const data = await response.json()
-        setSources(data)
+        setAccounts(data)
       }
     } catch (error) {
-      console.error('Failed to fetch sources:', error)
+      console.error('Failed to fetch accounts:', error)
     }
   }
 
@@ -194,7 +203,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   useEffect(() => {
     fetchCategories()
     fetchTypes()
-    fetchSources()
+    fetchAccounts()
     fetchUsers()
   }, [])
 
@@ -222,7 +231,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     setFilters({
       category: 'all',
       type: 'all',
-      source: 'all',
+      account: 'all',
       user: 'all',
       startDate: '',
       endDate: '',
@@ -240,7 +249,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     let count = 0
     if (filters.category !== 'all') count++
     if (filters.type !== 'all') count++
-    if (filters.source !== 'all') count++
+    if (filters.account !== 'all') count++
     if (filters.user !== 'all') count++
     if (filters.startDate) count++
     if (filters.endDate) count++
@@ -281,7 +290,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     // Transform transaction with nested objects to format expected by form
     const formTransaction = {
       ...transaction,
-      sourceId: transaction.sourceId || transaction.source?.id || '',
+      accountId: transaction.accountId || transaction.account?.id || '',
       userId: transaction.userId || transaction.user?.id || '',
       categoryId: transaction.categoryId || transaction.category?.id || '',
       typeId: transaction.typeId || transaction.type?.id || '',
@@ -298,35 +307,46 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
 
   return (
     <div className="space-y-6">
-      {/* Page Header with Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Transactions</h2>
-          <p className="text-sm text-muted-foreground">Manage your financial transactions</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setShowCSVUpload(true)}
-            className="flex items-center gap-2"
-          >
-            <Upload className="w-4 h-4" />
-            Upload CSV
-          </Button>
-          <Button
-            onClick={() => {
-              setEditingTransaction(null)
-              setShowTransactionForm(true)
-            }}
-            className="flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add Transaction
-          </Button>
-        </div>
+      {/* Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow duration-200"
+          onClick={() => setShowCSVUpload(true)}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                <Upload className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Upload CSV</CardTitle>
+                <CardDescription>Import transactions from CSV file</CardDescription>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow duration-200"
+          onClick={() => {
+            setEditingTransaction(null)
+            setShowTransactionForm(true)
+          }}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 text-green-600">
+                <Plus className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Add Transaction</CardTitle>
+                <CardDescription>Create a new transaction manually</CardDescription>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="bg-muted rounded-lg">
+      <div className="bg-muted rounded-xl">
         {/* Filter Header - Mobile Toggle */}
         <div className="flex items-center justify-between p-4 lg:hidden">
           <div className="flex items-center gap-2">
@@ -396,20 +416,20 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-foreground flex items-center gap-1">
                   <Building2 className="w-3 h-3" />
-                  Source
+                  Account
                 </label>
                 <Select
-                  value={filters.source}
-                  onValueChange={(value) => handleFilterChange('source', value)}
+                  value={filters.account}
+                  onValueChange={(value) => handleFilterChange('account', value)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="All Sources" />
+                    <SelectValue placeholder="All Accounts" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Sources</SelectItem>
-                    {sources.map((source) => (
-                      <SelectItem key={source.id} value={source.name}>
-                        {source.name}
+                    <SelectItem value="all">All Accounts</SelectItem>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.name}>
+                        {account.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -519,53 +539,51 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
       {loading ? (
         <div className="text-center py-8 text-muted-foreground">Loading transactions...</div>
       ) : (
-        <div className="border border rounded-lg overflow-hidden bg-card">
-          <table className="w-full">
-            <thead className="bg-muted">
-              <tr>
-                <th className="p-3 text-left text-sm font-medium text-foreground">Source</th>
-                <th className="p-3 text-left text-sm font-medium text-foreground">User</th>
-                <th className="p-3 text-left text-sm font-medium text-foreground">
-                  Transaction Date
-                </th>
-                <th className="p-3 text-left text-sm font-medium text-foreground">Description</th>
-                <th className="p-3 text-left text-sm font-medium text-foreground">Category</th>
-                <th className="p-3 text-left text-sm font-medium text-foreground">Type</th>
-                <th className="p-3 text-right text-sm font-medium text-foreground">Amount</th>
-                <th className="p-3 text-center text-sm font-medium text-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+        <div className="border border rounded-xl bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="p-3">Account</TableHead>
+                <TableHead className="p-3">User</TableHead>
+                <TableHead className="p-3">Transaction Date</TableHead>
+                <TableHead className="p-3">Description</TableHead>
+                <TableHead className="p-3">Category</TableHead>
+                <TableHead className="p-3">Type</TableHead>
+                <TableHead className="p-3 text-right">Amount</TableHead>
+                <TableHead className="p-3 text-center">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {transactions.map((transaction) => (
-                <tr key={transaction.id} className="hover:bg-muted/50">
-                  <td className="p-3 text-sm text-foreground">
-                    {transaction.source?.name || 'Unknown'}
-                  </td>
-                  <td className="p-3 text-sm text-foreground">
+                <TableRow key={transaction.id}>
+                  <TableCell className="p-3 text-sm text-foreground">
+                    {transaction.account?.name || 'Unknown'}
+                  </TableCell>
+                  <TableCell className="p-3 text-sm text-foreground">
                     {transaction.user?.name || 'Unknown'}
-                  </td>
-                  <td className="p-3 text-sm text-foreground">
+                  </TableCell>
+                  <TableCell className="p-3 text-sm text-foreground">
                     {formatDate(parseLocalDate(transaction.transactionDate))}
-                  </td>
-                  <td className="p-3 text-sm text-foreground max-w-xs truncate">
+                  </TableCell>
+                  <TableCell className="p-3 text-sm text-foreground max-w-xs truncate">
                     {transaction.description}
-                  </td>
-                  <td className="p-3 text-sm text-foreground">
+                  </TableCell>
+                  <TableCell className="p-3 text-sm text-foreground">
                     {transaction.category?.name || 'Unknown'}
-                  </td>
-                  <td className="p-3 text-sm">
+                  </TableCell>
+                  <TableCell className="p-3 text-sm">
                     <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
                       {transaction.type?.name || 'Unknown'}
                     </span>
-                  </td>
-                  <td
+                  </TableCell>
+                  <TableCell
                     className={`p-3 text-sm text-right font-medium ${
                       transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'
                     }`}
                   >
                     {formatCurrency(transaction.amount)}
-                  </td>
-                  <td className="p-3 text-center">
+                  </TableCell>
+                  <TableCell className="p-3 text-center">
                     <div className="flex justify-center gap-2">
                       <Button
                         variant="ghost"
@@ -582,11 +600,11 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 
