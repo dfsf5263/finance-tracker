@@ -527,6 +527,23 @@ export function AnalyticsChart() {
                     ))}
                   </Pie>
                   <Tooltip content={<CustomTooltip />} />
+                  {/* Center label showing total */}
+                  <text
+                    x="50%"
+                    y="50%"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    className="fill-current"
+                  >
+                    <tspan
+                      x="50%"
+                      fontSize="24"
+                      fontWeight="700"
+                      className={totalAmount >= 0 ? "fill-green-600" : "fill-red-600"}
+                    >
+                      {formatCurrency(totalAmount)}
+                    </tspan>
+                  </text>
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -537,7 +554,7 @@ export function AnalyticsChart() {
             <div className="space-y-4">
               <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
                 <span className="font-medium text-foreground">Total Amount:</span>
-                <span className="text-xl font-bold text-blue-600">
+                <span className={`text-xl font-bold ${totalAmount >= 0 ? "text-green-600" : "text-red-600"}`}>
                   {formatCurrency(totalAmount)}
                 </span>
               </div>
