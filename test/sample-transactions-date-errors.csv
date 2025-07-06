@@ -1,0 +1,7 @@
+Source,User,Transaction Date,Post Date,Description,Category,Type,Amount,Memo
+Chase Bank,Chris,2024-01-15,2024-01-17,Wrong date format - ISO format,Food & Dining,Debit,125.50,Should use MM/DD/YYYY
+Chase Bank,Chris,13/01/2024,13/01/2024,Invalid month,Transportation,Debit,45.00,Month cannot be 13
+Wells Fargo,Chris,02/30/2024,02/30/2024,Invalid day for February,Other,Credit,100.00,Feb 30 doesn't exist
+Chase Bank,Chris,1-15-2024,1-17-2024,Wrong separator,Food & Dining,Debit,85.75,Should use / not -
+Wells Fargo,Chris,01/15/24,01/15/24,Two digit year,Bills & Utilities,Debit,120.00,Should be YYYY not YY
+Chase Bank,Chris,invalid date,,Not a date at all,Shopping,Debit,299.99,Completely invalid

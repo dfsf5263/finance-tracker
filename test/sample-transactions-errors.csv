@@ -1,0 +1,5 @@
+Source,User,Transaction Date,Post Date,Description,Category,Type,Amount,Memo
+Invalid Bank,Chris,01/15/2024,01/17/2024,Test transaction,Food & Dining,Debit,125.50,This source doesn't exist
+Chase Bank,Invalid User,01/16/2024,01/18/2024,Test transaction 2,Transportation,Debit,45.00,This user doesn't exist
+Chase Bank,Chris,01/17/2024,01/17/2024,Test transaction 3,Invalid Category,Credit,100.00,This category doesn't exist
+Chase Bank,Chris,01/18/2024,01/18/2024,Test transaction 4,Other,Invalid Type,50.00,This type doesn't exist

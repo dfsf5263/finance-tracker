@@ -1,0 +1,55 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+node_modules/
+jspm_packages/
+bower_components/
+
+# Cache directories
+.yarn/cache
+.yarn/unplugged
+.yarn/install-state.gz
+.eslintcache
+.cache
+.parcel-cache
+.npm
+
+# Environment files
+.env.local
+.env.test
+.custom-env
+
+# Editor and IDE files
+.vscode-test
+.vscode
+
+# NodeJS specific
+.nyc_output/
+coverage/
+node_modules/
+npm-debug.log
+package-lock.json
+test/*.log
+tsconfig.tsbuildinfo
+
+#Next.js specific
+.next/
+.next/cache/
+.next/trace/
+.next/trace/
+.*.env
+
+#Misc
+.DS_Store

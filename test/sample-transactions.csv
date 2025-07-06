@@ -1,0 +1,7 @@
+Source,User,Transaction Date,Post Date,Description,Category,Type,Amount,Memo
+Chase Bank,Chris,01/15/2024,01/17/2024,Grocery Store Purchase,Food & Dining,Debit,125.50,Weekly shopping
+Chase Bank,Chris,01/16/2024,01/18/2024,Gas Station,Transportation,Debit,45.00,Fuel for car
+Wells Fargo,Chris,01/17/2024,01/17/2024,Salary Deposit,Other,Credit,3500.00,Monthly salary
+Chase Bank,Chris,01/18/2024,01/20/2024,Restaurant Bill,Food & Dining,Debit,85.75,Dinner with friends
+Wells Fargo,Chris,01/19/2024,01/19/2024,Electric Bill,Bills & Utilities,Debit,120.00,Monthly electricity
+Chase Bank,Chris,01/20/2024,01/22/2024,Online Shopping,Shopping,Debit,299.99,Electronics purchase

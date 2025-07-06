@@ -1,0 +1,3 @@
+SOURCE,USER,transaction date,Post date,DESCRIPTION,Category,TYPE,Amount,MEMO
+Chase Bank,Chris,01/15/2024,01/17/2024,Test with mixed case headers,Food & Dining,Debit,125.50,Testing header normalization
+Wells Fargo,Chris,01/16/2024,01/16/2024,Another test transaction,Other,Credit,500.00,Headers work with various cases
