@@ -152,41 +152,43 @@ export default function Home() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <nav className="flex space-x-8">
-            <button
-              onClick={() => setActiveTab('transactions')}
-              className={`flex items-center gap-2 px-3 py-2 border-b-2 font-medium text-sm ${
-                activeTab === 'transactions'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Grid3x3 className="w-4 h-4" />
-              Transactions
-            </button>
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`flex items-center gap-2 px-3 py-2 border-b-2 font-medium text-sm ${
-                activeTab === 'analytics'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <BarChart3 className="w-4 h-4" />
-              Analytics
-            </button>
-            <button
-              onClick={() => setActiveTab('management')}
-              className={`flex items-center gap-2 px-3 py-2 border-b-2 font-medium text-sm ${
-                activeTab === 'management'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-              Management
-            </button>
-          </nav>
+          <div className="bg-muted/30 p-3 rounded-lg border">
+            <nav className="flex space-x-1">
+              <button
+                onClick={() => setActiveTab('transactions')}
+                className={`flex items-center gap-2 px-4 py-3 rounded-md font-medium text-base transition-all duration-200 ${
+                  activeTab === 'transactions'
+                    ? 'bg-background text-foreground shadow-sm border-b-3 border-blue-500'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <Grid3x3 className="w-5 h-5" />
+                Transactions
+              </button>
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={`flex items-center gap-2 px-4 py-3 rounded-md font-medium text-base transition-all duration-200 ${
+                  activeTab === 'analytics'
+                    ? 'bg-background text-foreground shadow-sm border-b-3 border-blue-500'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <BarChart3 className="w-5 h-5" />
+                Analytics
+              </button>
+              <button
+                onClick={() => setActiveTab('management')}
+                className={`flex items-center gap-2 px-4 py-3 rounded-md font-medium text-base transition-all duration-200 ${
+                  activeTab === 'management'
+                    ? 'bg-background text-foreground shadow-sm border-b-3 border-blue-500'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <Settings className="w-5 h-5" />
+                Management
+              </button>
+            </nav>
+          </div>
         </div>
 
         {activeTab === 'transactions' ? (
