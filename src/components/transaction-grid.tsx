@@ -61,6 +61,7 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [totalPages, setTotalPages] = useState(1)
   const [categories, setCategories] = useState<Category[]>([])
   const [types, setTypes] = useState<TransactionType[]>([])
@@ -81,7 +82,7 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '10',
+        limit: pageSize.toString(),
       })
 
       if (filters.category && filters.category !== 'all')
@@ -169,7 +170,7 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
   useEffect(() => {
     fetchTransactions()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filters, refreshTrigger])
+  }, [page, pageSize, filters, refreshTrigger])
 
   useEffect(() => {
     fetchCategories()
@@ -209,6 +210,11 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
       search: '',
     })
     setPage(1)
+  }
+
+  const handlePageSizeChange = (newPageSize: string) => {
+    setPageSize(parseInt(newPageSize))
+    setPage(1) // Reset to first page when changing page size
   }
 
   return (
@@ -430,27 +436,45 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
         <div className="text-center py-8 text-muted-foreground">No transactions found</div>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-            disabled={page === 1}
-          >
-            Previous
-          </Button>
-          <span className="flex items-center px-4 text-sm text-foreground">
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-            disabled={page === totalPages}
-          >
-            Next
-          </Button>
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="flex items-center gap-2 text-sm text-foreground">
+          <span>Show</span>
+          <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+            <SelectTrigger className="w-[80px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
+          <span>items per page</span>
         </div>
-      )}
+
+        {totalPages > 1 && (
+          <div className="flex justify-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </Button>
+            <span className="flex items-center px-4 text-sm text-foreground">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={page === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
