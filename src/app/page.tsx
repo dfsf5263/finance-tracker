@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { TransactionForm } from '@/components/transaction-form'
 import { TransactionGrid } from '@/components/transaction-grid'
 import { CSVUpload } from '@/components/csv-upload'
 import { AnalyticsChart } from '@/components/analytics-chart'
 import { ManagementInterface } from '@/components/management-interface'
-import { Plus, Upload, BarChart3, Grid3x3, DollarSign, Settings } from 'lucide-react'
+import { Plus, Upload, BarChart3, Grid3x3, Settings } from 'lucide-react'
 import { ThemeToggleButton } from '@/components/theme-toggle'
 
 interface Source {
@@ -108,8 +109,14 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
-                <DollarSign className="w-6 h-6 text-white" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg overflow-hidden">
+                <Image
+                  src="/favicon.ico"
+                  alt="Finance Tracker Logo"
+                  width={40}
+                  height={40}
+                  className="object-contain"
+                />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Finance Tracker</h1>

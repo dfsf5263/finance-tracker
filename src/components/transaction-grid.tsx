@@ -10,7 +10,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Edit, Trash2, Filter, Search, Calendar, Tag, Building2, User } from 'lucide-react'
+import {
+  Edit,
+  Trash2,
+  Filter,
+  Search,
+  Calendar,
+  Tag,
+  Building2,
+  User,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react'
 import { formatCurrency, formatDate, parseLocalDate } from '@/lib/utils'
 
 interface Source {
@@ -76,6 +87,7 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
     endDate: '',
     search: '',
   })
+  const [filtersExpanded, setFiltersExpanded] = useState(false)
 
   const fetchTransactions = async () => {
     setLoading(true)
@@ -217,144 +229,221 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
     setPage(1) // Reset to first page when changing page size
   }
 
+  const getActiveFilterCount = () => {
+    let count = 0
+    if (filters.category !== 'all') count++
+    if (filters.type !== 'all') count++
+    if (filters.source !== 'all') count++
+    if (filters.user !== 'all') count++
+    if (filters.startDate) count++
+    if (filters.endDate) count++
+    if (filters.search) count++
+    return count
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-4 p-4 bg-muted rounded-lg">
-        <div className="flex flex-col gap-1 min-w-[200px] flex-1">
-          <label className="text-xs font-medium text-foreground flex items-center gap-1">
-            <Search className="w-3 h-3" />
-            Search
-          </label>
-          <Input
-            placeholder="Search transactions..."
-            value={filters.search}
-            onChange={(e) => handleFilterChange('search', e.target.value)}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-foreground flex items-center gap-1">
-            <Building2 className="w-3 h-3" />
-            Source
-          </label>
-          <Select
-            value={filters.source}
-            onValueChange={(value) => handleFilterChange('source', value)}
-          >
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="All Sources" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sources</SelectItem>
-              {sources.map((source) => (
-                <SelectItem key={source.id} value={source.name}>
-                  {source.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-foreground flex items-center gap-1">
-            <User className="w-3 h-3" />
-            User
-          </label>
-          <Select value={filters.user} onValueChange={(value) => handleFilterChange('user', value)}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="All Users" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Users</SelectItem>
-              {users.map((user) => (
-                <SelectItem key={user.id} value={user.name}>
-                  {user.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-foreground flex items-center gap-1">
-            <Tag className="w-3 h-3" />
-            Category
-          </label>
-          <Select
-            value={filters.category}
-            onValueChange={(value) => handleFilterChange('category', value)}
-          >
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.name}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-foreground flex items-center gap-1">
-            <Filter className="w-3 h-3" />
-            Type
-          </label>
-          <Select value={filters.type} onValueChange={(value) => handleFilterChange('type', value)}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="All Types" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              {types.map((type) => (
-                <SelectItem key={type.id} value={type.name}>
-                  {type.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-foreground flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
-            Start Date
-          </label>
-          <div className="relative">
-            <Input
-              type="date"
-              value={filters.startDate}
-              onChange={(e) => handleFilterChange('startDate', e.target.value)}
-              className="w-[150px] pr-10"
-            />
-            <Calendar className="absolute right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+      <div className="bg-muted rounded-lg">
+        {/* Filter Header - Mobile Toggle */}
+        <div className="flex items-center justify-between p-4 lg:hidden">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-foreground" />
+            <span className="text-sm font-medium text-foreground">
+              Filters
+              {getActiveFilterCount() > 0 && (
+                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                  {getActiveFilterCount()}
+                </span>
+              )}
+            </span>
           </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-foreground flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
-            End Date
-          </label>
-          <div className="relative">
-            <Input
-              type="date"
-              value={filters.endDate}
-              onChange={(e) => handleFilterChange('endDate', e.target.value)}
-              className="w-[150px] pr-10"
-            />
-            <Calendar className="absolute right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-foreground opacity-0">Actions</label>
-          <Button variant="outline" onClick={clearFilters}>
-            Clear
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setFiltersExpanded(!filtersExpanded)}
+            className="p-2"
+          >
+            {filtersExpanded ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
           </Button>
+        </div>
+
+        {/* Filter Content */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ${
+            filtersExpanded ? 'max-h-none' : 'max-h-0 lg:max-h-none'
+          }`}
+        >
+          <div className="p-4 pt-0 lg:pt-4">
+            {/* Desktop Filter Header */}
+            <div className="hidden lg:flex items-center gap-2 mb-4">
+              <Filter className="w-4 h-4 text-foreground" />
+              <span className="text-sm font-medium text-foreground">
+                Filters
+                {getActiveFilterCount() > 0 && (
+                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                    {getActiveFilterCount()}
+                  </span>
+                )}
+              </span>
+            </div>
+
+            {/* Search Bar - Always Full Width */}
+            <div className="mb-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-foreground flex items-center gap-1">
+                  <Search className="w-3 h-3" />
+                  Search
+                </label>
+                <Input
+                  placeholder="Search transactions..."
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+
+            {/* Filter Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* Dropdown Filters */}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-foreground flex items-center gap-1">
+                  <Building2 className="w-3 h-3" />
+                  Source
+                </label>
+                <Select
+                  value={filters.source}
+                  onValueChange={(value) => handleFilterChange('source', value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All Sources" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sources</SelectItem>
+                    {sources.map((source) => (
+                      <SelectItem key={source.id} value={source.name}>
+                        {source.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-foreground flex items-center gap-1">
+                  <User className="w-3 h-3" />
+                  User
+                </label>
+                <Select
+                  value={filters.user}
+                  onValueChange={(value) => handleFilterChange('user', value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All Users" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Users</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.name}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-foreground flex items-center gap-1">
+                  <Tag className="w-3 h-3" />
+                  Category
+                </label>
+                <Select
+                  value={filters.category}
+                  onValueChange={(value) => handleFilterChange('category', value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.name}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-foreground flex items-center gap-1">
+                  <Filter className="w-3 h-3" />
+                  Type
+                </label>
+                <Select
+                  value={filters.type}
+                  onValueChange={(value) => handleFilterChange('type', value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {types.map((type) => (
+                      <SelectItem key={type.id} value={type.name}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Date Filters */}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-foreground flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  Start Date
+                </label>
+                <div className="relative">
+                  <Input
+                    type="date"
+                    value={filters.startDate}
+                    onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                    className="w-full pr-10"
+                  />
+                  <Calendar className="absolute right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-foreground flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  End Date
+                </label>
+                <div className="relative">
+                  <Input
+                    type="date"
+                    value={filters.endDate}
+                    onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                    className="w-full pr-10"
+                  />
+                  <Calendar className="absolute right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Clear Button */}
+              <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
+                <label className="text-xs font-medium text-foreground opacity-0">Actions</label>
+                <Button variant="outline" onClick={clearFilters} className="w-full">
+                  Clear Filters
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
