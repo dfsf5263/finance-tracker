@@ -10,9 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Calendar } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 interface AnalyticsData {
@@ -30,6 +28,18 @@ interface TransactionType {
 interface SankeyData {
   nodes: Array<{ name: string; type: 'income' | 'user' | 'expense' }>
   links: Array<{ source: number; target: number; value: number; type: 'income' | 'expense' }>
+}
+
+interface DateRanges {
+  years: number[]
+  currentYear: number
+  currentMonth: number
+}
+
+interface TimePeriod {
+  type: 'all' | 'year' | 'month'
+  year: number
+  month: number
 }
 
 const COLORS = [
@@ -51,14 +61,66 @@ export function AnalyticsChart() {
   const [loading, setLoading] = useState(true)
   const [visualizationType, setVisualizationType] = useState<'donut' | 'sankey'>('donut')
   const [groupBy, setGroupBy] = useState('category')
-  const [dateRange, setDateRange] = useState({
-    startDate: '',
-    endDate: '',
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>({
+    type: 'month',
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1,
   })
   const [typeFilter, setTypeFilter] = useState('all')
   const [types, setTypes] = useState<TransactionType[]>([])
+  const [dateRanges, setDateRanges] = useState<DateRanges>({
+    years: [],
+    currentYear: new Date().getFullYear(),
+    currentMonth: new Date().getMonth() + 1,
+  })
   const [containerWidth, setContainerWidth] = useState(1000)
   const sankeyContainerRef = useRef<HTMLDivElement>(null)
+
+  // Helper function to convert timePeriod to start/end dates
+  const getDateRangeFromPeriod = (period: TimePeriod): { startDate: string; endDate: string } => {
+    if (period.type === 'all') {
+      return { startDate: '', endDate: '' }
+    }
+
+    if (period.type === 'year') {
+      const startDate = `${period.year}-01-01`
+      const endDate = `${period.year}-12-31`
+      return { startDate, endDate }
+    }
+
+    if (period.type === 'month') {
+      const year = period.year
+      const month = period.month.toString().padStart(2, '0')
+      const startDate = `${year}-${month}-01`
+
+      // Get last day of month
+      const lastDay = new Date(year, period.month, 0).getDate()
+      const endDate = `${year}-${month}-${lastDay.toString().padStart(2, '0')}`
+
+      return { startDate, endDate }
+    }
+
+    return { startDate: '', endDate: '' }
+  }
+
+  // Helper function to get month names
+  const getMonthName = (monthNumber: number): string => {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ]
+    return months[monthNumber - 1] || ''
+  }
 
   const fetchAnalytics = async () => {
     setLoading(true)
@@ -67,6 +129,7 @@ export function AnalyticsChart() {
         groupBy,
       })
 
+      const dateRange = getDateRangeFromPeriod(timePeriod)
       if (dateRange.startDate) params.append('startDate', dateRange.startDate)
       if (dateRange.endDate) params.append('endDate', dateRange.endDate)
       if (typeFilter && typeFilter !== 'all') params.append('typeId', typeFilter)
@@ -95,6 +158,7 @@ export function AnalyticsChart() {
     try {
       const params = new URLSearchParams()
 
+      const dateRange = getDateRangeFromPeriod(timePeriod)
       if (dateRange.startDate) params.append('startDate', dateRange.startDate)
       if (dateRange.endDate) params.append('endDate', dateRange.endDate)
       if (typeFilter && typeFilter !== 'all') params.append('typeId', typeFilter)
@@ -111,7 +175,7 @@ export function AnalyticsChart() {
     }
   }
 
-  // Fetch types on mount
+  // Fetch types and date ranges on mount
   useEffect(() => {
     const fetchTypes = async () => {
       try {
@@ -124,7 +188,27 @@ export function AnalyticsChart() {
         console.error('Error fetching types:', error)
       }
     }
+
+    const fetchDateRanges = async () => {
+      try {
+        const response = await fetch('/api/transactions/date-ranges')
+        if (response.ok) {
+          const data = await response.json()
+          setDateRanges(data)
+          // Update initial time period with current data
+          setTimePeriod((prev) => ({
+            ...prev,
+            year: data.currentYear,
+            month: data.currentMonth,
+          }))
+        }
+      } catch (error) {
+        console.error('Error fetching date ranges:', error)
+      }
+    }
+
     fetchTypes()
+    fetchDateRanges()
   }, [])
 
   // Measure container width for responsive Sankey diagram
@@ -163,7 +247,7 @@ export function AnalyticsChart() {
       fetchSankeyData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visualizationType, groupBy, dateRange, typeFilter])
+  }, [visualizationType, groupBy, timePeriod, typeFilter])
 
   const CustomTooltip = ({
     active,
@@ -337,38 +421,76 @@ export function AnalyticsChart() {
         </div>
 
         <div className="flex gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-foreground flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              Start Transaction Date
-            </label>
-            <div className="relative">
-              <Input
-                id="startDate"
-                type="date"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange((prev) => ({ ...prev, startDate: e.target.value }))}
-                className="w-[150px] pr-10"
-              />
-              <Calendar className="absolute right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
+          <div>
+            <Label htmlFor="periodType" className="text-sm font-medium">
+              Time Period:
+            </Label>
+            <Select
+              value={timePeriod.type}
+              onValueChange={(value) =>
+                setTimePeriod((prev) => ({ ...prev, type: value as 'all' | 'year' | 'month' }))
+              }
+            >
+              <SelectTrigger className="w-[130px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="year">By Year</SelectItem>
+                <SelectItem value="month">By Month</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-foreground flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              End Transaction Date
-            </label>
-            <div className="relative">
-              <Input
-                id="endDate"
-                type="date"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange((prev) => ({ ...prev, endDate: e.target.value }))}
-                className="w-[150px] pr-10"
-              />
-              <Calendar className="absolute right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+
+          {(timePeriod.type === 'year' || timePeriod.type === 'month') && (
+            <div>
+              <Label htmlFor="year" className="text-sm font-medium">
+                Year:
+              </Label>
+              <Select
+                value={timePeriod.year.toString()}
+                onValueChange={(value) =>
+                  setTimePeriod((prev) => ({ ...prev, year: parseInt(value) }))
+                }
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {dateRanges.years.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </div>
+          )}
+
+          {timePeriod.type === 'month' && (
+            <div>
+              <Label htmlFor="month" className="text-sm font-medium">
+                Month:
+              </Label>
+              <Select
+                value={timePeriod.month.toString()}
+                onValueChange={(value) =>
+                  setTimePeriod((prev) => ({ ...prev, month: parseInt(value) }))
+                }
+              >
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                    <SelectItem key={month} value={month.toString()}>
+                      {getMonthName(month)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -380,7 +502,7 @@ export function AnalyticsChart() {
           No data available for the selected period
         </div>
       ) : visualizationType === 'donut' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
           <div className="bg-card p-6 rounded-lg border">
             <h3 className="text-lg font-semibold mb-4 text-foreground">
               Transactions by{' '}
