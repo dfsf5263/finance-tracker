@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
+import { Filter, ChartPie, TrendingUpDown } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 interface AnalyticsData {
@@ -161,7 +162,8 @@ export function AnalyticsChart() {
       const dateRange = getDateRangeFromPeriod(timePeriod)
       if (dateRange.startDate) params.append('startDate', dateRange.startDate)
       if (dateRange.endDate) params.append('endDate', dateRange.endDate)
-      if (typeFilter && typeFilter !== 'all') params.append('typeId', typeFilter)
+      // Note: typeFilter is intentionally not applied to Money Flow visualization
+      // as it inherently separates income/expense using isOutflow flag
 
       const response = await fetch(`/api/transactions/sankey?${params}`)
       if (response.ok) {
@@ -247,7 +249,13 @@ export function AnalyticsChart() {
       fetchSankeyData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visualizationType, groupBy, timePeriod, typeFilter])
+  }, [
+    visualizationType,
+    groupBy,
+    timePeriod,
+    // Only include typeFilter for donut chart
+    ...(visualizationType === 'donut' ? [typeFilter] : []),
+  ])
 
   const CustomTooltip = ({
     active,
@@ -271,7 +279,37 @@ export function AnalyticsChart() {
     return null
   }
 
-  // Custom slice label component
+  // State to store text dimensions
+  const [labelDimensions, setLabelDimensions] = useState<Record<string, DOMRect>>({})
+  const measurementSvgRef = useRef<SVGSVGElement>(null)
+
+  // Measure label texts when data changes
+  useEffect(() => {
+    if (!measurementSvgRef.current || data.length === 0) return
+
+    const svg = measurementSvgRef.current
+    const dimensions: Record<string, DOMRect> = {}
+
+    // Create temporary text elements to measure
+    data.forEach((item) => {
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+      text.setAttribute('font-size', '14')
+      text.setAttribute('font-weight', '500')
+      text.textContent = item.name
+      svg.appendChild(text)
+
+      // Get bounding box
+      const bbox = text.getBBox()
+      dimensions[item.name] = bbox
+
+      // Remove temporary element
+      svg.removeChild(text)
+    })
+
+    setLabelDimensions(dimensions)
+  }, [data])
+
+  // Custom slice label component with accurate measurement
   const RADIAN = Math.PI / 180
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderSliceLabel = (props: any) => {
@@ -290,13 +328,32 @@ export function AnalyticsChart() {
     const textAnchor = isLeftSide ? 'end' : 'start'
     const color = COLORS[index % COLORS.length]
 
-    // Calculate text metrics for background
-    const textLength = name ? name.length * 7 : 0 // Approximate width
-    const padding = 8
-    const rectX = isLeftSide ? x - textLength - padding : x - padding / 2
-    const rectY = y - 12
-    const rectWidth = textLength + padding * 2
-    const rectHeight = 24
+    // Get measured dimensions or use fallback
+    const dimensions = labelDimensions[name]
+    const padding = 12
+
+    if (!dimensions) {
+      // Fallback rendering while measuring
+      return (
+        <text
+          x={x}
+          y={y}
+          fill={color}
+          textAnchor={textAnchor}
+          dominantBaseline="central"
+          fontSize="14"
+          fontWeight="500"
+        >
+          {name}
+        </text>
+      )
+    }
+
+    // Calculate rectangle position using actual text dimensions
+    const rectWidth = dimensions.width + padding * 2
+    const rectHeight = dimensions.height + padding * 1.5
+    const rectX = isLeftSide ? x - dimensions.width - padding : x - padding
+    const rectY = y - rectHeight / 2
 
     return (
       <g>
@@ -360,137 +417,158 @@ export function AnalyticsChart() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 p-4 bg-muted rounded-lg">
-        <div className="flex gap-4">
-          <div>
-            <Label htmlFor="visualizationType" className="text-sm font-medium">
-              Visualization:
-            </Label>
-            <Select
-              value={visualizationType}
-              onValueChange={(value) => setVisualizationType(value as 'donut' | 'sankey')}
+      {/* Page Header with Visualization Selector */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-muted-foreground">View:</span>
+          <div className="inline-flex rounded-lg border border-border bg-muted p-1">
+            <button
+              onClick={() => setVisualizationType('donut')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                visualizationType === 'donut'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
-              <SelectTrigger className="w-[150px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="donut">Breakdown</SelectItem>
-                <SelectItem value="sankey">Money Flow</SelectItem>
-              </SelectContent>
-            </Select>
+              <ChartPie className="w-4 h-4" />
+              Breakdown
+            </button>
+            <button
+              onClick={() => setVisualizationType('sankey')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                visualizationType === 'sankey'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <TrendingUpDown className="w-4 h-4" />
+              Money Flow
+            </button>
           </div>
+        </div>
+      </div>
 
-          {visualizationType === 'donut' && (
-            <div>
-              <Label htmlFor="groupBy" className="text-sm font-medium">
-                Group by:
-              </Label>
-              <Select value={groupBy} onValueChange={setGroupBy}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="category">Category</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="source">Source</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {visualizationType === 'donut' && (
-            <div>
-              <Label htmlFor="typeFilter" className="text-sm font-medium">
-                Filter by Type:
-              </Label>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  {types.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+      {/* Filter Controls */}
+      <div className="bg-muted/30 p-4 rounded-lg border">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-muted-foreground">Filters</span>
         </div>
 
-        <div className="flex gap-4">
-          <div>
-            <Label htmlFor="periodType" className="text-sm font-medium">
-              Time Period:
-            </Label>
-            <Select
-              value={timePeriod.type}
-              onValueChange={(value) =>
-                setTimePeriod((prev) => ({ ...prev, type: value as 'all' | 'year' | 'month' }))
-              }
-            >
-              <SelectTrigger className="w-[130px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="year">By Year</SelectItem>
-                <SelectItem value="month">By Month</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-wrap gap-4">
+            {visualizationType === 'donut' && (
+              <div>
+                <Label htmlFor="groupBy" className="text-sm font-medium">
+                  View by:
+                </Label>
+                <Select value={groupBy} onValueChange={setGroupBy}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="category">Category</SelectItem>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="source">Source</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {visualizationType === 'donut' && (
+              <div>
+                <Label htmlFor="typeFilter" className="text-sm font-medium">
+                  Type:
+                </Label>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="All types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All types</SelectItem>
+                    {types.map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
-          {(timePeriod.type === 'year' || timePeriod.type === 'month') && (
+          <div className="flex flex-wrap gap-4">
             <div>
-              <Label htmlFor="year" className="text-sm font-medium">
-                Year:
+              <Label htmlFor="periodType" className="text-sm font-medium">
+                Time Period:
               </Label>
               <Select
-                value={timePeriod.year.toString()}
+                value={timePeriod.type}
                 onValueChange={(value) =>
-                  setTimePeriod((prev) => ({ ...prev, year: parseInt(value) }))
+                  setTimePeriod((prev) => ({ ...prev, type: value as 'all' | 'year' | 'month' }))
                 }
               >
-                <SelectTrigger className="w-[100px]">
+                <SelectTrigger className="w-[130px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {dateRanges.years.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">All Time</SelectItem>
+                  <SelectItem value="year">By Year</SelectItem>
+                  <SelectItem value="month">By Month</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          )}
 
-          {timePeriod.type === 'month' && (
-            <div>
-              <Label htmlFor="month" className="text-sm font-medium">
-                Month:
-              </Label>
-              <Select
-                value={timePeriod.month.toString()}
-                onValueChange={(value) =>
-                  setTimePeriod((prev) => ({ ...prev, month: parseInt(value) }))
-                }
-              >
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                    <SelectItem key={month} value={month.toString()}>
-                      {getMonthName(month)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+            {(timePeriod.type === 'year' || timePeriod.type === 'month') && (
+              <div>
+                <Label htmlFor="year" className="text-sm font-medium">
+                  Year:
+                </Label>
+                <Select
+                  value={timePeriod.year.toString()}
+                  onValueChange={(value) =>
+                    setTimePeriod((prev) => ({ ...prev, year: parseInt(value) }))
+                  }
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dateRanges.years.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {timePeriod.type === 'month' && (
+              <div>
+                <Label htmlFor="month" className="text-sm font-medium">
+                  Month:
+                </Label>
+                <Select
+                  value={timePeriod.month.toString()}
+                  onValueChange={(value) =>
+                    setTimePeriod((prev) => ({ ...prev, month: parseInt(value) }))
+                  }
+                >
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                      <SelectItem key={month} value={month.toString()}>
+                        {getMonthName(month)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -539,7 +617,7 @@ export function AnalyticsChart() {
                       x="50%"
                       fontSize="24"
                       fontWeight="700"
-                      className={totalAmount >= 0 ? "fill-green-600" : "fill-red-600"}
+                      className={totalAmount >= 0 ? 'fill-green-600' : 'fill-red-600'}
                     >
                       {formatCurrency(totalAmount)}
                     </tspan>
@@ -554,7 +632,9 @@ export function AnalyticsChart() {
             <div className="space-y-4">
               <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
                 <span className="font-medium text-foreground">Total Amount:</span>
-                <span className={`text-xl font-bold ${totalAmount >= 0 ? "text-green-600" : "text-red-600"}`}>
+                <span
+                  className={`text-xl font-bold ${totalAmount >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                >
                   {formatCurrency(totalAmount)}
                 </span>
               </div>
@@ -601,6 +681,12 @@ export function AnalyticsChart() {
           </div>
         </div>
       )}
+      {/* Hidden SVG for text measurement */}
+      <svg
+        ref={measurementSvgRef}
+        style={{ position: 'absolute', visibility: 'hidden', width: 0, height: 0 }}
+        aria-hidden="true"
+      />
     </div>
   )
 }
