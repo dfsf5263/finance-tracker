@@ -27,6 +27,7 @@ interface Category {
 interface TransactionType {
   id: string
   name: string
+  isOutflow?: boolean
 }
 
 export function ManagementInterface() {
@@ -107,66 +108,138 @@ export function ManagementInterface() {
 
   const handleCreateSource = async (sourceData: Omit<Source, 'id'>) => {
     try {
-      const response = await fetch('/api/sources', {
-        method: 'POST',
+      const isEditing = !!editingSource
+      const url = isEditing ? `/api/sources/${editingSource.id}` : '/api/sources'
+      const method = isEditing ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sourceData),
       })
       if (response.ok) {
         setSourceFormOpen(false)
+        setEditingSource(undefined)
         fetchSources()
+        setNotification({
+          message: `Source ${isEditing ? 'updated' : 'created'} successfully`,
+          type: 'success',
+        })
       }
     } catch (error) {
-      console.error('Failed to create source:', error)
+      console.error(`Failed to ${editingSource ? 'update' : 'create'} source:`, error)
+      setNotification({
+        message: `Failed to ${editingSource ? 'update' : 'create'} source`,
+        type: 'error',
+      })
     }
   }
 
   const handleCreateUser = async (userData: Omit<User, 'id'>) => {
     try {
-      const response = await fetch('/api/users', {
-        method: 'POST',
+      const isEditing = !!editingUser
+      const url = isEditing ? `/api/users/${editingUser.id}` : '/api/users'
+      const method = isEditing ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       })
       if (response.ok) {
         setUserFormOpen(false)
+        setEditingUser(undefined)
         fetchUsers()
+        setNotification({
+          message: `User ${isEditing ? 'updated' : 'created'} successfully`,
+          type: 'success',
+        })
       }
     } catch (error) {
-      console.error('Failed to create user:', error)
+      console.error(`Failed to ${editingUser ? 'update' : 'create'} user:`, error)
+      setNotification({
+        message: `Failed to ${editingUser ? 'update' : 'create'} user`,
+        type: 'error',
+      })
     }
   }
 
   const handleCreateCategory = async (categoryData: Omit<Category, 'id'>) => {
     try {
-      const response = await fetch('/api/categories', {
-        method: 'POST',
+      const isEditing = !!editingCategory
+      const url = isEditing ? `/api/categories/${editingCategory.id}` : '/api/categories'
+      const method = isEditing ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(categoryData),
       })
       if (response.ok) {
         setCategoryFormOpen(false)
+        setEditingCategory(undefined)
         fetchCategories()
+        setNotification({
+          message: `Category ${isEditing ? 'updated' : 'created'} successfully`,
+          type: 'success',
+        })
       }
     } catch (error) {
-      console.error('Failed to create category:', error)
+      console.error(`Failed to ${editingCategory ? 'update' : 'create'} category:`, error)
+      setNotification({
+        message: `Failed to ${editingCategory ? 'update' : 'create'} category`,
+        type: 'error',
+      })
     }
   }
 
   const handleCreateType = async (typeData: Omit<TransactionType, 'id'>) => {
     try {
-      const response = await fetch('/api/types', {
-        method: 'POST',
+      const isEditing = !!editingType
+      const url = isEditing ? `/api/types/${editingType.id}` : '/api/types'
+      const method = isEditing ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(typeData),
       })
       if (response.ok) {
         setTypeFormOpen(false)
+        setEditingType(undefined)
         fetchTypes()
+        setNotification({
+          message: `Transaction type ${isEditing ? 'updated' : 'created'} successfully`,
+          type: 'success',
+        })
       }
     } catch (error) {
-      console.error('Failed to create type:', error)
+      console.error(`Failed to ${editingType ? 'update' : 'create'} type:`, error)
+      setNotification({
+        message: `Failed to ${editingType ? 'update' : 'create'} transaction type`,
+        type: 'error',
+      })
     }
+  }
+
+  const handleEditSource = (source: Source) => {
+    setEditingSource(source)
+    setSourceFormOpen(true)
+  }
+
+  const handleEditUser = (user: User) => {
+    setEditingUser(user)
+    setUserFormOpen(true)
+  }
+
+  const handleEditCategory = (category: Category) => {
+    setEditingCategory(category)
+    setCategoryFormOpen(true)
+  }
+
+  const handleEditType = (type: TransactionType) => {
+    setEditingType(type)
+    setTypeFormOpen(true)
   }
 
   const handleDeleteSource = async (id: string) => {
@@ -279,13 +352,18 @@ export function ManagementInterface() {
                   className="flex justify-between items-center p-2 border rounded"
                 >
                   <span>{source.name}</span>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteSource(source.id)}
-                  >
-                    Delete
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEditSource(source)}>
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteSource(source.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -304,9 +382,18 @@ export function ManagementInterface() {
               {users.map((user) => (
                 <div key={user.id} className="flex justify-between items-center p-2 border rounded">
                   <span>{user.name}</span>
-                  <Button variant="destructive" size="sm" onClick={() => handleDeleteUser(user.id)}>
-                    Delete
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEditUser(user)}>
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteUser(user.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -328,13 +415,22 @@ export function ManagementInterface() {
                   className="flex justify-between items-center p-2 border rounded"
                 >
                   <span>{category.name}</span>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteCategory(category.id)}
-                  >
-                    Delete
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditCategory(category)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteCategory(category.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -352,10 +448,24 @@ export function ManagementInterface() {
             <div className="space-y-2">
               {types.map((type) => (
                 <div key={type.id} className="flex justify-between items-center p-2 border rounded">
-                  <span>{type.name}</span>
-                  <Button variant="destructive" size="sm" onClick={() => handleDeleteType(type.id)}>
-                    Delete
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <span>{type.name}</span>
+                    <span className="text-sm text-muted-foreground">
+                      ({type.isOutflow ? 'Outflow' : 'Inflow'})
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEditType(type)}>
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteType(type.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

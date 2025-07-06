@@ -20,15 +20,20 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { name } = await request.json()
+    const { name, isOutflow } = await request.json()
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
+    const updateData: { name: string; isOutflow?: boolean } = { name }
+    if (isOutflow !== undefined) {
+      updateData.isOutflow = isOutflow
+    }
+
     const type = await db.transactionType.update({
       where: { id: params.id },
-      data: { name },
+      data: updateData,
     })
 
     return NextResponse.json(type)

@@ -95,17 +95,26 @@ async function main() {
     prisma.transactionType.upsert({
       where: { name: 'Credit' },
       update: {},
-      create: { name: 'Credit' },
+      create: {
+        name: 'Credit',
+        isOutflow: false, // Credit means money coming in
+      },
     }),
     prisma.transactionType.upsert({
       where: { name: 'Debit' },
       update: {},
-      create: { name: 'Debit' },
+      create: {
+        name: 'Debit',
+        isOutflow: true, // Debit means money going out
+      },
     }),
     prisma.transactionType.upsert({
       where: { name: 'Transfer' },
       update: {},
-      create: { name: 'Transfer' },
+      create: {
+        name: 'Transfer',
+        isOutflow: true, // Transfer typically means money going out from the source account
+      },
     }),
   ])
 

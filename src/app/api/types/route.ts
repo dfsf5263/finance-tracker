@@ -15,14 +15,17 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name } = await request.json()
+    const { name, isOutflow } = await request.json()
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
     const type = await db.transactionType.create({
-      data: { name },
+      data: {
+        name,
+        isOutflow: isOutflow !== undefined ? isOutflow : true,
+      },
     })
 
     return NextResponse.json(type, { status: 201 })

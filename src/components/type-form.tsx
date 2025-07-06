@@ -1,14 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface TransactionType {
   id?: string
   name: string
+  isOutflow?: boolean
 }
 
 interface TypeFormProps {
@@ -21,6 +29,7 @@ interface TypeFormProps {
 export function TypeForm({ type, open, onClose, onSubmit }: TypeFormProps) {
   const [formData, setFormData] = useState<Omit<TransactionType, 'id'>>({
     name: type?.name || '',
+    isOutflow: type?.isOutflow !== undefined ? type.isOutflow : true,
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -28,9 +37,18 @@ export function TypeForm({ type, open, onClose, onSubmit }: TypeFormProps) {
     onSubmit(formData)
   }
 
-  const handleInputChange = (field: keyof typeof formData, value: string) => {
+  const handleInputChange = (field: keyof typeof formData, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
+
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        name: type?.name || '',
+        isOutflow: type?.isOutflow !== undefined ? type.isOutflow : true,
+      })
+    }
+  }, [open, type])
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -47,6 +65,22 @@ export function TypeForm({ type, open, onClose, onSubmit }: TypeFormProps) {
               onChange={(e) => handleInputChange('name', e.target.value)}
               required
             />
+          </div>
+
+          <div>
+            <Label htmlFor="flow-direction">Flow Direction</Label>
+            <Select
+              value={formData.isOutflow ? 'outflow' : 'inflow'}
+              onValueChange={(value: string) => handleInputChange('isOutflow', value === 'outflow')}
+            >
+              <SelectTrigger id="flow-direction">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="outflow">Outflow (Expenses)</SelectItem>
+                <SelectItem value="inflow">Inflow (Income)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex justify-end space-x-2">
