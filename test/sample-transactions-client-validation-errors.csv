@@ -1,0 +1,8 @@
+Source,User,Transaction Date,Post Date,Description,Category,Type,Amount,Memo
+Chase Bank,Chris,01/15/2024,01/17/2024,Grocery Store Purchase,Food & Dining,Debit,125.50,Weekly shopping
+Wells Fargo,,02/20/2024,02/22/2024,Gas Station,Transportation,Debit,45.75,Missing user
+,Jane,03/15/2024,03/17/2024,Coffee Shop,Food & Dining,Debit,4.50,Missing source
+Chase Bank,Bob,invalid-date,04/12/2024,Online Purchase,Shopping,Debit,89.25,Invalid date format
+Chase Bank,Alice,04/10/2024,04/12/2024,,Utilities,Debit,50.00,Missing description
+Chase Bank,Bob,05/15/2024,05/17/2024,Subscription Service,Entertainment,Debit,,Missing amount
+Chase Bank,Carol,06/20/2024,06/22/2024,Restaurant,Food & Dining,Debit,not-a-number,Invalid amount format

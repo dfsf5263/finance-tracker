@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Edit, Trash2, Filter, Search, Calendar, Tag } from 'lucide-react'
+import { Edit, Trash2, Filter, Search, Calendar, Tag, Building2, User } from 'lucide-react'
 import { formatCurrency, formatDate, parseLocalDate } from '@/lib/utils'
 
 interface Source {
@@ -64,9 +64,13 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
   const [totalPages, setTotalPages] = useState(1)
   const [categories, setCategories] = useState<Category[]>([])
   const [types, setTypes] = useState<TransactionType[]>([])
+  const [sources, setSources] = useState<Source[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [filters, setFilters] = useState({
     category: 'all',
     type: 'all',
+    source: 'all',
+    user: 'all',
     startDate: '',
     endDate: '',
     search: '',
@@ -83,6 +87,8 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
       if (filters.category && filters.category !== 'all')
         params.append('category', filters.category)
       if (filters.type && filters.type !== 'all') params.append('type', filters.type)
+      if (filters.source && filters.source !== 'all') params.append('source', filters.source)
+      if (filters.user && filters.user !== 'all') params.append('user', filters.user)
       if (filters.startDate) params.append('startDate', filters.startDate)
       if (filters.endDate) params.append('endDate', filters.endDate)
 
@@ -136,6 +142,30 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
     }
   }
 
+  const fetchSources = async () => {
+    try {
+      const response = await fetch('/api/sources')
+      if (response.ok) {
+        const data = await response.json()
+        setSources(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch sources:', error)
+    }
+  }
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/users')
+      if (response.ok) {
+        const data = await response.json()
+        setUsers(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch users:', error)
+    }
+  }
+
   useEffect(() => {
     fetchTransactions()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -144,6 +174,8 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
   useEffect(() => {
     fetchCategories()
     fetchTypes()
+    fetchSources()
+    fetchUsers()
   }, [])
 
   const handleDelete = async (id: string) => {
@@ -170,6 +202,8 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
     setFilters({
       category: 'all',
       type: 'all',
+      source: 'all',
+      user: 'all',
       startDate: '',
       endDate: '',
       search: '',
@@ -190,6 +224,49 @@ export function TransactionGrid({ onEditTransaction, refreshTrigger }: Transacti
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
           />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-foreground flex items-center gap-1">
+            <Building2 className="w-3 h-3" />
+            Source
+          </label>
+          <Select
+            value={filters.source}
+            onValueChange={(value) => handleFilterChange('source', value)}
+          >
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="All Sources" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Sources</SelectItem>
+              {sources.map((source) => (
+                <SelectItem key={source.id} value={source.name}>
+                  {source.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-foreground flex items-center gap-1">
+            <User className="w-3 h-3" />
+            User
+          </label>
+          <Select value={filters.user} onValueChange={(value) => handleFilterChange('user', value)}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="All Users" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Users</SelectItem>
+              {users.map((user) => (
+                <SelectItem key={user.id} value={user.name}>
+                  {user.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex flex-col gap-1">

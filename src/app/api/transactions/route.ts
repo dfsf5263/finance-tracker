@@ -10,6 +10,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const category = searchParams.get('category')
     const type = searchParams.get('type')
+    const source = searchParams.get('source')
+    const user = searchParams.get('user')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
@@ -18,6 +20,8 @@ export async function GET(request: NextRequest) {
     const where: Prisma.TransactionWhereInput = {}
     if (category) where.category = { name: category }
     if (type) where.type = { name: type }
+    if (source) where.source = { name: source }
+    if (user) where.user = { name: user }
     if (startDate || endDate) {
       where.transactionDate = {}
       if (startDate) where.transactionDate.gte = new Date(startDate)

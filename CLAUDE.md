@@ -23,6 +23,7 @@ This is a Next.js 15 personal website using the App Router with TypeScript and T
 - `src/components/` - Reusable UI components
 - `src/lib/` - Types and utilities
 - `prisma/` - Prisma configuration
+- `test/` - All test files and related data
 
 ### Styling
 

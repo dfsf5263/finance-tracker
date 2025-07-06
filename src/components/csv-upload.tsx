@@ -3,10 +3,16 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
-import { Upload, FileText, AlertCircle } from 'lucide-react'
+import { Upload, FileText, AlertCircle, Download } from 'lucide-react'
 import Papa from 'papaparse'
 import toast from 'react-hot-toast'
 
@@ -33,6 +39,13 @@ interface ValidationError {
   field: string
   value: string
   message: string
+}
+
+interface ColumnMapping {
+  csvHeader: string
+  mappedField: keyof CSVTransaction | 'skip'
+  confidence: 'high' | 'medium' | 'low'
+  sampleData: string
 }
 
 // Normalize header names to handle case and space variations
@@ -87,9 +100,66 @@ export function CSVUpload({ open, onClose, onUploadComplete }: CSVUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<CSVTransaction[]>([])
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([])
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([])
+  const [showMapping, setShowMapping] = useState(false)
+  const [rawCsvData, setRawCsvData] = useState<Record<string, unknown>[]>([])
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0]
+  // Auto-mapping logic with common header variations
+  const autoMapHeaders = (csvHeaders: string[]): ColumnMapping[] => {
+    const headerVariations: Record<keyof CSVTransaction, string[]> = {
+      source: ['source', 'bank', 'institution', 'financial institution', 'account'],
+      user: ['user', 'account holder', 'name', 'customer', 'client'],
+      transactionDate: ['transaction date', 'trans date', 'date', 'transaction_date', 'transdate'],
+      postDate: ['post date', 'posting date', 'posted date', 'post_date', 'postdate'],
+      description: ['description', 'desc', 'transaction', 'details'],
+      category: ['category', 'cat', 'classification', 'group'],
+      type: ['type', 'transaction type', 'trans type', 'debit/credit', 'dr/cr'],
+      amount: ['amount', 'amt', 'value', 'total', 'sum', 'dollar amount', 'money'],
+      memo: ['memo', 'note', 'notes', 'comment', 'remarks', 'additional info', 'info'],
+    }
+
+    return csvHeaders.map((header) => {
+      const normalizedHeader = normalizeHeader(header)
+      let bestMatch: keyof CSVTransaction | 'skip' = 'skip'
+      let confidence: 'high' | 'medium' | 'low' = 'low'
+
+      // Check for exact matches first
+      for (const [field, variations] of Object.entries(headerVariations)) {
+        if (variations.some((variation) => normalizeHeader(variation) === normalizedHeader)) {
+          bestMatch = field as keyof CSVTransaction
+          confidence = 'high'
+          break
+        }
+      }
+
+      // Check for partial matches if no exact match found
+      if (bestMatch === 'skip') {
+        for (const [field, variations] of Object.entries(headerVariations)) {
+          if (
+            variations.some(
+              (variation) =>
+                normalizedHeader.includes(normalizeHeader(variation)) ||
+                normalizeHeader(variation).includes(normalizedHeader)
+            )
+          ) {
+            bestMatch = field as keyof CSVTransaction
+            confidence = 'medium'
+            break
+          }
+        }
+      }
+
+      return {
+        csvHeader: header,
+        mappedField: bestMatch,
+        confidence,
+        sampleData: '',
+      }
+    })
+  }
+
+  const processFile = (selectedFile: File) => {
     if (selectedFile && selectedFile.type === 'text/csv') {
       setFile(selectedFile)
       setValidationErrors([])
@@ -98,36 +168,22 @@ export function CSVUpload({ open, onClose, onUploadComplete }: CSVUploadProps) {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-          // Check if CSV has required headers
           if (results.meta.fields) {
-            const normalizedFields = results.meta.fields.map((f) => normalizeHeader(f))
-            const missingHeaders = requiredHeaders.filter(
-              (h) => !normalizedFields.some((f) => f === h)
-            )
+            // Store raw CSV data
+            setRawCsvData(results.data as Record<string, unknown>[])
 
-            if (missingHeaders.length > 0) {
-              const missingHeaderNames = missingHeaders.map((h) => {
-                // Convert back to readable format
-                switch (h) {
-                  case 'transactiondate':
-                    return 'Transaction Date'
-                  case 'postdate':
-                    return 'Post Date'
-                  default:
-                    return h.charAt(0).toUpperCase() + h.slice(1)
-                }
-              })
-              toast.error(`Missing required headers: ${missingHeaderNames.join(', ')}`)
-              return
-            }
+            // Auto-map headers and add sample data
+            const mappings = autoMapHeaders(results.meta.fields).map((mapping) => ({
+              ...mapping,
+              sampleData:
+                results.data.length > 0
+                  ? String((results.data[0] as Record<string, unknown>)[mapping.csvHeader] || '')
+                  : '',
+            }))
+
+            setColumnMappings(mappings)
+            setShowMapping(true)
           }
-
-          // Normalize the data
-          const normalizedData = results.data
-            .map((row) => normalizeRow(row as Record<string, unknown>))
-            .filter((row): row is CSVTransaction => row !== null)
-
-          setPreview(normalizedData.slice(0, 3))
         },
         error: (error) => {
           toast.error(`Error parsing CSV: ${error.message}`)
@@ -136,6 +192,59 @@ export function CSVUpload({ open, onClose, onUploadComplete }: CSVUploadProps) {
     } else {
       toast.error('Please select a valid CSV file')
     }
+  }
+
+  // Helper function to validate date format (MM/DD/YYYY)
+  const isValidDateFormat = (dateString: string): boolean => {
+    const dateRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/
+    if (!dateRegex.test(dateString)) return false
+
+    // Check if the date is actually valid
+    const [month, day, year] = dateString.split('/').map(Number)
+    const date = new Date(year, month - 1, day)
+    return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0]
+    if (selectedFile) {
+      processFile(selectedFile)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(true)
+  }
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+
+    const droppedFiles = e.dataTransfer.files
+    if (droppedFiles.length > 0) {
+      const droppedFile = droppedFiles[0]
+      processFile(droppedFile)
+    }
+  }
+
+  const handleUploadAreaClick = () => {
+    const fileInput = document.getElementById('csv-file') as HTMLInputElement
+    fileInput?.click()
   }
 
   const handleUpload = async () => {
@@ -232,10 +341,160 @@ export function CSVUpload({ open, onClose, onUploadComplete }: CSVUploadProps) {
     }
   }
 
+  const downloadTemplate = () => {
+    // Create CSV template with headers and sample data
+    const templateContent = `Source,User,Transaction Date,Post Date,Description,Category,Type,Amount,Memo
+Chase Bank,Chris,01/15/2024,01/17/2024,Grocery Store Purchase,Food & Dining,Debit,125.50,Weekly shopping
+Wells Fargo,Jane,02/20/2024,02/22/2024,Gas Station,Transportation,Debit,45.75,Fuel for car
+Chase Bank,Bob,03/10/2024,03/12/2024,Restaurant Bill,Food & Dining,Debit,85.25,Dinner out`
+
+    // Create blob and download
+    const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+
+    link.setAttribute('href', url)
+    link.setAttribute('download', 'transaction-template.csv')
+    link.style.visibility = 'hidden'
+
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    URL.revokeObjectURL(url)
+    toast.success('Template downloaded successfully!')
+  }
+
+  const updateMapping = (csvHeader: string, newMapping: keyof CSVTransaction | 'skip') => {
+    setColumnMappings((prev) =>
+      prev.map((mapping) =>
+        mapping.csvHeader === csvHeader ? { ...mapping, mappedField: newMapping } : mapping
+      )
+    )
+  }
+
+  const resetMappings = () => {
+    if (file && rawCsvData.length > 0) {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          if (results.meta.fields) {
+            const mappings = autoMapHeaders(results.meta.fields).map((mapping) => ({
+              ...mapping,
+              sampleData:
+                results.data.length > 0
+                  ? String((results.data[0] as Record<string, unknown>)[mapping.csvHeader] || '')
+                  : '',
+            }))
+            setColumnMappings(mappings)
+          }
+        },
+      })
+    }
+  }
+
+  const proceedToPreview = () => {
+    // Process data using column mappings
+    const mappedData = rawCsvData
+      .map((row) => {
+        const mappedRow: Partial<CSVTransaction> = {}
+
+        columnMappings.forEach((mapping) => {
+          if (mapping.mappedField !== 'skip') {
+            mappedRow[mapping.mappedField] = row[mapping.csvHeader] as string
+          }
+        })
+
+        return mappedRow as CSVTransaction
+      })
+      .filter(
+        (row) =>
+          // Only include rows that have the essential required fields
+          row.description && row.amount
+      )
+
+    // Validate the mapped data
+    const clientValidationErrors: ValidationError[] = []
+
+    mappedData.forEach((transaction, index) => {
+      const rowNumber = index + 2
+
+      if (!transaction.source?.trim()) {
+        clientValidationErrors.push({
+          row: rowNumber,
+          field: 'source',
+          value: transaction.source || '',
+          message: 'Source is required',
+        })
+      }
+
+      if (!transaction.user?.trim()) {
+        clientValidationErrors.push({
+          row: rowNumber,
+          field: 'user',
+          value: transaction.user || '',
+          message: 'User is required',
+        })
+      }
+
+      if (!transaction.description?.trim()) {
+        clientValidationErrors.push({
+          row: rowNumber,
+          field: 'description',
+          value: transaction.description || '',
+          message: 'Description is required',
+        })
+      }
+
+      if (!transaction.amount?.trim()) {
+        clientValidationErrors.push({
+          row: rowNumber,
+          field: 'amount',
+          value: transaction.amount || '',
+          message: 'Amount is required',
+        })
+      } else {
+        const amount = parseFloat(transaction.amount)
+        if (isNaN(amount)) {
+          clientValidationErrors.push({
+            row: rowNumber,
+            field: 'amount',
+            value: transaction.amount,
+            message: 'Amount must be a valid number',
+          })
+        }
+      }
+
+      if (transaction.transactionDate && !isValidDateFormat(transaction.transactionDate)) {
+        clientValidationErrors.push({
+          row: rowNumber,
+          field: 'transactionDate',
+          value: transaction.transactionDate,
+          message: 'Transaction Date must be in MM/DD/YYYY format',
+        })
+      }
+    })
+
+    setValidationErrors(clientValidationErrors)
+    setPreview(mappedData.slice(0, 3))
+    setShowMapping(false)
+
+    if (clientValidationErrors.length > 0) {
+      toast.error(
+        `Found ${clientValidationErrors.length} validation error${clientValidationErrors.length > 1 ? 's' : ''} in CSV file`
+      )
+    }
+  }
+
   const handleClose = () => {
     setFile(null)
     setPreview([])
     setValidationErrors([])
+    setIsDragOver(false)
+    setColumnMappings([])
+    setShowMapping(false)
+    setRawCsvData([])
     onClose()
   }
 
@@ -247,33 +506,152 @@ export function CSVUpload({ open, onClose, onUploadComplete }: CSVUploadProps) {
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-            <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <Label htmlFor="csv-file" className="cursor-pointer">
-              <span className="text-sm text-muted-foreground">
-                Click to upload CSV file or drag and drop
-              </span>
-              <Input
-                id="csv-file"
-                type="file"
-                accept=".csv"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-            </Label>
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">Need help getting started?</div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={downloadTemplate}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Download Template
+            </Button>
+          </div>
+
+          <div
+            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+              isDragOver
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
+                : 'border-border hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-950/10'
+            }`}
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={handleUploadAreaClick}
+          >
+            <Upload
+              className={`mx-auto h-12 w-12 mb-4 ${
+                isDragOver ? 'text-blue-500' : 'text-muted-foreground'
+              }`}
+            />
+            <div className="text-sm text-muted-foreground">
+              {isDragOver ? 'Drop CSV file here' : 'Click to upload CSV file or drag and drop'}
+            </div>
+            <Input
+              id="csv-file"
+              type="file"
+              accept=".csv"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
           </div>
 
           {file && (
-            <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-              <FileText className="h-5 w-5 text-blue-500" />
+            <div
+              className={`flex items-center gap-2 p-3 rounded-lg border ${
+                validationErrors.length > 0
+                  ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800'
+                  : 'bg-muted border-border'
+              }`}
+            >
+              {validationErrors.length > 0 ? (
+                <AlertCircle className="h-5 w-5 text-red-500" />
+              ) : (
+                <FileText className="h-5 w-5 text-blue-500" />
+              )}
               <span className="text-sm font-medium">{file.name}</span>
               <span className="text-xs text-muted-foreground">
                 ({(file.size / 1024).toFixed(1)} KB)
               </span>
+              {validationErrors.length > 0 && (
+                <span className="text-xs text-red-600 font-medium">• Has validation errors</span>
+              )}
             </div>
           )}
 
-          {preview.length > 0 && (
+          {showMapping && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-foreground">Map CSV Columns</h3>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={resetMappings}>
+                    Auto-Map
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="p-3 text-left text-foreground">CSV Column</th>
+                      <th className="p-3 text-left text-foreground">Sample Data</th>
+                      <th className="p-3 text-left text-foreground">Map To</th>
+                      <th className="p-3 text-left text-foreground">Confidence</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {columnMappings.map((mapping, index) => (
+                      <tr key={index} className="border-t border-border">
+                        <td className="p-3 text-foreground font-medium">{mapping.csvHeader}</td>
+                        <td className="p-3 text-muted-foreground text-xs max-w-32 truncate">
+                          {mapping.sampleData}
+                        </td>
+                        <td className="p-3">
+                          <Select
+                            value={mapping.mappedField}
+                            onValueChange={(value) =>
+                              updateMapping(
+                                mapping.csvHeader,
+                                value as keyof CSVTransaction | 'skip'
+                              )
+                            }
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select field..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="skip">Skip Column</SelectItem>
+                              <SelectItem value="source">Source</SelectItem>
+                              <SelectItem value="user">User</SelectItem>
+                              <SelectItem value="transactionDate">Transaction Date</SelectItem>
+                              <SelectItem value="postDate">Post Date</SelectItem>
+                              <SelectItem value="description">Description</SelectItem>
+                              <SelectItem value="category">Category</SelectItem>
+                              <SelectItem value="type">Type</SelectItem>
+                              <SelectItem value="amount">Amount</SelectItem>
+                              <SelectItem value="memo">Memo</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={`text-xs px-2 py-1 rounded ${
+                              mapping.confidence === 'high'
+                                ? 'bg-green-100 text-green-700'
+                                : mapping.confidence === 'medium'
+                                  ? 'bg-yellow-100 text-yellow-700'
+                                  : 'bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            {mapping.confidence}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={proceedToPreview}>Continue to Preview</Button>
+              </div>
+            </div>
+          )}
+
+          {preview.length > 0 && !showMapping && (
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-foreground">Preview (first 3 rows):</h3>
               <div className="border border rounded-lg overflow-hidden bg-card">
@@ -319,14 +697,24 @@ export function CSVUpload({ open, onClose, onUploadComplete }: CSVUploadProps) {
             </div>
           )}
 
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpload} disabled={!file || uploading} className="min-w-[100px]">
-              {uploading ? 'Uploading...' : 'Upload'}
-            </Button>
-          </div>
+          {!showMapping && (
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpload}
+                disabled={!file || uploading || validationErrors.length > 0 || preview.length === 0}
+                className="min-w-[120px]"
+              >
+                {uploading
+                  ? 'Uploading...'
+                  : validationErrors.length > 0
+                    ? 'Fix Errors to Upload'
+                    : 'Upload'}
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
       <LoadingOverlay show={uploading} message="Uploading transactions..." />
