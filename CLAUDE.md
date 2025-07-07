@@ -60,6 +60,7 @@ prisma/
 - **Normalized Structure**: Separate entities for accounts, users, categories, and types
 - **Audit Trails**: All models include `createdAt` and `updatedAt` timestamps
 - **Referential Integrity**: Proper foreign key relationships with cascading rules
+- **Singular Naming**: All models are named in the singular context
 
 **Core Models:**
 - `TransactionAccount`: Financial institutions/accounts (Chase Bank, Wells Fargo, etc.)

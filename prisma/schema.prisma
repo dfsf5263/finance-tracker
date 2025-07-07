@@ -14,7 +14,7 @@ model TransactionAccount {
   updatedAt    DateTime      @updatedAt @map("updated_at")
   transactions Transaction[]
 
-  @@map("transaction_accounts")
+  @@map("transaction_account")
 }
 
 model TransactionUser {
@@ -24,7 +24,7 @@ model TransactionUser {
   updatedAt    DateTime      @updatedAt @map("updated_at")
   transactions Transaction[]
 
-  @@map("transaction_users")
+  @@map("transaction_user")
 }
 
 model TransactionCategory {
@@ -34,7 +34,7 @@ model TransactionCategory {
   updatedAt    DateTime      @updatedAt @map("updated_at")
   transactions Transaction[]
 
-  @@map("transaction_categories")
+  @@map("transaction_category")
 }
 
 model TransactionType {
@@ -45,7 +45,7 @@ model TransactionType {
   updatedAt    DateTime      @updatedAt @map("updated_at")
   transactions Transaction[]
 
-  @@map("transaction_types")
+  @@map("transaction_type")
 }
 
 model Transaction {
@@ -66,5 +66,5 @@ model Transaction {
   type            TransactionType     @relation(fields: [typeId], references: [id])
   user            TransactionUser     @relation(fields: [userId], references: [id])
 
-  @@map("transactions")
+  @@map("transaction")
 }
