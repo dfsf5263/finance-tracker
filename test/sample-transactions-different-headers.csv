@@ -1,4 +1,4 @@
-Bank,Customer,Date,Details,Amt,Cat,Memo
+Account,Customer,Date,Details,Amt,Cat,Memo
 Chase Bank,Chris,01/15/2024,Grocery Store Purchase,125.50,Food & Dining,Weekly shopping
 Wells Fargo,Jane,02/20/2024,Gas Station,45.75,Transportation,Fuel for car
 Chase Bank,Bob,03/10/2024,Restaurant Bill,85.25,Food & Dining,Dinner out

@@ -1,27 +1,46 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-interface Category {
+interface TransactionCategory {
   id?: string
   name: string
 }
 
-interface CategoryFormProps {
-  category?: Category
+interface TransactionCategoryFormProps {
+  category?: TransactionCategory
   open: boolean
   onClose: () => void
-  onSubmit: (category: Omit<Category, 'id'>) => void
+  onSubmit: (category: Omit<TransactionCategory, 'id'>) => void
 }
 
-export function CategoryForm({ category, open, onClose, onSubmit }: CategoryFormProps) {
-  const [formData, setFormData] = useState<Omit<Category, 'id'>>({
+export function TransactionCategoryForm({
+  category,
+  open,
+  onClose,
+  onSubmit,
+}: TransactionCategoryFormProps) {
+  const [formData, setFormData] = useState<Omit<TransactionCategory, 'id'>>({
     name: category?.name || '',
   })
+
+  // Update form data when category prop changes
+  useEffect(() => {
+    if (category) {
+      setFormData({
+        name: category.name || '',
+      })
+    } else {
+      // Reset form for new category
+      setFormData({
+        name: '',
+      })
+    }
+  }, [category])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

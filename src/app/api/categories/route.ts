@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 
 export async function GET() {
   try {
-    const categories = await db.category.findMany({
+    const categories = await db.transactionCategory.findMany({
       orderBy: { name: 'asc' },
     })
     return NextResponse.json(categories)
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
-    const category = await db.category.create({
+    const category = await db.transactionCategory.create({
       data: { name },
     })
 

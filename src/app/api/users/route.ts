@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 
 export async function GET() {
   try {
-    const users = await db.user.findMany({
+    const users = await db.transactionUser.findMany({
       orderBy: { name: 'asc' },
     })
     return NextResponse.json(users)
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
-    const user = await db.user.create({
+    const user = await db.transactionUser.create({
       data: { name },
     })
 

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const category = searchParams.get('category')
     const type = searchParams.get('type')
-    const source = searchParams.get('source')
+    const account = searchParams.get('account')
     const user = searchParams.get('user')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const where: Prisma.TransactionWhereInput = {}
     if (category) where.category = { name: category }
     if (type) where.type = { name: type }
-    if (source) where.source = { name: source }
+    if (account) where.account = { name: account }
     if (user) where.user = { name: user }
     if (startDate || endDate) {
       where.transactionDate = {}
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { transactionDate: 'desc' },
         include: {
-          source: true,
+          account: true,
           user: true,
           category: true,
           type: true,
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const {
-      sourceId,
+      accountId,
       userId,
       transactionDate,
       postDate,
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     const transaction = await db.transaction.create({
       data: {
-        sourceId,
+        accountId,
         userId,
         transactionDate: new Date(transactionDate),
         postDate: new Date(postDate),
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
         memo,
       },
       include: {
-        source: true,
+        account: true,
         user: true,
         category: true,
         type: true,

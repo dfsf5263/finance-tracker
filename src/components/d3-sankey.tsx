@@ -262,7 +262,7 @@ export function D3Sankey({ data, width, height, colors }: D3SankeyProps) {
             marginTop: '-10px',
             pointerEvents: 'none',
           }}
-          className="bg-card p-3 border border-gray-200 rounded-lg shadow-lg"
+          className="bg-card p-3 border border-gray-200 rounded-xl shadow-lg"
         >
           <p className="text-sm font-medium">{tooltip.content}</p>
         </div>

@@ -31,11 +31,11 @@ export async function GET(request: NextRequest) {
       where.typeId = typeId
     }
 
-    // Fetch all transactions with source, user, category, and type information
+    // Fetch all transactions with account, user, category, and type information
     const transactions = await db.transaction.findMany({
       where,
       include: {
-        source: true,
+        account: true,
         user: true,
         category: true,
         type: true,
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     // Collect income sources from income transactions
     for (const transaction of incomeTransactions) {
-      incomeSources.add(transaction.source?.name || 'Unknown Source')
+      incomeSources.add(transaction.account?.name || 'Unknown Account')
       users.add(transaction.user?.name || 'Unknown User')
     }
 
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
 
     // Process income transactions: income source -> user
     for (const transaction of incomeTransactions) {
-      const sourceName = transaction.source?.name || 'Unknown Source'
+      const sourceName = transaction.account?.name || 'Unknown Account'
       const userName = transaction.user?.name || 'Unknown User'
 
       const sourceIndex = nodeMap.get(`income:${sourceName}`)!

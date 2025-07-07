@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const category = await db.category.findUnique({
+    const category = await db.transactionCategory.findUnique({
       where: { id },
     })
 
@@ -28,7 +28,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
-    const category = await db.category.update({
+    const category = await db.transactionCategory.update({
       where: { id },
       data: { name },
     })
@@ -46,7 +46,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    await db.category.delete({
+    await db.transactionCategory.delete({
       where: { id },
     })
 

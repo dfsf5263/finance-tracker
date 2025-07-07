@@ -4,22 +4,16 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { SourceForm } from './source-form'
-import { UserForm } from './user-form'
-import { CategoryForm } from './category-form'
+import { TransactionUserForm } from './user-form'
+import { TransactionCategoryForm } from './category-form'
 import { TypeForm } from './type-form'
 
-interface Source {
+interface TransactionUser {
   id: string
   name: string
 }
 
-interface User {
-  id: string
-  name: string
-}
-
-interface Category {
+interface TransactionCategory {
   id: string
   name: string
 }
@@ -31,19 +25,16 @@ interface TransactionType {
 }
 
 export function ManagementInterface() {
-  const [sources, setSources] = useState<Source[]>([])
-  const [users, setUsers] = useState<User[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const [users, setUsers] = useState<TransactionUser[]>([])
+  const [categories, setCategories] = useState<TransactionCategory[]>([])
   const [types, setTypes] = useState<TransactionType[]>([])
 
-  const [sourceFormOpen, setSourceFormOpen] = useState(false)
   const [userFormOpen, setUserFormOpen] = useState(false)
   const [categoryFormOpen, setCategoryFormOpen] = useState(false)
   const [typeFormOpen, setTypeFormOpen] = useState(false)
 
-  const [editingSource, setEditingSource] = useState<Source | undefined>()
-  const [editingUser, setEditingUser] = useState<User | undefined>()
-  const [editingCategory, setEditingCategory] = useState<Category | undefined>()
+  const [editingUser, setEditingUser] = useState<TransactionUser | undefined>()
+  const [editingCategory, setEditingCategory] = useState<TransactionCategory | undefined>()
   const [editingType, setEditingType] = useState<TransactionType | undefined>()
 
   const [notification, setNotification] = useState<{
@@ -52,23 +43,10 @@ export function ManagementInterface() {
   } | null>(null)
 
   useEffect(() => {
-    fetchSources()
     fetchUsers()
     fetchCategories()
     fetchTypes()
   }, [])
-
-  const fetchSources = async () => {
-    try {
-      const response = await fetch('/api/sources')
-      if (response.ok) {
-        const data = await response.json()
-        setSources(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch sources:', error)
-    }
-  }
 
   const fetchUsers = async () => {
     try {
@@ -106,36 +84,7 @@ export function ManagementInterface() {
     }
   }
 
-  const handleCreateSource = async (sourceData: Omit<Source, 'id'>) => {
-    try {
-      const isEditing = !!editingSource
-      const url = isEditing ? `/api/sources/${editingSource.id}` : '/api/sources'
-      const method = isEditing ? 'PUT' : 'POST'
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sourceData),
-      })
-      if (response.ok) {
-        setSourceFormOpen(false)
-        setEditingSource(undefined)
-        fetchSources()
-        setNotification({
-          message: `Source ${isEditing ? 'updated' : 'created'} successfully`,
-          type: 'success',
-        })
-      }
-    } catch (error) {
-      console.error(`Failed to ${editingSource ? 'update' : 'create'} source:`, error)
-      setNotification({
-        message: `Failed to ${editingSource ? 'update' : 'create'} source`,
-        type: 'error',
-      })
-    }
-  }
-
-  const handleCreateUser = async (userData: Omit<User, 'id'>) => {
+  const handleCreateUser = async (userData: Omit<TransactionUser, 'id'>) => {
     try {
       const isEditing = !!editingUser
       const url = isEditing ? `/api/users/${editingUser.id}` : '/api/users'
@@ -164,7 +113,7 @@ export function ManagementInterface() {
     }
   }
 
-  const handleCreateCategory = async (categoryData: Omit<Category, 'id'>) => {
+  const handleCreateCategory = async (categoryData: Omit<TransactionCategory, 'id'>) => {
     try {
       const isEditing = !!editingCategory
       const url = isEditing ? `/api/categories/${editingCategory.id}` : '/api/categories'
@@ -222,17 +171,12 @@ export function ManagementInterface() {
     }
   }
 
-  const handleEditSource = (source: Source) => {
-    setEditingSource(source)
-    setSourceFormOpen(true)
-  }
-
-  const handleEditUser = (user: User) => {
+  const handleEditUser = (user: TransactionUser) => {
     setEditingUser(user)
     setUserFormOpen(true)
   }
 
-  const handleEditCategory = (category: Category) => {
+  const handleEditCategory = (category: TransactionCategory) => {
     setEditingCategory(category)
     setCategoryFormOpen(true)
   }
@@ -240,25 +184,6 @@ export function ManagementInterface() {
   const handleEditType = (type: TransactionType) => {
     setEditingType(type)
     setTypeFormOpen(true)
-  }
-
-  const handleDeleteSource = async (id: string) => {
-    try {
-      const response = await fetch(`/api/sources/${id}`, { method: 'DELETE' })
-      if (response.ok) {
-        fetchSources()
-        setNotification({ message: 'Source deleted successfully', type: 'success' })
-      } else {
-        const errorData = await response.json()
-        setNotification({
-          message: errorData.error || 'Failed to delete source',
-          type: 'error',
-        })
-      }
-    } catch (error) {
-      console.error('Failed to delete source:', error)
-      setNotification({ message: 'Failed to delete source', type: 'error' })
-    }
   }
 
   const handleDeleteUser = async (id: string) => {
@@ -338,46 +263,13 @@ export function ManagementInterface() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex justify-between items-center">
-              Sources
-              <Button onClick={() => setSourceFormOpen(true)}>Add Source</Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {sources.map((source) => (
-                <div
-                  key={source.id}
-                  className="flex justify-between items-center p-2 border rounded"
-                >
-                  <span>{source.name}</span>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEditSource(source)}>
-                      Edit
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteSource(source.id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
+          <CardHeader className="p-6">
             <CardTitle className="flex justify-between items-center">
               Users
               <Button onClick={() => setUserFormOpen(true)}>Add User</Button>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="space-y-2">
               {users.map((user) => (
                 <div key={user.id} className="flex justify-between items-center p-2 border rounded">
@@ -401,13 +293,13 @@ export function ManagementInterface() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="p-6">
             <CardTitle className="flex justify-between items-center">
               Categories
               <Button onClick={() => setCategoryFormOpen(true)}>Add Category</Button>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="space-y-2">
               {categories.map((category) => (
                 <div
@@ -438,13 +330,13 @@ export function ManagementInterface() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="p-6">
             <CardTitle className="flex justify-between items-center">
               Transaction Types
               <Button onClick={() => setTypeFormOpen(true)}>Add Type</Button>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="space-y-2">
               {types.map((type) => (
                 <div key={type.id} className="flex justify-between items-center p-2 border rounded">
@@ -473,17 +365,7 @@ export function ManagementInterface() {
         </Card>
       </div>
 
-      <SourceForm
-        source={editingSource}
-        open={sourceFormOpen}
-        onClose={() => {
-          setSourceFormOpen(false)
-          setEditingSource(undefined)
-        }}
-        onSubmit={handleCreateSource}
-      />
-
-      <UserForm
+      <TransactionUserForm
         user={editingUser}
         open={userFormOpen}
         onClose={() => {
@@ -493,7 +375,7 @@ export function ManagementInterface() {
         onSubmit={handleCreateUser}
       />
 
-      <CategoryForm
+      <TransactionCategoryForm
         category={editingCategory}
         open={categoryFormOpen}
         onClose={() => {

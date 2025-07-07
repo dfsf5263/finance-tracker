@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 
 interface CSVTransaction {
-  source: string
+  account: string
   user: string
   transactionDate: string
   postDate: string
@@ -60,8 +60,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Collect all unique names from the CSV
-    const sourceNames = [
-      ...new Set(transactions.map((t: CSVTransaction) => t.source).filter(Boolean)),
+    const accountNames = [
+      ...new Set(transactions.map((t: CSVTransaction) => t.account).filter(Boolean)),
     ]
     const userNames = [...new Set(transactions.map((t: CSVTransaction) => t.user).filter(Boolean))]
     const categoryNames = [
@@ -70,15 +70,15 @@ export async function POST(request: NextRequest) {
     const typeNames = [...new Set(transactions.map((t: CSVTransaction) => t.type).filter(Boolean))]
 
     // Fetch all entities from database
-    const [sources, users, categories, types] = await Promise.all([
-      db.source.findMany({ where: { name: { in: sourceNames } } }),
-      db.user.findMany({ where: { name: { in: userNames } } }),
-      db.category.findMany({ where: { name: { in: categoryNames } } }),
+    const [accounts, users, categories, types] = await Promise.all([
+      db.transactionAccount.findMany({ where: { name: { in: accountNames } } }),
+      db.transactionUser.findMany({ where: { name: { in: userNames } } }),
+      db.transactionCategory.findMany({ where: { name: { in: categoryNames } } }),
       db.transactionType.findMany({ where: { name: { in: typeNames } } }),
     ])
 
     // Create lookup maps
-    const sourceMap = new Map(sources.map((s) => [s.name, s.id]))
+    const accountMap = new Map(accounts.map((s) => [s.name, s.id]))
     const userMap = new Map(users.map((u) => [u.name, u.id]))
     const categoryMap = new Map(categories.map((c) => [c.name, c.id]))
     const typeMap = new Map(types.map((t) => [t.name, t.id]))
@@ -92,12 +92,12 @@ export async function POST(request: NextRequest) {
       const rowNumber = i + 2 // Adding 2 because row 1 is header and arrays are 0-indexed
 
       // Check if required entities exist
-      if (!sourceMap.has(transaction.source)) {
+      if (!accountMap.has(transaction.account)) {
         validationErrors.push({
           row: rowNumber,
-          field: 'source',
-          value: transaction.source,
-          message: `Source "${transaction.source}" does not exist in the database`,
+          field: 'account',
+          value: transaction.account,
+          message: `Source "${transaction.account}" does not exist in the database`,
         })
       }
       if (!userMap.has(transaction.user)) {
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
       const hasRowErrors = validationErrors.some((e) => e.row === rowNumber)
       if (!hasRowErrors && transactionDate) {
         validTransactions.push({
-          sourceId: sourceMap.get(transaction.source)!,
+          accountId: accountMap.get(transaction.account)!,
           userId: userMap.get(transaction.user)!,
           transactionDate: transactionDate,
           postDate: postDate || transactionDate,

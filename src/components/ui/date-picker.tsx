@@ -3,11 +3,11 @@
 import * as React from 'react'
 import { format } from 'date-fns'
 import { Calendar as CalendarIcon } from 'lucide-react'
-import DatePicker from 'react-datepicker'
-import 'react-datepicker/dist/react-datepicker.css'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { formatDateForInput, parseInputDate } from '@/lib/utils'
 
 interface CustomDatePickerProps {
@@ -15,6 +15,7 @@ interface CustomDatePickerProps {
   onChange: (date: string) => void
   placeholder?: string
   className?: string
+  disabled?: boolean
 }
 
 export function CustomDatePicker({
@@ -22,46 +23,41 @@ export function CustomDatePicker({
   onChange,
   placeholder = 'Pick a date',
   className,
+  disabled = false,
 }: CustomDatePickerProps) {
-  // Convert string date to Date object for the date picker
-  const selectedDate = value ? parseInputDate(value) : null
+  const [open, setOpen] = React.useState(false)
 
-  const handleChange = (date: Date | null) => {
+  // Convert string date to Date object for the calendar
+  const selectedDate = value ? parseInputDate(value) : undefined
+
+  const handleSelect = (date: Date | undefined) => {
     if (date) {
       // Format as YYYY-MM-DD for HTML date input compatibility
       const formatted = formatDateForInput(date)
       onChange(formatted)
+      setOpen(false)
     }
   }
 
-  const CustomInput = React.forwardRef<HTMLButtonElement, { value?: string; onClick?: () => void }>(
-    ({ value, onClick }, ref) => (
-      <Button
-        ref={ref}
-        onClick={onClick}
-        variant="outline"
-        className={cn(
-          'w-full justify-start text-left font-normal',
-          !value && 'text-muted-foreground',
-          className
-        )}
-      >
-        <CalendarIcon className="mr-2 h-4 w-4" />
-        {value ? format(parseInputDate(value), 'PPP') : <span>{placeholder}</span>}
-      </Button>
-    )
-  )
-  CustomInput.displayName = 'CustomInput'
-
   return (
-    <DatePicker
-      selected={selectedDate}
-      onChange={handleChange}
-      customInput={<CustomInput value={value} />}
-      dateFormat="yyyy-MM-dd"
-      className="w-full"
-      popperClassName="z-50"
-      popperPlacement="bottom-start"
-    />
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            'w-full justify-start text-left font-normal',
+            !value && 'text-muted-foreground',
+            className
+          )}
+          disabled={disabled}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {value ? format(parseInputDate(value), 'PPP') : <span>{placeholder}</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar mode="single" selected={selectedDate} onSelect={handleSelect} initialFocus />
+      </PopoverContent>
+    </Popover>
   )
 }

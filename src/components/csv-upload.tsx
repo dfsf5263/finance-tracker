@@ -23,7 +23,7 @@ interface CSVUploadProps {
 }
 
 interface CSVTransaction {
-  source: string
+  account: string
   user: string
   transactionDate: string
   postDate: string
@@ -55,7 +55,7 @@ function normalizeHeader(header: string): string {
 
 // Map normalized headers to expected field names
 const headerMapping: Record<string, keyof CSVTransaction> = {
-  source: 'source',
+  account: 'account',
   user: 'user',
   transactiondate: 'transactionDate',
   postdate: 'postDate',
@@ -67,7 +67,7 @@ const headerMapping: Record<string, keyof CSVTransaction> = {
 }
 
 // Required headers (normalized)
-const requiredHeaders = ['source', 'user', 'transactiondate', 'description', 'amount']
+const requiredHeaders = ['account', 'user', 'transactiondate', 'description', 'amount']
 
 // Convert raw CSV row to CSVTransaction with normalized headers
 function normalizeRow(row: Record<string, unknown>): CSVTransaction | null {
@@ -108,7 +108,7 @@ export function CSVUpload({ open, onClose, onUploadComplete }: CSVUploadProps) {
   // Auto-mapping logic with common header variations
   const autoMapHeaders = (csvHeaders: string[]): ColumnMapping[] => {
     const headerVariations: Record<keyof CSVTransaction, string[]> = {
-      source: ['source', 'bank', 'institution', 'financial institution', 'account'],
+      account: ['account', 'bank', 'institution', 'financial institution', 'account'],
       user: ['user', 'account holder', 'name', 'customer', 'client'],
       transactionDate: ['transaction date', 'trans date', 'date', 'transaction_date', 'transdate'],
       postDate: ['post date', 'posting date', 'posted date', 'post_date', 'postdate'],
@@ -289,7 +289,7 @@ export function CSVUpload({ open, onClose, onUploadComplete }: CSVUploadProps) {
 
           // Format transactions for API
           const formattedTransactions = normalizedTransactions.map((t) => ({
-            source: t.source.trim(),
+            account: t.account.trim(),
             user: t.user.trim(),
             transactionDate: t.transactionDate,
             postDate: t.postDate || t.transactionDate,
@@ -343,7 +343,7 @@ export function CSVUpload({ open, onClose, onUploadComplete }: CSVUploadProps) {
 
   const downloadTemplate = () => {
     // Create CSV template with headers and sample data
-    const templateContent = `Source,User,Transaction Date,Post Date,Description,Category,Type,Amount,Memo
+    const templateContent = `Account,User,Transaction Date,Post Date,Description,Category,Type,Amount,Memo
 Chase Bank,Chris,01/15/2024,01/17/2024,Grocery Store Purchase,Food & Dining,Debit,125.50,Weekly shopping
 Wells Fargo,Jane,02/20/2024,02/22/2024,Gas Station,Transportation,Debit,45.75,Fuel for car
 Chase Bank,Bob,03/10/2024,03/12/2024,Restaurant Bill,Food & Dining,Debit,85.25,Dinner out`
@@ -420,12 +420,12 @@ Chase Bank,Bob,03/10/2024,03/12/2024,Restaurant Bill,Food & Dining,Debit,85.25,D
     mappedData.forEach((transaction, index) => {
       const rowNumber = index + 2
 
-      if (!transaction.source?.trim()) {
+      if (!transaction.account?.trim()) {
         clientValidationErrors.push({
           row: rowNumber,
-          field: 'source',
-          value: transaction.source || '',
-          message: 'Source is required',
+          field: 'account',
+          value: transaction.account || '',
+          message: 'Account is required',
         })
       }
 
@@ -520,7 +520,7 @@ Chase Bank,Bob,03/10/2024,03/12/2024,Restaurant Bill,Food & Dining,Debit,85.25,D
           </div>
 
           <div
-            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+            className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
               isDragOver
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
                 : 'border-border hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-950/10'
@@ -550,7 +550,7 @@ Chase Bank,Bob,03/10/2024,03/12/2024,Restaurant Bill,Food & Dining,Debit,85.25,D
 
           {file && (
             <div
-              className={`flex items-center gap-2 p-3 rounded-lg border ${
+              className={`flex items-center gap-2 p-3 rounded-xl border ${
                 validationErrors.length > 0
                   ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800'
                   : 'bg-muted border-border'
@@ -582,7 +582,7 @@ Chase Bank,Bob,03/10/2024,03/12/2024,Restaurant Bill,Food & Dining,Debit,85.25,D
                 </div>
               </div>
 
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead className="bg-muted">
                     <tr>
@@ -614,7 +614,7 @@ Chase Bank,Bob,03/10/2024,03/12/2024,Restaurant Bill,Food & Dining,Debit,85.25,D
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="skip">Skip Column</SelectItem>
-                              <SelectItem value="source">Source</SelectItem>
+                              <SelectItem value="account">Account</SelectItem>
                               <SelectItem value="user">User</SelectItem>
                               <SelectItem value="transactionDate">Transaction Date</SelectItem>
                               <SelectItem value="postDate">Post Date</SelectItem>
@@ -654,11 +654,11 @@ Chase Bank,Bob,03/10/2024,03/12/2024,Restaurant Bill,Food & Dining,Debit,85.25,D
           {preview.length > 0 && !showMapping && (
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-foreground">Preview (first 3 rows):</h3>
-              <div className="border border rounded-lg overflow-hidden bg-card">
+              <div className="border border rounded-xl overflow-hidden bg-card">
                 <table className="w-full text-xs">
                   <thead className="bg-muted">
                     <tr>
-                      <th className="p-2 text-left text-foreground">Source</th>
+                      <th className="p-2 text-left text-foreground">Account</th>
                       <th className="p-2 text-left text-foreground">User</th>
                       <th className="p-2 text-left text-foreground">Date</th>
                       <th className="p-2 text-left text-foreground">Description</th>
@@ -668,7 +668,7 @@ Chase Bank,Bob,03/10/2024,03/12/2024,Restaurant Bill,Food & Dining,Debit,85.25,D
                   <tbody>
                     {preview.map((transaction, index) => (
                       <tr key={index} className="border-t border-border">
-                        <td className="p-2 text-foreground">{transaction.source}</td>
+                        <td className="p-2 text-foreground">{transaction.account}</td>
                         <td className="p-2 text-foreground">{transaction.user}</td>
                         <td className="p-2 text-foreground">{transaction.transactionDate}</td>
                         <td className="p-2 text-foreground">{transaction.description}</td>
@@ -682,7 +682,7 @@ Chase Bank,Bob,03/10/2024,03/12/2024,Restaurant Bill,Food & Dining,Debit,85.25,D
           )}
 
           {validationErrors.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
               <div className="flex items-center gap-2 text-red-700">
                 <AlertCircle className="h-5 w-5" />
                 <h4 className="font-medium">Validation Errors</h4>
