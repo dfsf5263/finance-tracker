@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 interface TransactionUser {
   id?: string
   name: string
+  annualBudget?: string | number | null
 }
 
 interface TransactionUserFormProps {
@@ -21,6 +22,7 @@ interface TransactionUserFormProps {
 export function TransactionUserForm({ user, open, onClose, onSubmit }: TransactionUserFormProps) {
   const [formData, setFormData] = useState<Omit<TransactionUser, 'id'>>({
     name: user?.name || '',
+    annualBudget: user?.annualBudget || '',
   })
 
   // Update form data when user prop changes
@@ -28,21 +30,27 @@ export function TransactionUserForm({ user, open, onClose, onSubmit }: Transacti
     if (user) {
       setFormData({
         name: user.name || '',
+        annualBudget: user.annualBudget || '',
       })
     } else {
       // Reset form for new user
       setFormData({
         name: '',
+        annualBudget: '',
       })
     }
   }, [user])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(formData)
+    const submitData = {
+      name: formData.name,
+      ...(formData.annualBudget && { annualBudget: formData.annualBudget }),
+    }
+    onSubmit(submitData)
   }
 
-  const handleInputChange = (field: keyof typeof formData, value: string) => {
+  const handleInputChange = (field: keyof typeof formData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -61,6 +69,21 @@ export function TransactionUserForm({ user, open, onClose, onSubmit }: Transacti
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
                 required
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="annualBudget">Annual Budget (optional)</Label>
+            <div className="mt-2">
+              <Input
+                id="annualBudget"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={formData.annualBudget || ''}
+                onChange={(e) => handleInputChange('annualBudget', e.target.value)}
               />
             </div>
           </div>

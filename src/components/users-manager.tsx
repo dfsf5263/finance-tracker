@@ -9,6 +9,7 @@ import { useCRUD } from '@/hooks/useCRUD'
 interface TransactionUser {
   id: string
   name: string
+  annualBudget?: string | number | null
 }
 
 export function UsersManager() {
@@ -39,7 +40,18 @@ export function UsersManager() {
           <div className="space-y-2">
             {users.map((user) => (
               <div key={user.id} className="flex justify-between items-center p-2 border rounded">
-                <span>{user.name}</span>
+                <div className="flex flex-col">
+                  <span className="font-medium">{user.name}</span>
+                  {user.annualBudget && (
+                    <span className="text-sm text-muted-foreground">
+                      Budget:{' '}
+                      {new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD',
+                      }).format(Number(user.annualBudget))}
+                    </span>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
                     <Edit className="h-4 w-4" />

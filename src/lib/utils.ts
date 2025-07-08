@@ -68,9 +68,10 @@ export function parseMonthDayYearDate(dateString: string): Date {
 }
 
 export function getDateRange(
-  period: 'all' | 'year' | 'month',
+  period: 'all' | 'year' | 'month' | 'quarter',
   year: number,
-  month?: number
+  month?: number,
+  quarter?: number
 ): { startDate: string; endDate: string } {
   if (period === 'all') {
     return { startDate: '', endDate: '' }
@@ -94,6 +95,16 @@ export function getDateRange(
     }
   }
 
+  if (period === 'quarter' && quarter) {
+    const quarterStartMonth = (quarter - 1) * 3
+    const quarterStart = startOfMonth(new Date(year, quarterStartMonth, 1))
+    const quarterEnd = endOfMonth(new Date(year, quarterStartMonth + 2, 1))
+    return {
+      startDate: formatDateForInput(quarterStart),
+      endDate: formatDateForInput(quarterEnd),
+    }
+  }
+
   return { startDate: '', endDate: '' }
 }
 
@@ -108,4 +119,9 @@ export function getCurrentYear(): number {
 
 export function getCurrentMonth(): number {
   return getMonth(new Date()) + 1 // date-fns getMonth returns 0-indexed, we want 1-indexed
+}
+
+export function getCurrentQuarter(): number {
+  const month = getMonth(new Date()) + 1 // 1-indexed month
+  return Math.ceil(month / 3)
 }

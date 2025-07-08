@@ -15,14 +15,21 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name } = await request.json()
+    const data = await request.json()
+    const { name, annualBudget } = data
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
+    const userData: { name: string; annualBudget?: string | number } = { name }
+
+    if (annualBudget !== undefined && annualBudget !== null && annualBudget !== '') {
+      userData.annualBudget = annualBudget
+    }
+
     const user = await db.transactionUser.create({
-      data: { name },
+      data: userData,
     })
 
     return NextResponse.json(user, { status: 201 })

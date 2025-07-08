@@ -22,15 +22,25 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const { name } = await request.json()
+    const data = await request.json()
+    const { name, annualBudget } = data
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
+    const updateData: { name: string; annualBudget?: string | number | null } = { name }
+
+    // Handle annualBudget: allow null to clear, otherwise set value
+    if (annualBudget === null || annualBudget === '') {
+      updateData.annualBudget = null
+    } else if (annualBudget !== undefined) {
+      updateData.annualBudget = annualBudget
+    }
+
     const user = await db.transactionUser.update({
       where: { id },
-      data: { name },
+      data: updateData,
     })
 
     return NextResponse.json(user)

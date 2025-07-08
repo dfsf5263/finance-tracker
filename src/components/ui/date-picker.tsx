@@ -16,6 +16,7 @@ interface CustomDatePickerProps {
   placeholder?: string
   className?: string
   disabled?: boolean
+  maxDate?: Date
 }
 
 export function CustomDatePicker({
@@ -24,6 +25,7 @@ export function CustomDatePicker({
   placeholder = 'Pick a date',
   className,
   disabled = false,
+  maxDate = new Date(),
 }: CustomDatePickerProps) {
   const [open, setOpen] = React.useState(false)
 
@@ -56,7 +58,13 @@ export function CustomDatePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar mode="single" selected={selectedDate} onSelect={handleSelect} initialFocus />
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={handleSelect}
+          initialFocus
+          disabled={(date) => date > maxDate}
+        />
       </PopoverContent>
     </Popover>
   )

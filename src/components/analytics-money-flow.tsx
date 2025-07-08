@@ -12,7 +12,13 @@ import {
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Filter } from 'lucide-react'
-import { getDateRange, getMonthName, getCurrentYear, getCurrentMonth } from '@/lib/utils'
+import {
+  getDateRange,
+  getMonthName,
+  getCurrentYear,
+  getCurrentMonth,
+  getCurrentQuarter,
+} from '@/lib/utils'
 
 interface SankeyData {
   nodes: Array<{ name: string; type: 'income' | 'user' | 'expense' }>
@@ -26,9 +32,10 @@ interface DateRanges {
 }
 
 interface TimePeriod {
-  type: 'all' | 'year' | 'month'
+  type: 'all' | 'year' | 'month' | 'quarter'
   year: number
   month: number
+  quarter: number
 }
 
 const COLORS = [
@@ -51,6 +58,7 @@ export function AnalyticsMoneyFlow() {
     type: 'month',
     year: getCurrentYear(),
     month: getCurrentMonth(),
+    quarter: getCurrentQuarter(),
   })
   const [dateRanges, setDateRanges] = useState<DateRanges>({
     years: [],
@@ -62,7 +70,7 @@ export function AnalyticsMoneyFlow() {
 
   // Helper function to convert timePeriod to start/end dates
   const getDateRangeFromPeriod = (period: TimePeriod): { startDate: string; endDate: string } => {
-    return getDateRange(period.type, period.year, period.month)
+    return getDateRange(period.type, period.year, period.month, period.quarter)
   }
 
   const fetchSankeyData = async () => {
@@ -168,7 +176,10 @@ export function AnalyticsMoneyFlow() {
               <Select
                 value={timePeriod.type}
                 onValueChange={(value) =>
-                  setTimePeriod((prev) => ({ ...prev, type: value as 'all' | 'year' | 'month' }))
+                  setTimePeriod((prev) => ({
+                    ...prev,
+                    type: value as 'all' | 'year' | 'month' | 'quarter',
+                  }))
                 }
               >
                 <SelectTrigger className="w-[130px]">
@@ -178,11 +189,14 @@ export function AnalyticsMoneyFlow() {
                   <SelectItem value="all">All Time</SelectItem>
                   <SelectItem value="year">By Year</SelectItem>
                   <SelectItem value="month">By Month</SelectItem>
+                  <SelectItem value="quarter">By Quarter</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {(timePeriod.type === 'year' || timePeriod.type === 'month') && (
+            {(timePeriod.type === 'year' ||
+              timePeriod.type === 'month' ||
+              timePeriod.type === 'quarter') && (
               <div>
                 <Label htmlFor="year" className="text-sm font-medium">
                   Year:
@@ -227,6 +241,30 @@ export function AnalyticsMoneyFlow() {
                         {getMonthName(month)}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {timePeriod.type === 'quarter' && (
+              <div>
+                <Label htmlFor="quarter" className="text-sm font-medium">
+                  Quarter:
+                </Label>
+                <Select
+                  value={timePeriod.quarter.toString()}
+                  onValueChange={(value) =>
+                    setTimePeriod((prev) => ({ ...prev, quarter: parseInt(value) }))
+                  }
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Q1</SelectItem>
+                    <SelectItem value="2">Q2</SelectItem>
+                    <SelectItem value="3">Q3</SelectItem>
+                    <SelectItem value="4">Q4</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
