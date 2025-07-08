@@ -1,15 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-
-export interface NotificationState {
-  message: string
-  type: 'error' | 'success' | 'warning'
-}
+import { toast } from 'sonner'
 
 export function useCRUD<T extends { id: string }>(apiEndpoint: string, entityName: string) {
   const [items, setItems] = useState<T[]>([])
   const [formOpen, setFormOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<T | undefined>()
-  const [notification, setNotification] = useState<NotificationState | null>(null)
 
   const fetchItems = useCallback(async () => {
     try {
@@ -42,17 +37,11 @@ export function useCRUD<T extends { id: string }>(apiEndpoint: string, entityNam
         setFormOpen(false)
         setEditingItem(undefined)
         fetchItems()
-        setNotification({
-          message: `${entityName} ${isEditing ? 'updated' : 'created'} successfully`,
-          type: 'success',
-        })
+        toast.success(`${entityName} ${isEditing ? 'updated' : 'created'} successfully`)
       }
     } catch (error) {
       console.error(`Failed to ${editingItem ? 'update' : 'create'} ${entityName}:`, error)
-      setNotification({
-        message: `Failed to ${editingItem ? 'update' : 'create'} ${entityName}`,
-        type: 'error',
-      })
+      toast.error(`Failed to ${editingItem ? 'update' : 'create'} ${entityName}`)
     }
   }
 
@@ -66,17 +55,14 @@ export function useCRUD<T extends { id: string }>(apiEndpoint: string, entityNam
       const response = await fetch(`/api/${apiEndpoint}/${id}`, { method: 'DELETE' })
       if (response.ok) {
         fetchItems()
-        setNotification({ message: `${entityName} deleted successfully`, type: 'success' })
+        toast.success(`${entityName} deleted successfully`)
       } else {
         const errorData = await response.json()
-        setNotification({
-          message: errorData.error || `Failed to delete ${entityName}`,
-          type: 'error',
-        })
+        toast.error(errorData.error || `Failed to delete ${entityName}`)
       }
     } catch (error) {
       console.error(`Failed to delete ${entityName}:`, error)
-      setNotification({ message: `Failed to delete ${entityName}`, type: 'error' })
+      toast.error(`Failed to delete ${entityName}`)
     }
   }
 
@@ -89,9 +75,7 @@ export function useCRUD<T extends { id: string }>(apiEndpoint: string, entityNam
     items,
     formOpen,
     editingItem,
-    notification,
     setFormOpen,
-    setNotification,
     handleCreate,
     handleEdit,
     handleDelete,

@@ -53,6 +53,11 @@ prisma/
 └── seed.ts                 # Database seeding script
 ```
 
+### Coding Guidelines
+
+**Key Design Principals**
+- **Always use the shadcn/ui Component**: If there is a shadcn/ui component available for the task, use it instead of basic html or react
+
 ### Database Schema Guidelines
 
 **Key Design Principles:**

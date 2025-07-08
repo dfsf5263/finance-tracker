@@ -2,7 +2,6 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { TypeForm } from './type-form'
 import { useCRUD } from '@/hooks/useCRUD'
 
@@ -17,9 +16,7 @@ export function TypesManager() {
     items: types,
     formOpen,
     editingItem: editingType,
-    notification,
     setFormOpen,
-    setNotification,
     handleCreate,
     handleEdit,
     handleDelete,
@@ -28,22 +25,6 @@ export function TypesManager() {
 
   return (
     <div className="space-y-6">
-      {notification && (
-        <Alert
-          variant={
-            notification.type === 'error'
-              ? 'destructive'
-              : notification.type === 'success'
-                ? 'success'
-                : 'warning'
-          }
-          dismissible
-          onDismiss={() => setNotification(null)}
-        >
-          <AlertDescription>{notification.message}</AlertDescription>
-        </Alert>
-      )}
-
       <Card>
         <CardHeader className="p-6">
           <CardTitle className="flex justify-between items-center">

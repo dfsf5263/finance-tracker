@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { TransactionUserForm } from './user-form'
 import { TransactionCategoryForm } from './category-form'
 import { TypeForm } from './type-form'
+import { toast } from 'sonner'
 
 interface TransactionUser {
   id: string
@@ -36,11 +36,6 @@ export function ManagementInterface() {
   const [editingUser, setEditingUser] = useState<TransactionUser | undefined>()
   const [editingCategory, setEditingCategory] = useState<TransactionCategory | undefined>()
   const [editingType, setEditingType] = useState<TransactionType | undefined>()
-
-  const [notification, setNotification] = useState<{
-    message: string
-    type: 'error' | 'success' | 'warning'
-  } | null>(null)
 
   useEffect(() => {
     fetchUsers()
@@ -99,17 +94,11 @@ export function ManagementInterface() {
         setUserFormOpen(false)
         setEditingUser(undefined)
         fetchUsers()
-        setNotification({
-          message: `User ${isEditing ? 'updated' : 'created'} successfully`,
-          type: 'success',
-        })
+        toast.success(`User ${isEditing ? 'updated' : 'created'} successfully`)
       }
     } catch (error) {
       console.error(`Failed to ${editingUser ? 'update' : 'create'} user:`, error)
-      setNotification({
-        message: `Failed to ${editingUser ? 'update' : 'create'} user`,
-        type: 'error',
-      })
+      toast.error(`Failed to ${editingUser ? 'update' : 'create'} user`)
     }
   }
 
@@ -128,17 +117,11 @@ export function ManagementInterface() {
         setCategoryFormOpen(false)
         setEditingCategory(undefined)
         fetchCategories()
-        setNotification({
-          message: `Category ${isEditing ? 'updated' : 'created'} successfully`,
-          type: 'success',
-        })
+        toast.success(`Category ${isEditing ? 'updated' : 'created'} successfully`)
       }
     } catch (error) {
       console.error(`Failed to ${editingCategory ? 'update' : 'create'} category:`, error)
-      setNotification({
-        message: `Failed to ${editingCategory ? 'update' : 'create'} category`,
-        type: 'error',
-      })
+      toast.error(`Failed to ${editingCategory ? 'update' : 'create'} category`)
     }
   }
 
@@ -157,17 +140,11 @@ export function ManagementInterface() {
         setTypeFormOpen(false)
         setEditingType(undefined)
         fetchTypes()
-        setNotification({
-          message: `Transaction type ${isEditing ? 'updated' : 'created'} successfully`,
-          type: 'success',
-        })
+        toast.success(`Transaction type ${isEditing ? 'updated' : 'created'} successfully`)
       }
     } catch (error) {
       console.error(`Failed to ${editingType ? 'update' : 'create'} type:`, error)
-      setNotification({
-        message: `Failed to ${editingType ? 'update' : 'create'} transaction type`,
-        type: 'error',
-      })
+      toast.error(`Failed to ${editingType ? 'update' : 'create'} transaction type`)
     }
   }
 
@@ -191,17 +168,14 @@ export function ManagementInterface() {
       const response = await fetch(`/api/users/${id}`, { method: 'DELETE' })
       if (response.ok) {
         fetchUsers()
-        setNotification({ message: 'User deleted successfully', type: 'success' })
+        toast.success('User deleted successfully')
       } else {
         const errorData = await response.json()
-        setNotification({
-          message: errorData.error || 'Failed to delete user',
-          type: 'error',
-        })
+        toast.error(errorData.error || 'Failed to delete user')
       }
     } catch (error) {
       console.error('Failed to delete user:', error)
-      setNotification({ message: 'Failed to delete user', type: 'error' })
+      toast.error('Failed to delete user')
     }
   }
 
@@ -210,17 +184,14 @@ export function ManagementInterface() {
       const response = await fetch(`/api/categories/${id}`, { method: 'DELETE' })
       if (response.ok) {
         fetchCategories()
-        setNotification({ message: 'Category deleted successfully', type: 'success' })
+        toast.success('Category deleted successfully')
       } else {
         const errorData = await response.json()
-        setNotification({
-          message: errorData.error || 'Failed to delete category',
-          type: 'error',
-        })
+        toast.error(errorData.error || 'Failed to delete category')
       }
     } catch (error) {
       console.error('Failed to delete category:', error)
-      setNotification({ message: 'Failed to delete category', type: 'error' })
+      toast.error('Failed to delete category')
     }
   }
 
@@ -229,38 +200,19 @@ export function ManagementInterface() {
       const response = await fetch(`/api/types/${id}`, { method: 'DELETE' })
       if (response.ok) {
         fetchTypes()
-        setNotification({ message: 'Transaction type deleted successfully', type: 'success' })
+        toast.success('Transaction type deleted successfully')
       } else {
         const errorData = await response.json()
-        setNotification({
-          message: errorData.error || 'Failed to delete transaction type',
-          type: 'error',
-        })
+        toast.error(errorData.error || 'Failed to delete transaction type')
       }
     } catch (error) {
       console.error('Failed to delete type:', error)
-      setNotification({ message: 'Failed to delete transaction type', type: 'error' })
+      toast.error('Failed to delete transaction type')
     }
   }
 
   return (
     <div className="space-y-6">
-      {notification && (
-        <Alert
-          variant={
-            notification.type === 'error'
-              ? 'destructive'
-              : notification.type === 'success'
-                ? 'success'
-                : 'warning'
-          }
-          dismissible
-          onDismiss={() => setNotification(null)}
-        >
-          <AlertDescription>{notification.message}</AlertDescription>
-        </Alert>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="p-6">

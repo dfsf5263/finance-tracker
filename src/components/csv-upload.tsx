@@ -14,7 +14,7 @@ import {
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
 import { Upload, FileText, AlertCircle, Download } from 'lucide-react'
 import Papa from 'papaparse'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 interface CSVUploadProps {
   open: boolean

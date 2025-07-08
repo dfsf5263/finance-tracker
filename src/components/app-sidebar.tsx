@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import Link from 'next/link'
 import Image from 'next/image'
 import { CreditCard, DollarSign, Home, PieChart, Settings, TrendingUp, Users } from 'lucide-react'
 
@@ -78,7 +79,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
-              <a href="/dashboard">
+              <Link href="/dashboard">
                 <Image
                   src="/favicon-32x32.png"
                   alt="Finance Tracker"
@@ -87,7 +88,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   className="!size-5"
                 />
                 <span className="text-base font-semibold">Finance Tracker</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
