@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 interface TransactionCategory {
   id?: string
   name: string
+  annualBudget?: string | number | null
 }
 
 interface TransactionCategoryFormProps {
@@ -26,6 +27,7 @@ export function TransactionCategoryForm({
 }: TransactionCategoryFormProps) {
   const [formData, setFormData] = useState<Omit<TransactionCategory, 'id'>>({
     name: category?.name || '',
+    annualBudget: category?.annualBudget || '',
   })
 
   // Update form data when category prop changes
@@ -33,21 +35,27 @@ export function TransactionCategoryForm({
     if (category) {
       setFormData({
         name: category.name || '',
+        annualBudget: category.annualBudget || '',
       })
     } else {
       // Reset form for new category
       setFormData({
         name: '',
+        annualBudget: '',
       })
     }
   }, [category])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(formData)
+    const submitData = {
+      name: formData.name,
+      ...(formData.annualBudget && { annualBudget: formData.annualBudget }),
+    }
+    onSubmit(submitData)
   }
 
-  const handleInputChange = (field: keyof typeof formData, value: string) => {
+  const handleInputChange = (field: keyof typeof formData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -60,19 +68,38 @@ export function TransactionCategoryForm({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              required
-            />
+            <div className="mt-2">
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="annualBudget">Annual Budget (optional)</Label>
+            <div className="mt-2">
+              <Input
+                id="annualBudget"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={formData.annualBudget || ''}
+                onChange={(e) => handleInputChange('annualBudget', e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">{category ? 'Update' : 'Create'} Category</Button>
+            <Button type="submit" variant="default">
+              {category ? 'Update' : 'Create'} Category
+            </Button>
           </div>
         </form>
       </DialogContent>

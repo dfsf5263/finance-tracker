@@ -30,6 +30,7 @@ model TransactionUser {
 model TransactionCategory {
   id           String        @id @default(uuid()) @db.Uuid
   name         String        @unique
+  annualBudget Decimal?      @map("annual_budget") @db.Decimal(12, 2)
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
   transactions Transaction[]
@@ -49,18 +50,18 @@ model TransactionType {
 }
 
 model Transaction {
-  id              String             @id @default(uuid()) @db.Uuid
-  accountId       String             @map("account_id") @db.Uuid
-  userId          String             @map("user_id") @db.Uuid
-  transactionDate DateTime           @map("transaction_date")
-  postDate        DateTime           @map("post_date")
+  id              String              @id @default(uuid()) @db.Uuid
+  accountId       String              @map("account_id") @db.Uuid
+  userId          String              @map("user_id") @db.Uuid
+  transactionDate DateTime            @map("transaction_date")
+  postDate        DateTime            @map("post_date")
   description     String
-  categoryId      String             @map("category_id") @db.Uuid
-  typeId          String             @map("type_id") @db.Uuid
-  amount          Decimal            @db.Decimal(10, 2)
+  categoryId      String              @map("category_id") @db.Uuid
+  typeId          String              @map("type_id") @db.Uuid
+  amount          Decimal             @db.Decimal(10, 2)
   memo            String?
-  createdAt       DateTime           @default(now()) @map("created_at")
-  updatedAt       DateTime           @updatedAt @map("updated_at")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
   account         TransactionAccount  @relation(fields: [accountId], references: [id])
   category        TransactionCategory @relation(fields: [categoryId], references: [id])
   type            TransactionType     @relation(fields: [typeId], references: [id])

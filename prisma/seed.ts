@@ -36,17 +36,17 @@ async function main() {
     prisma.transactionCategory.upsert({
       where: { name: 'Groceries' },
       update: {},
-      create: { name: 'Groceries' },
+      create: { name: 'Groceries', annualBudget: 6000 },
     }),
     prisma.transactionCategory.upsert({
       where: { name: 'Travel' },
       update: {},
-      create: { name: 'Travel' },
+      create: { name: 'Travel', annualBudget: 3000 },
     }),
     prisma.transactionCategory.upsert({
       where: { name: 'Health & Wellness' },
       update: {},
-      create: { name: 'Health & Wellness' },
+      create: { name: 'Health & Wellness', annualBudget: 2400 },
     }),
     prisma.transactionCategory.upsert({
       where: { name: 'Shopping' },
@@ -56,12 +56,12 @@ async function main() {
     prisma.transactionCategory.upsert({
       where: { name: 'Food & Drink' },
       update: {},
-      create: { name: 'Food & Drink' },
+      create: { name: 'Food & Drink', annualBudget: 4800 },
     }),
     prisma.transactionCategory.upsert({
       where: { name: 'Gas' },
       update: {},
-      create: { name: 'Gas' },
+      create: { name: 'Gas', annualBudget: 1800 },
     }),
     prisma.transactionCategory.upsert({
       where: { name: 'Personal' },
@@ -76,12 +76,12 @@ async function main() {
     prisma.transactionCategory.upsert({
       where: { name: 'Bills & Utilities' },
       update: {},
-      create: { name: 'Bills & Utilities' },
+      create: { name: 'Bills & Utilities', annualBudget: 24000 },
     }),
     prisma.transactionCategory.upsert({
       where: { name: 'Entertainment' },
       update: {},
-      create: { name: 'Entertainment' },
+      create: { name: 'Entertainment', annualBudget: 1200 },
     }),
     prisma.transactionCategory.upsert({
       where: { name: 'Automotive' },

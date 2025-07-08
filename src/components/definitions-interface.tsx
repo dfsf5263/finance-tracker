@@ -24,7 +24,7 @@ interface TransactionType {
   isOutflow?: boolean
 }
 
-export function ManagementInterface() {
+export function DefinitionsInterface() {
   const [users, setUsers] = useState<TransactionUser[]>([])
   const [categories, setCategories] = useState<TransactionCategory[]>([])
   const [types, setTypes] = useState<TransactionType[]>([])

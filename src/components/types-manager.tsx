@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Edit, Trash2, Plus } from 'lucide-react'
 import { TypeForm } from './type-form'
 import { useCRUD } from '@/hooks/useCRUD'
 
@@ -29,7 +30,10 @@ export function TypesManager() {
         <CardHeader className="p-6">
           <CardTitle className="flex justify-between items-center">
             Transaction Types
-            <Button onClick={() => setFormOpen(true)}>Add Type</Button>
+            <Button onClick={() => setFormOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Type
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
@@ -43,11 +47,11 @@ export function TypesManager() {
                   </span>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(type)}>
-                    Edit
+                  <Button variant="ghost" size="sm" onClick={() => handleEdit(type)}>
+                    <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="destructive" size="sm" onClick={() => handleDelete(type.id)}>
-                    Delete
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(type.id)}>
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>

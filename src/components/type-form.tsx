@@ -59,35 +59,43 @@ export function TypeForm({ type, open, onClose, onSubmit }: TypeFormProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              required
-            />
+            <div className="mt-2">
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                required
+              />
+            </div>
           </div>
 
           <div>
             <Label htmlFor="flow-direction">Flow Direction</Label>
-            <Select
-              value={formData.isOutflow ? 'outflow' : 'inflow'}
-              onValueChange={(value: string) => handleInputChange('isOutflow', value === 'outflow')}
-            >
-              <SelectTrigger id="flow-direction">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="outflow">Outflow (Expenses)</SelectItem>
-                <SelectItem value="inflow">Inflow (Income)</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="mt-2">
+              <Select
+                value={formData.isOutflow ? 'outflow' : 'inflow'}
+                onValueChange={(value: string) =>
+                  handleInputChange('isOutflow', value === 'outflow')
+                }
+              >
+                <SelectTrigger id="flow-direction">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="outflow">Outflow (Expenses)</SelectItem>
+                  <SelectItem value="inflow">Inflow (Income)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">{type ? 'Update' : 'Create'} Transaction Type</Button>
+            <Button type="submit" variant="default">
+              {type ? 'Update' : 'Create'} Transaction Type
+            </Button>
           </div>
         </form>
       </DialogContent>

@@ -3,7 +3,17 @@
 import * as React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { CreditCard, DollarSign, Home, PieChart, Settings, TrendingUp, Users } from 'lucide-react'
+import {
+  CreditCard,
+  DollarSign,
+  Home,
+  List,
+  PieChart,
+  Settings,
+  TrendingUp,
+  Upload,
+  Users,
+} from 'lucide-react'
 
 import { NavMain } from '@/components/nav-main'
 import { NavGroup } from '@/components/nav-group'
@@ -30,10 +40,17 @@ const data = {
       url: '/dashboard',
       icon: Home,
     },
+  ],
+  transactions: [
     {
-      title: 'Transactions',
-      url: '/dashboard/transactions',
-      icon: CreditCard,
+      name: 'Manage',
+      url: '/dashboard/transactions/manage',
+      icon: List,
+    },
+    {
+      name: 'Upload',
+      url: '/dashboard/transactions/upload',
+      icon: Upload,
     },
   ],
   analytics: [
@@ -48,25 +65,25 @@ const data = {
       icon: TrendingUp,
     },
   ],
-  management: [
+  definitions: [
     {
       name: 'Categories',
-      url: '/dashboard/management/categories',
+      url: '/dashboard/definitions/categories',
       icon: Settings,
     },
     {
       name: 'Accounts',
-      url: '/dashboard/management/accounts',
+      url: '/dashboard/definitions/accounts',
       icon: CreditCard,
     },
     {
       name: 'Users',
-      url: '/dashboard/management/users',
+      url: '/dashboard/definitions/users',
       icon: Users,
     },
     {
       name: 'Transaction Types',
-      url: '/dashboard/management/types',
+      url: '/dashboard/definitions/types',
       icon: DollarSign,
     },
   ],
@@ -95,8 +112,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
+        <NavGroup title="Transactions" items={data.transactions} />
         <NavGroup title="Analytics" items={data.analytics} />
-        <NavGroup title="Management" items={data.management} />
+        <NavGroup title="Definitions" items={data.definitions} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

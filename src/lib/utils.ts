@@ -4,6 +4,7 @@ import {
   format,
   parseISO,
   isValid,
+  parse,
   startOfMonth,
   endOfMonth,
   startOfYear,
@@ -51,6 +52,19 @@ export function isValidDate(dateString: string): boolean {
   } catch {
     return false
   }
+}
+
+export function isValidMonthDayYearDate(dateString: string): boolean {
+  try {
+    const date = parse(dateString, 'MM/dd/yyyy', new Date())
+    return isValid(date)
+  } catch {
+    return false
+  }
+}
+
+export function parseMonthDayYearDate(dateString: string): Date {
+  return parse(dateString, 'MM/dd/yyyy', new Date())
 }
 
 export function getDateRange(

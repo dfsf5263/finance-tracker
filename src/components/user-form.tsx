@@ -55,19 +55,23 @@ export function TransactionUserForm({ user, open, onClose, onSubmit }: Transacti
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              required
-            />
+            <div className="mt-2">
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                required
+              />
+            </div>
           </div>
 
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">{user ? 'Update' : 'Create'} User</Button>
+            <Button type="submit" variant="default">
+              {user ? 'Update' : 'Create'} User
+            </Button>
           </div>
         </form>
       </DialogContent>

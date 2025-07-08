@@ -91,37 +91,20 @@ export async function POST(request: NextRequest) {
       const transaction = transactions[i] as CSVTransaction
       const rowNumber = i + 2 // Adding 2 because row 1 is header and arrays are 0-indexed
 
-      // Check if required entities exist
-      if (!accountMap.has(transaction.account)) {
+      // Entity existence is now validated client-side
+      // Keep minimal server-side validation as backup security check
+      if (
+        !accountMap.has(transaction.account) ||
+        !userMap.has(transaction.user) ||
+        !categoryMap.has(transaction.category) ||
+        !typeMap.has(transaction.type)
+      ) {
         validationErrors.push({
           row: rowNumber,
-          field: 'account',
-          value: transaction.account,
-          message: `Source "${transaction.account}" does not exist in the database`,
-        })
-      }
-      if (!userMap.has(transaction.user)) {
-        validationErrors.push({
-          row: rowNumber,
-          field: 'user',
-          value: transaction.user,
-          message: `User "${transaction.user}" does not exist in the database`,
-        })
-      }
-      if (!categoryMap.has(transaction.category)) {
-        validationErrors.push({
-          row: rowNumber,
-          field: 'category',
-          value: transaction.category,
-          message: `Category "${transaction.category}" does not exist in the database`,
-        })
-      }
-      if (!typeMap.has(transaction.type)) {
-        validationErrors.push({
-          row: rowNumber,
-          field: 'type',
-          value: transaction.type,
-          message: `Type "${transaction.type}" does not exist in the database`,
+          field: 'entities',
+          value: '',
+          message:
+            'One or more entities do not exist. Ensure you have defined all entities in the definitions page prior to uploading your transactions.',
         })
       }
 

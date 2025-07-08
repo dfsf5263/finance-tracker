@@ -1,13 +1,13 @@
 'use client'
 
-import { ManagementInterface } from '@/components/management-interface'
+import { DefinitionsInterface } from '@/components/definitions-interface'
 
-export default function ManagementPage() {
+export default function DefinitionsPage() {
   return (
     <div className="@container/main flex flex-1 flex-col gap-2">
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         <div className="px-4 lg:px-6">
-          <ManagementInterface />
+          <DefinitionsInterface />
         </div>
       </div>
     </div>

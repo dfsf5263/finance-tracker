@@ -4,11 +4,11 @@ export function getPageTitle(pathname: string): string {
     '/dashboard/transactions': 'Transactions',
     '/dashboard/analytics/breakdown': 'Analytics - Breakdown',
     '/dashboard/analytics/money-flow': 'Analytics - Money Flow',
-    '/dashboard/management': 'Management',
-    '/dashboard/management/categories': 'Management - Categories',
-    '/dashboard/management/users': 'Management - Users',
-    '/dashboard/management/types': 'Management - Transaction Types',
-    '/dashboard/management/accounts': 'Management - Accounts',
+    '/dashboard/definitions': 'Definitions',
+    '/dashboard/definitions/categories': 'Definitions - Categories',
+    '/dashboard/definitions/users': 'Definitions - Users',
+    '/dashboard/definitions/types': 'Definitions - Transaction Types',
+    '/dashboard/definitions/accounts': 'Definitions - Accounts',
   }
 
   return routeTitles[pathname] || 'Dashboard'

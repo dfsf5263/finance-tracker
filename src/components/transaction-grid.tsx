@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -12,7 +13,6 @@ import {
 } from '@/components/ui/select'
 import { CustomDatePicker } from '@/components/ui/date-picker'
 import { TransactionForm } from '@/components/transaction-form'
-import { CSVUpload } from '@/components/csv-upload'
 import {
   Edit,
   Trash2,
@@ -102,7 +102,6 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   })
   const [filtersExpanded, setFiltersExpanded] = useState(false)
   const [showTransactionForm, setShowTransactionForm] = useState(false)
-  const [showCSVUpload, setShowCSVUpload] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
 
   const fetchTransactions = async () => {
@@ -258,7 +257,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   }
 
   const handleTransactionSubmit = async (
-    transactionData: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>
+    transactionData: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'> & { amount: number }
   ) => {
     try {
       const url = editingTransaction
@@ -299,32 +298,25 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     setShowTransactionForm(true)
   }
 
-  const handleCSVUploadComplete = () => {
-    setShowCSVUpload(false)
-    fetchTransactions()
-    onRefresh?.()
-  }
-
   return (
     <div className="space-y-6">
       {/* Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card
-          className="cursor-pointer hover:shadow-md transition-shadow duration-200"
-          onClick={() => setShowCSVUpload(true)}
-        >
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                <Upload className="h-5 w-5" />
+        <Link href="/dashboard/transactions/upload">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow duration-200">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                  <Upload className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Upload CSV</CardTitle>
+                  <CardDescription>Import transactions from CSV file</CardDescription>
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-lg">Upload CSV</CardTitle>
-                <CardDescription>Import transactions from CSV file</CardDescription>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
         <Card
           className="cursor-pointer hover:shadow-md transition-shadow duration-200"
           onClick={() => {
@@ -660,12 +652,6 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
           setEditingTransaction(null)
         }}
         onSubmit={handleTransactionSubmit}
-      />
-
-      <CSVUpload
-        open={showCSVUpload}
-        onClose={() => setShowCSVUpload(false)}
-        onUploadComplete={handleCSVUploadComplete}
       />
     </div>
   )

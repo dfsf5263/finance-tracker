@@ -15,14 +15,21 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name } = await request.json()
+    const data = await request.json()
+    const { name, annualBudget } = data
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
+    const categoryData: { name: string; annualBudget?: string | number } = { name }
+
+    if (annualBudget !== undefined && annualBudget !== null && annualBudget !== '') {
+      categoryData.annualBudget = annualBudget
+    }
+
     const category = await db.transactionCategory.create({
-      data: { name },
+      data: categoryData,
     })
 
     return NextResponse.json(category, { status: 201 })

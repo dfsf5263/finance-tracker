@@ -44,7 +44,7 @@ interface Transaction {
   description: string
   categoryId: string
   typeId: string
-  amount: number
+  amount: number | string
   memo?: string
   account?: Account
   user?: TransactionUser
@@ -56,7 +56,17 @@ interface TransactionFormProps {
   transaction?: Transaction
   open: boolean
   onClose: () => void
-  onSubmit: (transaction: Omit<Transaction, 'id'>) => void
+  onSubmit: (transaction: Omit<Transaction, 'id'> & { amount: number }) => void
+}
+
+interface ValidationErrors {
+  accountId?: string
+  userId?: string
+  transactionDate?: string
+  description?: string
+  categoryId?: string
+  typeId?: string
+  amount?: string
 }
 
 export function TransactionForm({ transaction, open, onClose, onSubmit }: TransactionFormProps) {
@@ -64,6 +74,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
   const [users, setUsers] = useState<TransactionUser[]>([])
   const [categories, setCategories] = useState<TransactionCategory[]>([])
   const [types, setTypes] = useState<TransactionType[]>([])
+  const [errors, setErrors] = useState<ValidationErrors>({})
 
   const [formData, setFormData] = useState<Omit<Transaction, 'id'>>({
     accountId: transaction?.accountId || '',
@@ -71,13 +82,11 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     transactionDate: transaction?.transactionDate
       ? formatDateForInput(parseLocalDate(transaction.transactionDate))
       : formatDateForInput(new Date()),
-    postDate: transaction?.postDate
-      ? formatDateForInput(parseLocalDate(transaction.postDate))
-      : formatDateForInput(new Date()),
+    postDate: transaction?.postDate ? formatDateForInput(parseLocalDate(transaction.postDate)) : '',
     description: transaction?.description || '',
     categoryId: transaction?.categoryId || '',
     typeId: transaction?.typeId || '',
-    amount: transaction?.amount || 0,
+    amount: transaction?.amount || '',
     memo: transaction?.memo || '',
   })
 
@@ -87,6 +96,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
       fetchUsers()
       fetchCategories()
       fetchTypes()
+      setErrors({}) // Reset errors when opening
     }
   }, [open])
 
@@ -101,11 +111,11 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
           : formatDateForInput(new Date()),
         postDate: transaction.postDate
           ? formatDateForInput(parseLocalDate(transaction.postDate))
-          : formatDateForInput(new Date()),
+          : '',
         description: transaction.description || '',
         categoryId: transaction.categoryId || '',
         typeId: transaction.typeId || '',
-        amount: transaction.amount || 0,
+        amount: transaction.amount || '',
         memo: transaction.memo || '',
       })
     } else {
@@ -114,14 +124,15 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
         accountId: '',
         userId: '',
         transactionDate: formatDateForInput(new Date()),
-        postDate: formatDateForInput(new Date()),
+        postDate: '',
         description: '',
         categoryId: '',
         typeId: '',
-        amount: 0,
+        amount: '',
         memo: '',
       })
     }
+    setErrors({}) // Reset errors when transaction changes
   }, [transaction])
 
   const fetchAccounts = async () => {
@@ -172,13 +183,62 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     }
   }
 
+  const validateForm = (): boolean => {
+    const newErrors: ValidationErrors = {}
+
+    if (!formData.accountId) {
+      newErrors.accountId = 'Account is required'
+    }
+    if (!formData.userId) {
+      newErrors.userId = 'User is required'
+    }
+    if (!formData.transactionDate) {
+      newErrors.transactionDate = 'Transaction date is required'
+    }
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required'
+    }
+    if (!formData.categoryId) {
+      newErrors.categoryId = 'Category is required'
+    }
+    if (!formData.typeId) {
+      newErrors.typeId = 'Type is required'
+    }
+    if (!formData.amount || formData.amount === '') {
+      newErrors.amount = 'Amount is required'
+    } else {
+      const amountNum = parseFloat(formData.amount.toString())
+      if (isNaN(amountNum)) {
+        newErrors.amount = 'Amount must be a valid number'
+      }
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(formData)
+
+    if (!validateForm()) {
+      return
+    }
+
+    const submitData = {
+      ...formData,
+      amount:
+        typeof formData.amount === 'string' ? parseFloat(formData.amount) || 0 : formData.amount,
+      postDate: formData.postDate || formData.transactionDate, // Default to transaction date if not provided
+    }
+    onSubmit(submitData)
   }
 
   const handleInputChange = (field: keyof typeof formData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+    // Clear error for this field when user starts typing
+    if (errors[field as keyof ValidationErrors]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }))
+    }
   }
 
   return (
@@ -190,135 +250,168 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="account">Account</Label>
-            <Select
-              value={formData.accountId}
-              onValueChange={(value) => handleInputChange('accountId', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select account" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="mt-2">
+              <Select
+                value={formData.accountId}
+                onValueChange={(value) => handleInputChange('accountId', value)}
+              >
+                <SelectTrigger aria-invalid={!!errors.accountId}>
+                  <SelectValue placeholder="Select account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.accountId && (
+                <p className="text-sm text-destructive mt-1">{errors.accountId}</p>
+              )}
+            </div>
           </div>
 
           <div>
             <Label htmlFor="user">User</Label>
-            <Select
-              value={formData.userId}
-              onValueChange={(value) => handleInputChange('userId', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select user" />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="mt-2">
+              <Select
+                value={formData.userId}
+                onValueChange={(value) => handleInputChange('userId', value)}
+              >
+                <SelectTrigger aria-invalid={!!errors.userId}>
+                  <SelectValue placeholder="Select user" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.userId && <p className="text-sm text-destructive mt-1">{errors.userId}</p>}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="transactionDate">Transaction Date</Label>
-              <CustomDatePicker
-                value={formData.transactionDate}
-                onChange={(date) => handleInputChange('transactionDate', date)}
-                placeholder="Select transaction date"
-              />
+              <div className="mt-2">
+                <CustomDatePicker
+                  value={formData.transactionDate}
+                  onChange={(date) => handleInputChange('transactionDate', date)}
+                  placeholder="Select transaction date"
+                />
+                {errors.transactionDate && (
+                  <p className="text-sm text-destructive mt-1">{errors.transactionDate}</p>
+                )}
+              </div>
             </div>
             <div>
-              <Label htmlFor="postDate">Post Date</Label>
-              <CustomDatePicker
-                value={formData.postDate}
-                onChange={(date) => handleInputChange('postDate', date)}
-                placeholder="Select post date"
-              />
+              <Label htmlFor="postDate">Post Date (optional)</Label>
+              <div className="mt-2">
+                <CustomDatePicker
+                  value={formData.postDate}
+                  onChange={(date) => handleInputChange('postDate', date)}
+                  placeholder="Select post date"
+                />
+              </div>
             </div>
           </div>
 
           <div>
             <Label htmlFor="description">Description</Label>
-            <Input
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              required
-            />
+            <div className="mt-2">
+              <Input
+                id="description"
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                aria-invalid={!!errors.description}
+              />
+              {errors.description && (
+                <p className="text-sm text-destructive mt-1">{errors.description}</p>
+              )}
+            </div>
           </div>
 
           <div>
             <Label htmlFor="category">Category</Label>
-            <Select
-              value={formData.categoryId}
-              onValueChange={(value) => handleInputChange('categoryId', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="mt-2">
+              <Select
+                value={formData.categoryId}
+                onValueChange={(value) => handleInputChange('categoryId', value)}
+              >
+                <SelectTrigger aria-invalid={!!errors.categoryId}>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.categoryId && (
+                <p className="text-sm text-destructive mt-1">{errors.categoryId}</p>
+              )}
+            </div>
           </div>
 
           <div>
             <Label htmlFor="type">Type</Label>
-            <Select
-              value={formData.typeId}
-              onValueChange={(value) => handleInputChange('typeId', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                {types.map((type) => (
-                  <SelectItem key={type.id} value={type.id}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="mt-2">
+              <Select
+                value={formData.typeId}
+                onValueChange={(value) => handleInputChange('typeId', value)}
+              >
+                <SelectTrigger aria-invalid={!!errors.typeId}>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {types.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.typeId && <p className="text-sm text-destructive mt-1">{errors.typeId}</p>}
+            </div>
           </div>
 
           <div>
             <Label htmlFor="amount">Amount</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              value={formData.amount}
-              onChange={(e) => handleInputChange('amount', parseFloat(e.target.value))}
-              required
-            />
+            <div className="mt-2">
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                value={formData.amount}
+                onChange={(e) => handleInputChange('amount', e.target.value)}
+                aria-invalid={!!errors.amount}
+              />
+              {errors.amount && <p className="text-sm text-destructive mt-1">{errors.amount}</p>}
+            </div>
           </div>
 
           <div>
-            <Label htmlFor="memo">Memo (Optional)</Label>
-            <Input
-              id="memo"
-              value={formData.memo}
-              onChange={(e) => handleInputChange('memo', e.target.value)}
-            />
+            <Label htmlFor="memo">Memo (optional)</Label>
+            <div className="mt-2">
+              <Input
+                id="memo"
+                value={formData.memo}
+                onChange={(e) => handleInputChange('memo', e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" variant="outline">
+            <Button type="submit" variant="default">
               {transaction ? 'Update' : 'Create'} Transaction
             </Button>
           </div>

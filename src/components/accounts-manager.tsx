@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Edit, Trash2, Plus } from 'lucide-react'
 import { AccountForm } from './account-form'
 import { useCRUD } from '@/hooks/useCRUD'
 
@@ -28,7 +29,10 @@ export function AccountsManager() {
         <CardHeader className="p-6">
           <CardTitle className="flex justify-between items-center">
             Accounts
-            <Button onClick={() => setFormOpen(true)}>Add Account</Button>
+            <Button onClick={() => setFormOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Account
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
@@ -40,11 +44,11 @@ export function AccountsManager() {
               >
                 <span>{account.name}</span>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(account)}>
-                    Edit
+                  <Button variant="ghost" size="sm" onClick={() => handleEdit(account)}>
+                    <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="destructive" size="sm" onClick={() => handleDelete(account.id)}>
-                    Delete
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(account.id)}>
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
