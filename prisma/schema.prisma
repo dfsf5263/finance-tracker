@@ -11,8 +11,8 @@ model User {
   id                    String                 @id @default(uuid()) @db.Uuid
   clerkUserId           String                 @unique @map("clerk_user_id")
   email                 String                 @unique
-  fullName              String?                @map("full_name")
-  nickname              String?
+  firstName             String?                @map("first_name")
+  lastName              String?                @map("last_name")
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @updatedAt @map("updated_at")
   households            UserHousehold[]
@@ -58,6 +58,7 @@ model HouseholdInvitation {
   inviterUserId String          @map("inviter_user_id") @db.Uuid
   inviteeEmail String           @map("invitee_email")
   inviteeUserId String?         @map("invitee_user_id") @db.Uuid
+  role         HouseholdRole    @default(MEMBER)
   status       InvitationStatus @default(PENDING)
   token        String           @unique @default(uuid())
   expiresAt    DateTime         @map("expires_at")

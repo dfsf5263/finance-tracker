@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Home } from 'lucide-react'
 import { useHousehold } from '@/contexts/household-context'
 import { toast } from 'sonner'
+import { useUser } from '@clerk/nextjs'
 
 interface HouseholdCreationModalProps {
   open: boolean
@@ -16,11 +17,22 @@ interface HouseholdCreationModalProps {
 
 export function HouseholdCreationModal({ open, isFirstTime = false }: HouseholdCreationModalProps) {
   const { completeHouseholdCreation } = useHousehold()
+  const { user } = useUser()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     annualBudget: '',
   })
+
+  const getDisplayName = () => {
+    if (!user) return 'User'
+    return (
+      user.fullName ||
+      `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+      user.firstName ||
+      'User'
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -90,10 +102,17 @@ export function HouseholdCreationModal({ open, isFirstTime = false }: HouseholdC
     <Dialog open={open} onOpenChange={() => {}} modal>
       <DialogContent className="sm:max-w-[425px]" showCloseButton={false}>
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <Home className="h-5 w-5 text-primary" />
+          <div className="flex items-start gap-2">
+            <Home className="h-5 w-5 text-primary mt-0.5" />
             <DialogTitle>
-              {isFirstTime ? 'Welcome! Create Your First Household' : 'Create a Household'}
+              {isFirstTime ? (
+                <div className="space-y-1">
+                  <div>Welcome {getDisplayName()}!</div>
+                  <div className="text-base font-medium">Create your first household</div>
+                </div>
+              ) : (
+                'Create a Household'
+              )}
             </DialogTitle>
           </div>
         </DialogHeader>

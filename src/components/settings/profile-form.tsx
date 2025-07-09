@@ -14,7 +14,6 @@ export function ProfileForm() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    nickname: '',
   })
 
   useEffect(() => {
@@ -22,7 +21,6 @@ export function ProfileForm() {
       setFormData({
         firstName: user.firstName || '',
         lastName: user.lastName || '',
-        nickname: user.username || '',
       })
     }
   }, [user])
@@ -37,7 +35,6 @@ export function ProfileForm() {
       await user.update({
         firstName: formData.firstName || undefined,
         lastName: formData.lastName || undefined,
-        username: formData.nickname || undefined,
       })
 
       toast.success('Profile updated successfully')
@@ -101,21 +98,6 @@ export function ProfileForm() {
                 placeholder="Smith"
               />
             </div>
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="nickname">Nickname (Username)</Label>
-          <div className="mt-2">
-            <Input
-              id="nickname"
-              value={formData.nickname}
-              onChange={(e) => setFormData((prev) => ({ ...prev, nickname: e.target.value }))}
-              placeholder="johnsmith"
-            />
-            <p className="text-sm text-muted-foreground mt-1">
-              This will be used as your display name throughout the app
-            </p>
           </div>
         </div>
       </div>

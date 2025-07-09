@@ -108,7 +108,9 @@ function SelectItem({
           <CheckIcon className="size-4" />
         </SelectPrimitive.ItemIndicator>
       </span>
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      <SelectPrimitive.ItemText className="truncate min-w-0 flex-1">
+        {children}
+      </SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
   )
 }

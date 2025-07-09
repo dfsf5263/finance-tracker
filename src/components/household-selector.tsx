@@ -15,11 +15,6 @@ import { useHousehold } from '@/contexts/household-context'
 export function HouseholdSelector() {
   const { households, selectedHousehold, selectHousehold, isLoading } = useHousehold()
 
-  const truncateName = (name: string, maxLength: number = 15) => {
-    if (name.length <= maxLength) return name
-    return `${name.substring(0, maxLength)}...`
-  }
-
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 px-2 py-1.5">
@@ -51,7 +46,7 @@ export function HouseholdSelector() {
         }}
       >
         <SelectTrigger>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-hidden">
             <Home className="h-4 w-4" />
             <SelectValue placeholder="Select household..." />
           </div>
@@ -59,7 +54,7 @@ export function HouseholdSelector() {
         <SelectContent>
           {households.map((household) => (
             <SelectItem key={household.id} value={household.id}>
-              <span title={household.name}>{truncateName(household.name)}</span>
+              <span title={household.name}>{household.name}</span>
             </SelectItem>
           ))}
         </SelectContent>

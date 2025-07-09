@@ -3,7 +3,6 @@ import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { ModeToggle } from '@/components/mode-toggle'
 import { useHousehold } from '@/contexts/household-context'
 import { Home } from 'lucide-react'
-import { UserButton } from '@clerk/nextjs'
 
 export function SiteHeader({ title }: { title: string }) {
   const { state } = useSidebar()
@@ -57,7 +56,6 @@ export function SiteHeader({ title }: { title: string }) {
         {renderHouseholdInfo()}
         <div className="ml-auto flex items-center gap-2">
           <ModeToggle />
-          <UserButton afterSignOutUrl="/" />
         </div>
       </div>
     </header>

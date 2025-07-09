@@ -76,21 +76,20 @@ export function OnboardingCard({ householdId, householdName }: OnboardingCardPro
   )
 
   return (
-    <Card>
-      <CardHeader className="pb-4">
+    <Card className="p-4">
+      <CardHeader>
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
             <Rocket className="h-5 w-5" />
           </div>
           <div className="flex-1">
-            <CardTitle className="text-lg">
-              Hello there, {actualHouseholdName || 'your household'}!
+            <CardTitle className="text-lg text-foreground">
+              Let&apos;s get the {actualHouseholdName || ' '} household started!
             </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Let&apos;s set up your household for financial tracking success!
-            </p>
           </div>
-          <Badge variant="outline">{completionPercentage}% Complete</Badge>
+          <Badge variant="outline" className="border-primary/30 text-primary">
+            {completionPercentage}% Complete
+          </Badge>
         </div>
       </CardHeader>
 
@@ -110,14 +109,14 @@ export function OnboardingCard({ householdId, householdName }: OnboardingCardPro
                 key={entity.key}
                 className={`flex items-center gap-3 p-3 rounded-lg border ${
                   isComplete
-                    ? 'bg-green-50/50 border-green-200 dark:bg-green-900/20 dark:border-green-700'
-                    : 'bg-muted/30 border-border'
+                    ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/50 dark:border-emerald-800'
+                    : 'bg-muted/50 border-border'
                 }`}
               >
                 <div
                   className={`flex h-8 w-8 items-center justify-center rounded-lg ${
                     isComplete
-                      ? 'bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400'
+                      ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400'
                       : 'bg-muted text-muted-foreground'
                   }`}
                 >
@@ -127,13 +126,13 @@ export function OnboardingCard({ householdId, householdName }: OnboardingCardPro
                 <div className="flex-1 min-w-0">
                   <span
                     className={`text-sm font-medium ${
-                      isComplete ? 'text-slate-900 dark:text-slate-100' : 'text-foreground'
+                      isComplete ? 'text-emerald-900 dark:text-emerald-100' : 'text-foreground'
                     }`}
                   >
                     {entity.name}
                   </span>
                   <p
-                    className={`text-xs ${isComplete ? 'text-slate-700 dark:text-slate-300' : 'text-muted-foreground'}`}
+                    className={`text-xs ${isComplete ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'}`}
                   >
                     {entity.description}
                   </p>
@@ -151,7 +150,6 @@ export function OnboardingCard({ householdId, householdName }: OnboardingCardPro
             )
           })}
         </div>
-        <div className="h-1"></div>
       </CardContent>
     </Card>
   )

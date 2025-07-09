@@ -3,10 +3,21 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Edit, Trash2, Plus, Home, Users, CreditCard, Settings, DollarSign } from 'lucide-react'
+import {
+  Edit,
+  Trash2,
+  Plus,
+  Home,
+  Users,
+  CreditCard,
+  Settings,
+  DollarSign,
+  UserRoundPlus,
+} from 'lucide-react'
 import { HouseholdForm } from './household-form'
 import { useCRUD } from '@/hooks/useCRUD'
 import { useHousehold } from '@/contexts/household-context'
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 
 interface Household {
@@ -22,6 +33,7 @@ interface Household {
 }
 
 export function HouseholdsManager() {
+  const router = useRouter()
   const {
     refreshHouseholds,
     households: contextHouseholds,
@@ -70,6 +82,11 @@ export function HouseholdsManager() {
     await refreshHouseholds()
   }
 
+  // Handle share/invite navigation
+  const handleShare = (householdId: string) => {
+    router.push(`/dashboard/households/${householdId}/settings?tab=invitations`)
+  }
+
   const formatCurrency = (amount: number | null | undefined) => {
     if (amount === null || amount === undefined) return 'Not set'
     return new Intl.NumberFormat('en-US', {
@@ -96,28 +113,14 @@ export function HouseholdsManager() {
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {households.map((household) => (
-              <Card key={household.id} className="border border-border">
-                <CardContent className="p-4">
+              <Card key={household.id} className="border border-border overflow-hidden">
+                <CardContent className="p-4 overflow-hidden">
                   <div className="space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{household.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Budget: {formatCurrency(household.annualBudget)}
-                        </p>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(household)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(household.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    <div>
+                      <h3 className="font-semibold text-lg truncate">{household.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Budget: {formatCurrency(household.annualBudget)}
+                      </p>
                     </div>
 
                     {household._count && (
@@ -144,6 +147,23 @@ export function HouseholdsManager() {
                         </div>
                       </div>
                     )}
+
+                    <div className="flex justify-end gap-1 pt-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(household)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleShare(household.id)}
+                        title="Share household"
+                      >
+                        <UserRoundPlus className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(household.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

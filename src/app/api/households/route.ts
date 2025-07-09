@@ -1,21 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { ensureUser } from '@/lib/ensure-user'
 
 export async function GET() {
   try {
-    const households = await db.household.findMany({
-      orderBy: { name: 'asc' },
+    // Ensure user exists in database
+    const { user } = await ensureUser()
+
+    // Get user with households
+    const userWithHouseholds = await db.user.findUnique({
+      where: { id: user.id },
       include: {
-        _count: {
-          select: {
-            accounts: true,
-            users: true,
-            categories: true,
-            types: true,
+        households: {
+          include: {
+            household: {
+              include: {
+                _count: {
+                  select: {
+                    accounts: true,
+                    users: true,
+                    categories: true,
+                    types: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
     })
+
+    if (!userWithHouseholds) {
+      return NextResponse.json(
+        {
+          error: 'User not found in database. Please try logging out and back in.',
+        },
+        { status: 404 }
+      )
+    }
+
+    // Return only households the user has access to
+    const households = userWithHouseholds.households.map((uh) => ({
+      ...uh.household,
+      userRole: uh.role,
+    }))
+
     return NextResponse.json(households)
   } catch (error) {
     console.error('Error fetching households:', error)
@@ -25,6 +54,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Ensure user exists in database
+    const { user } = await ensureUser()
+
     const data = await request.json()
     const { name, annualBudget } = data
 
@@ -38,21 +70,39 @@ export async function POST(request: NextRequest) {
       householdData.annualBudget = annualBudget
     }
 
-    const household = await db.household.create({
-      data: householdData,
-      include: {
-        _count: {
-          select: {
-            accounts: true,
-            users: true,
-            categories: true,
-            types: true,
+    // Create household and user-household relationship in a transaction
+    const result = await db.$transaction(async (tx) => {
+      // Create the household
+      const household = await tx.household.create({
+        data: householdData,
+      })
+
+      // Create the user-household relationship with OWNER role
+      await tx.userHousehold.create({
+        data: {
+          userId: user.id,
+          householdId: household.id,
+          role: 'OWNER',
+        },
+      })
+
+      // Return household with counts
+      return tx.household.findUnique({
+        where: { id: household.id },
+        include: {
+          _count: {
+            select: {
+              accounts: true,
+              users: true,
+              categories: true,
+              types: true,
+            },
           },
         },
-      },
+      })
     })
 
-    return NextResponse.json(household, { status: 201 })
+    return NextResponse.json(result, { status: 201 })
   } catch (error) {
     console.error('Error creating household:', error)
     return NextResponse.json({ error: 'Failed to create household' }, { status: 500 })

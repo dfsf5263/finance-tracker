@@ -13,5 +13,10 @@ export function getPageTitle(pathname: string): string {
     '/dashboard/settings': 'Settings',
   }
 
+  // Handle dynamic household settings routes
+  if (pathname.startsWith('/dashboard/households/') && pathname.endsWith('/settings')) {
+    return 'Household Settings'
+  }
+
   return routeTitles[pathname] || 'Dashboard'
 }

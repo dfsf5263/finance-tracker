@@ -9,7 +9,6 @@ import {
   Home,
   List,
   PieChart,
-  Settings,
   Tag,
   TrendingUp,
   Upload,
@@ -31,11 +30,6 @@ import {
 } from '@/components/ui/sidebar'
 
 const data = {
-  user: {
-    name: 'Finance User',
-    email: 'user@finance.com',
-    avatar: '/avatars/user.jpg',
-  },
   navMain: [
     {
       title: 'Dashboard',
@@ -94,13 +88,6 @@ const data = {
       icon: DollarSign,
     },
   ],
-  settings: [
-    {
-      name: 'Profile',
-      url: '/dashboard/settings',
-      icon: Settings,
-    },
-  ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -132,10 +119,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavGroup title="Transactions" items={data.transactions} />
         <NavGroup title="Analytics" items={data.analytics} />
         <NavGroup title="Definitions" items={data.definitions} />
-        <NavGroup title="Settings" items={data.settings} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser />
       </SidebarFooter>
     </Sidebar>
   )

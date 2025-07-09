@@ -34,7 +34,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [requiresHouseholdCreation, setRequiresHouseholdCreation] = useState(false)
 
-  const fetchHouseholds = async () => {
+  const fetchHouseholds = async (retryCount = 0) => {
     try {
       const response = await fetch('/api/households')
       if (response.ok) {
@@ -89,9 +89,40 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
             setRequiresHouseholdCreation(false)
           }
         }
+      } else {
+        // Handle different error responses
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+
+        if (response.status === 404 && errorData.error?.includes('User not found in database')) {
+          // User record doesn't exist - this should now be handled by ensure-user
+          // but we can add retry logic as a fallback
+          if (retryCount < 2) {
+            console.log(
+              `Retrying household fetch after user creation issue (attempt ${retryCount + 1})`
+            )
+            setTimeout(() => fetchHouseholds(retryCount + 1), 1000)
+            return
+          }
+        }
+
+        console.error('Failed to fetch households:', response.status, errorData)
+        // For now, still trigger household creation as a fallback
+        setHouseholds([])
+        setSelectedHousehold(null)
+        setRequiresHouseholdCreation(true)
       }
     } catch (error) {
       console.error('Failed to fetch households:', error)
+      // Network error or other issue - try again if this is the first attempt
+      if (retryCount < 1) {
+        console.log(`Retrying household fetch after network error (attempt ${retryCount + 1})`)
+        setTimeout(() => fetchHouseholds(retryCount + 1), 1000)
+        return
+      }
+      // Fallback to household creation
+      setHouseholds([])
+      setSelectedHousehold(null)
+      setRequiresHouseholdCreation(true)
     } finally {
       setIsLoading(false)
     }
