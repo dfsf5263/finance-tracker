@@ -13,7 +13,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             users: true,
             categories: true,
             types: true,
-            transactions: true,
           },
         },
       },
@@ -59,7 +58,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             users: true,
             categories: true,
             types: true,
-            transactions: true,
           },
         },
       },
@@ -78,7 +76,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    
+
     // Check if household has any transactions
     const transactionCount = await db.transaction.count({
       where: { householdId: id },
@@ -87,7 +85,8 @@ export async function DELETE(
     if (transactionCount > 0) {
       return NextResponse.json(
         {
-          error: 'Cannot delete this household because it has existing transactions. Please delete all transactions first.',
+          error:
+            'Cannot delete this household because it has existing transactions. Please delete all transactions first.',
           errorType: 'HAS_TRANSACTIONS',
         },
         { status: 409 }

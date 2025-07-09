@@ -69,8 +69,12 @@ export function TransactionUserForm({ user, open, onClose, onSubmit }: Transacti
                 id="name"
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
+                placeholder="e.g., John Smith"
                 required
               />
+              <p className="text-sm text-muted-foreground mt-1">
+                The person who makes transactions (cardholder, account holder, etc.)
+              </p>
             </div>
           </div>
 

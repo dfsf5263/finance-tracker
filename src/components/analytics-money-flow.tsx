@@ -109,7 +109,9 @@ export function AnalyticsMoneyFlow() {
     const fetchDateRanges = async () => {
       if (!selectedHousehold) return
       try {
-        const response = await fetch(`/api/transactions/date-ranges?householdId=${selectedHousehold.id}`)
+        const response = await fetch(
+          `/api/transactions/date-ranges?householdId=${selectedHousehold.id}`
+        )
         if (response.ok) {
           const data = await response.json()
           setDateRanges(data)

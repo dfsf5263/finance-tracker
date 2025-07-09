@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     const where: Prisma.TransactionWhereInput = {
-      householdId: householdId
+      householdId: householdId,
     }
     if (startDate || endDate) {
       where.transactionDate = {}
@@ -42,7 +42,9 @@ export async function GET(request: NextRequest) {
     })
 
     // Get the actual names for the IDs
-    const ids = aggregations.map((item) => item[groupByField]).filter((id): id is string => id !== null)
+    const ids = aggregations
+      .map((item) => item[groupByField])
+      .filter((id): id is string => id !== null)
 
     let nameMap: { [key: string]: string } = {}
     if (groupBy === 'user') {

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     }
 
     const where: Prisma.TransactionWhereInput = {
-      householdId: householdId
+      householdId: householdId,
     }
     if (startDate || endDate) {
       where.transactionDate = {}

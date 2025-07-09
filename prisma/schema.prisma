@@ -7,6 +7,71 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  clerkUserId           String                 @unique @map("clerk_user_id")
+  email                 String                 @unique
+  fullName              String?                @map("full_name")
+  nickname              String?
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  households            UserHousehold[]
+  invitationsSent       HouseholdInvitation[]  @relation("InviterUser")
+  invitationsReceived   HouseholdInvitation[]  @relation("InvitedUser")
+
+  @@map("user")
+}
+
+enum HouseholdRole {
+  OWNER
+  MEMBER
+  VIEWER
+
+  @@map("household_role")
+}
+
+model UserHousehold {
+  userId      String         @map("user_id") @db.Uuid
+  householdId String         @map("household_id") @db.Uuid
+  role        HouseholdRole  @default(MEMBER)
+  joinedAt    DateTime       @default(now()) @map("joined_at")
+  invitedBy   String?        @map("invited_by") @db.Uuid
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household   Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@id([userId, householdId])
+  @@map("user_household")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+
+  @@map("invitation_status")
+}
+
+model HouseholdInvitation {
+  id           String           @id @default(uuid()) @db.Uuid
+  householdId  String           @map("household_id") @db.Uuid
+  inviterUserId String          @map("inviter_user_id") @db.Uuid
+  inviteeEmail String           @map("invitee_email")
+  inviteeUserId String?         @map("invitee_user_id") @db.Uuid
+  status       InvitationStatus @default(PENDING)
+  token        String           @unique @default(uuid())
+  expiresAt    DateTime         @map("expires_at")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  household    Household        @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  inviter      User             @relation("InviterUser", fields: [inviterUserId], references: [id])
+  invitee      User?            @relation("InvitedUser", fields: [inviteeUserId], references: [id])
+
+  @@index([inviteeEmail])
+  @@index([token])
+  @@map("household_invitation")
+}
+
 model Household {
   id           String                    @id @default(uuid()) @db.Uuid
   name         String                    @unique
@@ -18,6 +83,8 @@ model Household {
   categories   HouseholdCategory[]
   types        HouseholdType[]
   transactions Transaction[]
+  members      UserHousehold[]
+  invitations  HouseholdInvitation[]
 
   @@map("household")
 }

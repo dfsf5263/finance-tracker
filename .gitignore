@@ -53,3 +53,5 @@ tsconfig.tsbuildinfo
 
 #Misc
 .DS_Store
+# clerk configuration (can include secrets)
+/.clerk/

@@ -15,6 +15,8 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.24.0",
+    "@clerk/themes": "^2.2.55",
     "@prisma/client": "^6.11.1",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-dialog": "^1.1.14",
@@ -51,6 +53,7 @@
     "react-hot-toast": "^2.5.2",
     "recharts": "^3.0.2",
     "sonner": "^2.0.6",
+    "svix": "^1.69.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.0.0",
     "tailwindcss-animate": "^1.0.7"

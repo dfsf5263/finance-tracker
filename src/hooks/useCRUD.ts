@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 
 export function useCRUD<T extends { id: string }>(
-  apiEndpoint: string, 
+  apiEndpoint: string,
   entityName: string,
   householdId?: string
 ) {
@@ -12,7 +12,7 @@ export function useCRUD<T extends { id: string }>(
 
   const fetchItems = useCallback(async () => {
     try {
-      const url = householdId 
+      const url = householdId
         ? `/api/${apiEndpoint}?householdId=${householdId}`
         : `/api/${apiEndpoint}`
       const response = await fetch(url)
@@ -36,9 +36,7 @@ export function useCRUD<T extends { id: string }>(
       const method = isEditing ? 'PUT' : 'POST'
 
       // Include householdId in the request body for create operations
-      const bodyData = !isEditing && householdId 
-        ? { ...itemData, householdId }
-        : itemData
+      const bodyData = !isEditing && householdId ? { ...itemData, householdId } : itemData
 
       const response = await fetch(url, {
         method,

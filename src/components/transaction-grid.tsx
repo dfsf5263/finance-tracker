@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,12 +19,13 @@ import {
   Filter,
   Search,
   Tag,
-  Building2,
-  User,
+  CreditCard,
+  Users,
   ChevronDown,
   ChevronUp,
   Plus,
   Upload,
+  DollarSign,
 } from 'lucide-react'
 import { formatCurrency, formatDate, parseLocalDate } from '@/lib/utils'
 import {
@@ -160,7 +161,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     }
   }
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     if (!selectedHousehold) return
     try {
       const response = await fetch(`/api/categories?householdId=${selectedHousehold.id}`)
@@ -171,9 +172,9 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     } catch (error) {
       console.error('Failed to fetch categories:', error)
     }
-  }
+  }, [selectedHousehold])
 
-  const fetchTypes = async () => {
+  const fetchTypes = useCallback(async () => {
     if (!selectedHousehold) return
     try {
       const response = await fetch(`/api/types?householdId=${selectedHousehold.id}`)
@@ -184,9 +185,9 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     } catch (error) {
       console.error('Failed to fetch types:', error)
     }
-  }
+  }, [selectedHousehold])
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = useCallback(async () => {
     if (!selectedHousehold) return
     try {
       const response = await fetch(`/api/accounts?householdId=${selectedHousehold.id}`)
@@ -197,9 +198,9 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     } catch (error) {
       console.error('Failed to fetch accounts:', error)
     }
-  }
+  }, [selectedHousehold])
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     if (!selectedHousehold) return
     try {
       const response = await fetch(`/api/users?householdId=${selectedHousehold.id}`)
@@ -210,7 +211,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     } catch (error) {
       console.error('Failed to fetch users:', error)
     }
-  }
+  }, [selectedHousehold])
 
   useEffect(() => {
     fetchTransactions()
@@ -224,7 +225,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
       fetchAccounts()
       fetchUsers()
     }
-  }, [selectedHousehold])
+  }, [selectedHousehold, fetchCategories, fetchTypes, fetchAccounts, fetchUsers])
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this transaction?')) {
@@ -441,7 +442,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
               {/* Dropdown Filters */}
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-foreground flex items-center gap-1">
-                  <Building2 className="w-3 h-3" />
+                  <CreditCard className="w-3 h-3" />
                   Account
                 </label>
                 <Select
@@ -464,7 +465,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
 
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-foreground flex items-center gap-1">
-                  <User className="w-3 h-3" />
+                  <Users className="w-3 h-3" />
                   User
                 </label>
                 <Select
@@ -510,7 +511,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
 
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-foreground flex items-center gap-1">
-                  <Filter className="w-3 h-3" />
+                  <DollarSign className="w-3 h-3" />
                   Type
                 </label>
                 <Select

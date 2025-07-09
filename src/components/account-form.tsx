@@ -47,8 +47,12 @@ export function AccountForm({ account, open, onClose, onSubmit }: AccountFormPro
                 id="name"
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
+                placeholder="e.g., Chase Credit Card"
                 required
               />
+              <p className="text-sm text-muted-foreground mt-1">
+                Enter a descriptive name for your financial account
+              </p>
             </div>
           </div>
 

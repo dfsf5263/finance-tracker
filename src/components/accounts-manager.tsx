@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Edit, Trash2, Plus } from 'lucide-react'
+import { Edit, Trash2, Plus, CreditCard, Info } from 'lucide-react'
 import { AccountForm } from './account-form'
 import { useCRUD } from '@/hooks/useCRUD'
 import { useHousehold } from '@/contexts/household-context'
@@ -53,6 +53,24 @@ export function AccountsManager() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
+          {accounts.length === 0 && (
+            <Card className="bg-muted/50 border-muted mb-4">
+              <CardContent className="p-4">
+                <div className="flex gap-2">
+                  <Info className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div className="text-sm text-muted-foreground">
+                    <p className="font-medium mb-1">What are accounts?</p>
+                    <p>
+                      Accounts represent your financial institutions where money flows in or out.
+                    </p>
+                    <p className="mt-1">
+                      Examples: Chase Credit Card, Wells Fargo Checking, PayPal Account, Venmo
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <div className="space-y-2">
             {accounts.map((account) => (
               <div
@@ -70,6 +88,25 @@ export function AccountsManager() {
                 </div>
               </div>
             ))}
+
+            {accounts.length === 0 && (
+              <Card className="border-dashed">
+                <CardContent className="p-8 text-center">
+                  <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No accounts yet</h3>
+                  <p className="text-muted-foreground mb-2">
+                    Start by adding your financial accounts to track where money flows.
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Examples: Chase Credit Card, Wells Fargo Checking, PayPal, Venmo
+                  </p>
+                  <Button onClick={() => setFormOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First Account
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </CardContent>
       </Card>

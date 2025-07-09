@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -98,16 +98,6 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     householdId: transaction?.householdId || selectedHousehold?.id || '',
   })
 
-  useEffect(() => {
-    if (open && selectedHousehold) {
-      fetchAccounts()
-      fetchUsers()
-      fetchCategories()
-      fetchTypes()
-      setErrors({}) // Reset errors when opening
-    }
-  }, [open, selectedHousehold])
-
   // Update form data when transaction prop changes
   useEffect(() => {
     if (transaction) {
@@ -145,7 +135,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     setErrors({}) // Reset errors when transaction changes
   }, [transaction, selectedHousehold])
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = useCallback(async () => {
     if (!selectedHousehold) return
     try {
       const response = await fetch(`/api/accounts?householdId=${selectedHousehold.id}`)
@@ -156,9 +146,9 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     } catch (error) {
       console.error('Failed to fetch accounts:', error)
     }
-  }
+  }, [selectedHousehold])
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     if (!selectedHousehold) return
     try {
       const response = await fetch(`/api/users?householdId=${selectedHousehold.id}`)
@@ -169,9 +159,9 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     } catch (error) {
       console.error('Failed to fetch users:', error)
     }
-  }
+  }, [selectedHousehold])
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     if (!selectedHousehold) return
     try {
       const response = await fetch(`/api/categories?householdId=${selectedHousehold.id}`)
@@ -182,9 +172,9 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     } catch (error) {
       console.error('Failed to fetch categories:', error)
     }
-  }
+  }, [selectedHousehold])
 
-  const fetchTypes = async () => {
+  const fetchTypes = useCallback(async () => {
     if (!selectedHousehold) return
     try {
       const response = await fetch(`/api/types?householdId=${selectedHousehold.id}`)
@@ -195,7 +185,17 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     } catch (error) {
       console.error('Failed to fetch types:', error)
     }
-  }
+  }, [selectedHousehold])
+
+  useEffect(() => {
+    if (open && selectedHousehold) {
+      fetchAccounts()
+      fetchUsers()
+      fetchCategories()
+      fetchTypes()
+      setErrors({}) // Reset errors when opening
+    }
+  }, [open, selectedHousehold, fetchAccounts, fetchUsers, fetchCategories, fetchTypes])
 
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {}

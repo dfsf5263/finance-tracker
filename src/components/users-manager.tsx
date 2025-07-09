@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Edit, Trash2, Plus } from 'lucide-react'
+import { Edit, Trash2, Plus, Users, Info } from 'lucide-react'
 import { TransactionUserForm } from './user-form'
 import { useCRUD } from '@/hooks/useCRUD'
 import { useHousehold } from '@/contexts/household-context'
@@ -54,6 +54,26 @@ export function UsersManager() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
+          {users.length === 0 && (
+            <Card className="bg-muted/50 border-muted mb-4">
+              <CardContent className="p-4">
+                <div className="flex gap-2">
+                  <Info className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div className="text-sm text-muted-foreground">
+                    <p className="font-medium mb-1">Who are users?</p>
+                    <p>
+                      Users are individuals who make transactions in your household. This includes:
+                    </p>
+                    <ul className="mt-1 ml-4 list-disc">
+                      <li>Authorized users on credit cards</li>
+                      <li>Joint account holders on bank accounts</li>
+                      <li>Anyone directly spending or earning money in the household</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <div className="space-y-2">
             {users.map((user) => (
               <div key={user.id} className="flex justify-between items-center p-2 border rounded">
@@ -79,6 +99,26 @@ export function UsersManager() {
                 </div>
               </div>
             ))}
+
+            {users.length === 0 && (
+              <Card className="border-dashed">
+                <CardContent className="p-8 text-center">
+                  <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No users yet</h3>
+                  <p className="text-muted-foreground mb-2">
+                    Add the people who spend or earn money in your household.
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    This could be family members, authorized credit card users, or joint account
+                    holders.
+                  </p>
+                  <Button onClick={() => setFormOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First User
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </CardContent>
       </Card>

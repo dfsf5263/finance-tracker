@@ -35,9 +35,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Household ID is required' }, { status: 400 })
     }
 
-    const userData: { name: string; householdId: string; annualBudget?: string | number } = { 
-      name, 
-      householdId 
+    const userData: { name: string; householdId: string; annualBudget?: string | number } = {
+      name,
+      householdId,
     }
 
     if (annualBudget !== undefined && annualBudget !== null && annualBudget !== '') {

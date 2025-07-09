@@ -8,17 +8,17 @@ async function main() {
     prisma.household.upsert({
       where: { name: 'Smith Family' },
       update: {},
-      create: { 
+      create: {
         name: 'Smith Family',
-        annualBudget: 85000
+        annualBudget: 85000,
       },
     }),
     prisma.household.upsert({
       where: { name: 'Johnson Family' },
       update: {},
-      create: { 
+      create: {
         name: 'Johnson Family',
-        annualBudget: 75000
+        annualBudget: 75000,
       },
     }),
   ])
@@ -30,36 +30,42 @@ async function main() {
   const accounts = await Promise.all([
     // Smith Family accounts
     prisma.householdAccount.upsert({
-      where: { name_householdId: { name: 'Chase Sapphire Preferred', householdId: smithHousehold.id } },
+      where: {
+        name_householdId: { name: 'Chase Sapphire Preferred', householdId: smithHousehold.id },
+      },
       update: {},
-      create: { 
+      create: {
         name: 'Chase Sapphire Preferred',
-        householdId: smithHousehold.id
+        householdId: smithHousehold.id,
       },
     }),
     prisma.householdAccount.upsert({
       where: { name_householdId: { name: 'Wells Fargo Checking', householdId: smithHousehold.id } },
       update: {},
-      create: { 
+      create: {
         name: 'Wells Fargo Checking',
-        householdId: smithHousehold.id
+        householdId: smithHousehold.id,
       },
     }),
     // Johnson Family accounts
     prisma.householdAccount.upsert({
-      where: { name_householdId: { name: 'Bank of America Rewards', householdId: johnsonHousehold.id } },
+      where: {
+        name_householdId: { name: 'Bank of America Rewards', householdId: johnsonHousehold.id },
+      },
       update: {},
-      create: { 
+      create: {
         name: 'Bank of America Rewards',
-        householdId: johnsonHousehold.id
+        householdId: johnsonHousehold.id,
       },
     }),
     prisma.householdAccount.upsert({
-      where: { name_householdId: { name: 'Credit Union Savings', householdId: johnsonHousehold.id } },
+      where: {
+        name_householdId: { name: 'Credit Union Savings', householdId: johnsonHousehold.id },
+      },
       update: {},
-      create: { 
+      create: {
         name: 'Credit Union Savings',
-        householdId: johnsonHousehold.id
+        householdId: johnsonHousehold.id,
       },
     }),
   ])
@@ -70,38 +76,38 @@ async function main() {
     prisma.householdUser.upsert({
       where: { name_householdId: { name: 'Chris', householdId: smithHousehold.id } },
       update: {},
-      create: { 
+      create: {
         name: 'Chris',
         householdId: smithHousehold.id,
-        annualBudget: 25000
+        annualBudget: 25000,
       },
     }),
     prisma.householdUser.upsert({
       where: { name_householdId: { name: 'Steph', householdId: smithHousehold.id } },
       update: {},
-      create: { 
+      create: {
         name: 'Steph',
         householdId: smithHousehold.id,
-        annualBudget: 20000
+        annualBudget: 20000,
       },
     }),
     // Johnson Family users
     prisma.householdUser.upsert({
       where: { name_householdId: { name: 'Mike', householdId: johnsonHousehold.id } },
       update: {},
-      create: { 
+      create: {
         name: 'Mike',
         householdId: johnsonHousehold.id,
-        annualBudget: 30000
+        annualBudget: 30000,
       },
     }),
     prisma.householdUser.upsert({
       where: { name_householdId: { name: 'Sarah', householdId: johnsonHousehold.id } },
       update: {},
-      create: { 
+      create: {
         name: 'Sarah',
         householdId: johnsonHousehold.id,
-        annualBudget: 15000
+        annualBudget: 15000,
       },
     }),
   ])
@@ -137,10 +143,10 @@ async function main() {
       const category = await prisma.householdCategory.upsert({
         where: { name_householdId: { name: categoryInfo.name, householdId: household.id } },
         update: {},
-        create: { 
+        create: {
           name: categoryInfo.name,
           householdId: household.id,
-          annualBudget: categoryInfo.annualBudget
+          annualBudget: categoryInfo.annualBudget,
         },
       })
       categories.push(category)
@@ -160,10 +166,10 @@ async function main() {
       const type = await prisma.householdType.upsert({
         where: { name_householdId: { name: typeInfo.name, householdId: household.id } },
         update: {},
-        create: { 
+        create: {
           name: typeInfo.name,
           householdId: household.id,
-          isOutflow: typeInfo.isOutflow
+          isOutflow: typeInfo.isOutflow,
         },
       })
       types.push(type)

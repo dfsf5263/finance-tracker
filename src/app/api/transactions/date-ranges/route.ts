@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     // Get the earliest and latest transaction dates for the household
     const dateRange = await db.transaction.aggregate({
       where: {
-        householdId: householdId
+        householdId: householdId,
       },
       _min: {
         transactionDate: true,

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     const where: Prisma.TransactionWhereInput = {
-      householdId: householdId
+      householdId: householdId,
     }
     if (category) where.categoryId = category
     if (type) where.typeId = type

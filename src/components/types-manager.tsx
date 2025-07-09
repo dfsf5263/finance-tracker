@@ -1,11 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Edit, Trash2, Plus } from 'lucide-react'
+import { Edit, Trash2, Plus, DollarSign, Sparkles } from 'lucide-react'
 import { TypeForm } from './type-form'
 import { useCRUD } from '@/hooks/useCRUD'
 import { useHousehold } from '@/contexts/household-context'
+import { DEFAULT_TYPES } from '@/lib/default-types'
 
 interface TransactionType {
   id: string
@@ -16,6 +18,7 @@ interface TransactionType {
 
 export function TypesManager() {
   const { selectedHousehold } = useHousehold()
+  const [isCreatingBulk, setIsCreatingBulk] = useState(false)
   const {
     items: types,
     formOpen,
@@ -25,7 +28,38 @@ export function TypesManager() {
     handleEdit,
     handleDelete,
     closeForm,
+    fetchItems,
   } = useCRUD<TransactionType>('types', 'Transaction type', selectedHousehold?.id)
+
+  const handleBulkCreate = async () => {
+    if (!selectedHousehold) return
+
+    setIsCreatingBulk(true)
+    try {
+      const response = await fetch('/api/types/bulk', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          types: DEFAULT_TYPES,
+          householdId: selectedHousehold.id,
+        }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log(result.message)
+        fetchItems() // Refresh the types list
+      } else {
+        console.error('Failed to create bulk types')
+      }
+    } catch (error) {
+      console.error('Error creating bulk types:', error)
+    } finally {
+      setIsCreatingBulk(false)
+    }
+  }
 
   if (!selectedHousehold) {
     return (
@@ -73,6 +107,28 @@ export function TypesManager() {
                 </div>
               </div>
             ))}
+
+            {types.length === 0 && (
+              <Card className="border-dashed">
+                <CardContent className="p-8 text-center">
+                  <DollarSign className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No transaction types found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Create your first transaction type to classify inflows and outflows.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Button onClick={() => setFormOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Your First Type
+                    </Button>
+                    <Button variant="outline" onClick={handleBulkCreate} disabled={isCreatingBulk}>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      {isCreatingBulk ? 'Creating...' : 'Prepopulate Common Types'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </CardContent>
       </Card>

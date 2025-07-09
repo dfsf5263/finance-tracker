@@ -1,11 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Edit, Trash2, Plus } from 'lucide-react'
+import { Edit, Trash2, Plus, Tag, Sparkles } from 'lucide-react'
 import { TransactionCategoryForm } from './category-form'
 import { useCRUD } from '@/hooks/useCRUD'
 import { useHousehold } from '@/contexts/household-context'
+import { DEFAULT_CATEGORIES } from '@/lib/default-categories'
 
 interface TransactionCategory {
   id: string
@@ -16,6 +18,7 @@ interface TransactionCategory {
 
 export function CategoriesManager() {
   const { selectedHousehold } = useHousehold()
+  const [isCreatingBulk, setIsCreatingBulk] = useState(false)
   const {
     items: categories,
     formOpen,
@@ -25,7 +28,38 @@ export function CategoriesManager() {
     handleEdit,
     handleDelete,
     closeForm,
+    fetchItems,
   } = useCRUD<TransactionCategory>('categories', 'Category', selectedHousehold?.id)
+
+  const handleBulkCreate = async () => {
+    if (!selectedHousehold) return
+
+    setIsCreatingBulk(true)
+    try {
+      const response = await fetch('/api/categories/bulk', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          categories: DEFAULT_CATEGORIES,
+          householdId: selectedHousehold.id,
+        }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log(result.message)
+        fetchItems() // Refresh the categories list
+      } else {
+        console.error('Failed to create bulk categories')
+      }
+    } catch (error) {
+      console.error('Error creating bulk categories:', error)
+    } finally {
+      setIsCreatingBulk(false)
+    }
+  }
 
   if (!selectedHousehold) {
     return (
@@ -82,6 +116,28 @@ export function CategoriesManager() {
                 </div>
               </div>
             ))}
+
+            {categories.length === 0 && (
+              <Card className="border-dashed">
+                <CardContent className="p-8 text-center">
+                  <Tag className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No categories found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Create your first category to organize your transactions by type.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Button onClick={() => setFormOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Your First Category
+                    </Button>
+                    <Button variant="outline" onClick={handleBulkCreate} disabled={isCreatingBulk}>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      {isCreatingBulk ? 'Creating...' : 'Prepopulate Common Categories'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </CardContent>
       </Card>

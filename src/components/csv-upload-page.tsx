@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -222,7 +222,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     setColumnMappings(mappings)
   }
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     if (!selectedHousehold) return
     try {
       const response = await fetch(`/api/categories?householdId=${selectedHousehold.id}`)
@@ -233,9 +233,9 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     } catch (error) {
       console.error('Failed to fetch categories:', error)
     }
-  }
+  }, [selectedHousehold])
 
-  const fetchTypes = async () => {
+  const fetchTypes = useCallback(async () => {
     if (!selectedHousehold) return
     try {
       const response = await fetch(`/api/types?householdId=${selectedHousehold.id}`)
@@ -246,9 +246,9 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     } catch (error) {
       console.error('Failed to fetch types:', error)
     }
-  }
+  }, [selectedHousehold])
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = useCallback(async () => {
     if (!selectedHousehold) return
     try {
       const response = await fetch(`/api/accounts?householdId=${selectedHousehold.id}`)
@@ -259,9 +259,9 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     } catch (error) {
       console.error('Failed to fetch accounts:', error)
     }
-  }
+  }, [selectedHousehold])
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     if (!selectedHousehold) return
     try {
       const response = await fetch(`/api/users?householdId=${selectedHousehold.id}`)
@@ -272,7 +272,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     } catch (error) {
       console.error('Failed to fetch users:', error)
     }
-  }
+  }, [selectedHousehold])
 
   const updateColumnMapping = (csvHeader: string, mappedField: keyof CSVTransaction | 'skip') => {
     setColumnMappings((prev) =>
@@ -293,7 +293,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
       }
     }
     loadEntities()
-  }, [selectedHousehold])
+  }, [selectedHousehold, fetchCategories, fetchTypes, fetchAccounts, fetchUsers])
 
   const validateAndPreviewData = () => {
     const errors: ValidationError[] = []
@@ -441,9 +441,9 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           transactions: processedData,
-          householdId: selectedHousehold?.id 
+          householdId: selectedHousehold?.id,
         }),
       })
 
