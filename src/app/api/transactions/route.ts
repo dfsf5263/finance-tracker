@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
+    const householdId = searchParams.get('householdId')
     const category = searchParams.get('category')
     const type = searchParams.get('type')
     const account = searchParams.get('account')
@@ -15,13 +16,19 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
+    if (!householdId) {
+      return NextResponse.json({ error: 'householdId is required' }, { status: 400 })
+    }
+
     const skip = (page - 1) * limit
 
-    const where: Prisma.TransactionWhereInput = {}
-    if (category) where.category = { name: category }
-    if (type) where.type = { name: type }
-    if (account) where.account = { name: account }
-    if (user) where.user = { name: user }
+    const where: Prisma.TransactionWhereInput = {
+      householdId: householdId
+    }
+    if (category) where.categoryId = category
+    if (type) where.typeId = type
+    if (account) where.accountId = account
+    if (user) where.userId = user
     if (startDate || endDate) {
       where.transactionDate = {}
       if (startDate) where.transactionDate.gte = new Date(startDate)
@@ -63,6 +70,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const {
+      householdId,
       accountId,
       userId,
       transactionDate,
@@ -76,6 +84,7 @@ export async function POST(request: NextRequest) {
 
     const transaction = await db.transaction.create({
       data: {
+        householdId,
         accountId,
         userId,
         transactionDate: new Date(transactionDate),

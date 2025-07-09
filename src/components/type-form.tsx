@@ -17,6 +17,7 @@ interface TransactionType {
   id?: string
   name: string
   isOutflow?: boolean
+  householdId?: string
 }
 
 interface TypeFormProps {

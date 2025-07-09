@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 interface TransactionAccount {
   id?: string
   name: string
+  householdId?: string
 }
 
 interface AccountFormProps {

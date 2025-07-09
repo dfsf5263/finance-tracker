@@ -10,6 +10,7 @@ interface TransactionUser {
   id?: string
   name: string
   annualBudget?: string | number | null
+  householdId?: string
 }
 
 interface TransactionUserFormProps {

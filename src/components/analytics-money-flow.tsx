@@ -19,6 +19,7 @@ import {
   getCurrentMonth,
   getCurrentQuarter,
 } from '@/lib/utils'
+import { useHousehold } from '@/contexts/household-context'
 
 interface SankeyData {
   nodes: Array<{ name: string; type: 'income' | 'user' | 'expense' }>
@@ -52,6 +53,7 @@ const COLORS = [
 ]
 
 export function AnalyticsMoneyFlow() {
+  const { selectedHousehold } = useHousehold()
   const [sankeyData, setSankeyData] = useState<SankeyData>({ nodes: [], links: [] })
   const [loading, setLoading] = useState(true)
   const [timePeriod, setTimePeriod] = useState<TimePeriod>({
@@ -74,9 +76,12 @@ export function AnalyticsMoneyFlow() {
   }
 
   const fetchSankeyData = async () => {
+    if (!selectedHousehold) return
     setLoading(true)
     try {
-      const params = new URLSearchParams()
+      const params = new URLSearchParams({
+        householdId: selectedHousehold.id,
+      })
 
       const dateRange = getDateRangeFromPeriod(timePeriod)
       if (dateRange.startDate) params.append('startDate', dateRange.startDate)
@@ -88,6 +93,9 @@ export function AnalyticsMoneyFlow() {
       if (response.ok) {
         const data = await response.json()
         setSankeyData(data)
+      } else {
+        console.error('API Error:', await response.json())
+        setSankeyData({ nodes: [], links: [] })
       }
     } catch (error) {
       console.error('Error fetching sankey data:', error)
@@ -96,11 +104,12 @@ export function AnalyticsMoneyFlow() {
     }
   }
 
-  // Fetch date ranges on mount
+  // Fetch date ranges when household changes
   useEffect(() => {
     const fetchDateRanges = async () => {
+      if (!selectedHousehold) return
       try {
-        const response = await fetch('/api/transactions/date-ranges')
+        const response = await fetch(`/api/transactions/date-ranges?householdId=${selectedHousehold.id}`)
         if (response.ok) {
           const data = await response.json()
           setDateRanges(data)
@@ -116,8 +125,10 @@ export function AnalyticsMoneyFlow() {
       }
     }
 
-    fetchDateRanges()
-  }, [])
+    if (selectedHousehold) {
+      fetchDateRanges()
+    }
+  }, [selectedHousehold])
 
   // Measure container width for responsive Sankey diagram
   useEffect(() => {
@@ -151,7 +162,15 @@ export function AnalyticsMoneyFlow() {
   useEffect(() => {
     fetchSankeyData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timePeriod])
+  }, [timePeriod, selectedHousehold])
+
+  if (!selectedHousehold) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Please select a household to view money flow.
+      </div>
+    )
+  }
 
   if (loading) {
     return <div className="text-center py-8 text-muted-foreground">Loading money flow...</div>

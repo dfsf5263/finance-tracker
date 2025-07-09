@@ -4,8 +4,9 @@ import { db } from '@/lib/db'
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const category = await db.transactionCategory.findUnique({
+    const category = await db.householdCategory.findUnique({
       where: { id },
+      include: { household: true },
     })
 
     if (!category) {
@@ -38,9 +39,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       updateData.annualBudget = annualBudget
     }
 
-    const category = await db.transactionCategory.update({
+    const category = await db.householdCategory.update({
       where: { id },
       data: updateData,
+      include: { household: true },
     })
 
     return NextResponse.json(category)
@@ -56,7 +58,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    await db.transactionCategory.delete({
+    await db.householdCategory.delete({
       where: { id },
     })
 

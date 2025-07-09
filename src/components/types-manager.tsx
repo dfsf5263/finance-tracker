@@ -5,14 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Edit, Trash2, Plus } from 'lucide-react'
 import { TypeForm } from './type-form'
 import { useCRUD } from '@/hooks/useCRUD'
+import { useHousehold } from '@/contexts/household-context'
 
 interface TransactionType {
   id: string
   name: string
   isOutflow?: boolean
+  householdId?: string
 }
 
 export function TypesManager() {
+  const { selectedHousehold } = useHousehold()
   const {
     items: types,
     formOpen,
@@ -22,7 +25,21 @@ export function TypesManager() {
     handleEdit,
     handleDelete,
     closeForm,
-  } = useCRUD<TransactionType>('types', 'Transaction type')
+  } = useCRUD<TransactionType>('types', 'Transaction type', selectedHousehold?.id)
+
+  if (!selectedHousehold) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-center text-muted-foreground">
+              Please select a household to manage transaction types.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

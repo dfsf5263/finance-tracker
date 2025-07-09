@@ -14,25 +14,30 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { CustomDatePicker } from '@/components/ui/date-picker'
 import { formatDateForInput, parseLocalDate } from '@/lib/utils'
+import { useHousehold } from '@/contexts/household-context'
 
 interface Account {
   id: string
   name: string
+  householdId: string
 }
 
 interface TransactionUser {
   id: string
   name: string
+  householdId: string
 }
 
 interface TransactionCategory {
   id: string
   name: string
+  householdId: string
 }
 
 interface TransactionType {
   id: string
   name: string
+  householdId: string
 }
 
 interface Transaction {
@@ -46,6 +51,7 @@ interface Transaction {
   typeId: string
   amount: number | string
   memo?: string
+  householdId: string
   account?: Account
   user?: TransactionUser
   category?: TransactionCategory
@@ -70,6 +76,7 @@ interface ValidationErrors {
 }
 
 export function TransactionForm({ transaction, open, onClose, onSubmit }: TransactionFormProps) {
+  const { selectedHousehold } = useHousehold()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [users, setUsers] = useState<TransactionUser[]>([])
   const [categories, setCategories] = useState<TransactionCategory[]>([])
@@ -88,17 +95,18 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     typeId: transaction?.typeId || '',
     amount: transaction?.amount || '',
     memo: transaction?.memo || '',
+    householdId: transaction?.householdId || selectedHousehold?.id || '',
   })
 
   useEffect(() => {
-    if (open) {
+    if (open && selectedHousehold) {
       fetchAccounts()
       fetchUsers()
       fetchCategories()
       fetchTypes()
       setErrors({}) // Reset errors when opening
     }
-  }, [open])
+  }, [open, selectedHousehold])
 
   // Update form data when transaction prop changes
   useEffect(() => {
@@ -117,6 +125,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
         typeId: transaction.typeId || '',
         amount: transaction.amount || '',
         memo: transaction.memo || '',
+        householdId: transaction.householdId || selectedHousehold?.id || '',
       })
     } else {
       // Reset form for new transaction
@@ -130,14 +139,16 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
         typeId: '',
         amount: '',
         memo: '',
+        householdId: selectedHousehold?.id || '',
       })
     }
     setErrors({}) // Reset errors when transaction changes
-  }, [transaction])
+  }, [transaction, selectedHousehold])
 
   const fetchAccounts = async () => {
+    if (!selectedHousehold) return
     try {
-      const response = await fetch('/api/accounts')
+      const response = await fetch(`/api/accounts?householdId=${selectedHousehold.id}`)
       if (response.ok) {
         const data = await response.json()
         setAccounts(data)
@@ -148,8 +159,9 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
   }
 
   const fetchUsers = async () => {
+    if (!selectedHousehold) return
     try {
-      const response = await fetch('/api/users')
+      const response = await fetch(`/api/users?householdId=${selectedHousehold.id}`)
       if (response.ok) {
         const data = await response.json()
         setUsers(data)
@@ -160,8 +172,9 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
   }
 
   const fetchCategories = async () => {
+    if (!selectedHousehold) return
     try {
-      const response = await fetch('/api/categories')
+      const response = await fetch(`/api/categories?householdId=${selectedHousehold.id}`)
       if (response.ok) {
         const data = await response.json()
         setCategories(data)
@@ -172,8 +185,9 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
   }
 
   const fetchTypes = async () => {
+    if (!selectedHousehold) return
     try {
-      const response = await fetch('/api/types')
+      const response = await fetch(`/api/types?householdId=${selectedHousehold.id}`)
       if (response.ok) {
         const data = await response.json()
         setTypes(data)
@@ -239,6 +253,23 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     if (errors[field as keyof ValidationErrors]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }))
     }
+  }
+
+  if (!selectedHousehold) {
+    return (
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{transaction ? 'Edit Transaction' : 'Add New Transaction'}</DialogTitle>
+          </DialogHeader>
+          <div className="p-6 text-center">
+            <p className="text-muted-foreground">
+              Please select a household to manage transactions.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
   }
 
   return (

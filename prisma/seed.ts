@@ -3,172 +3,175 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  // Create accounts
+  // Create households
+  const households = await Promise.all([
+    prisma.household.upsert({
+      where: { name: 'Smith Family' },
+      update: {},
+      create: { 
+        name: 'Smith Family',
+        annualBudget: 85000
+      },
+    }),
+    prisma.household.upsert({
+      where: { name: 'Johnson Family' },
+      update: {},
+      create: { 
+        name: 'Johnson Family',
+        annualBudget: 75000
+      },
+    }),
+  ])
+
+  const smithHousehold = households[0]
+  const johnsonHousehold = households[1]
+
+  // Create accounts for each household
   const accounts = await Promise.all([
-    prisma.transactionAccount.upsert({
-      where: { name: 'Chase Sapphire Preferred' },
+    // Smith Family accounts
+    prisma.householdAccount.upsert({
+      where: { name_householdId: { name: 'Chase Sapphire Preferred', householdId: smithHousehold.id } },
       update: {},
-      create: { name: 'Chase Sapphire Preferred' },
+      create: { 
+        name: 'Chase Sapphire Preferred',
+        householdId: smithHousehold.id
+      },
     }),
-    prisma.transactionAccount.upsert({
-      where: { name: 'Wells Fargo Checking' },
+    prisma.householdAccount.upsert({
+      where: { name_householdId: { name: 'Wells Fargo Checking', householdId: smithHousehold.id } },
       update: {},
-      create: { name: 'Wells Fargo Checking' },
+      create: { 
+        name: 'Wells Fargo Checking',
+        householdId: smithHousehold.id
+      },
+    }),
+    // Johnson Family accounts
+    prisma.householdAccount.upsert({
+      where: { name_householdId: { name: 'Bank of America Rewards', householdId: johnsonHousehold.id } },
+      update: {},
+      create: { 
+        name: 'Bank of America Rewards',
+        householdId: johnsonHousehold.id
+      },
+    }),
+    prisma.householdAccount.upsert({
+      where: { name_householdId: { name: 'Credit Union Savings', householdId: johnsonHousehold.id } },
+      update: {},
+      create: { 
+        name: 'Credit Union Savings',
+        householdId: johnsonHousehold.id
+      },
     }),
   ])
 
-  // Create users
+  // Create users for each household
   const users = await Promise.all([
-    prisma.transactionUser.upsert({
-      where: { name: 'Chris' },
+    // Smith Family users
+    prisma.householdUser.upsert({
+      where: { name_householdId: { name: 'Chris', householdId: smithHousehold.id } },
       update: {},
-      create: { name: 'Chris' },
+      create: { 
+        name: 'Chris',
+        householdId: smithHousehold.id,
+        annualBudget: 25000
+      },
     }),
-    prisma.transactionUser.upsert({
-      where: { name: 'Steph' },
+    prisma.householdUser.upsert({
+      where: { name_householdId: { name: 'Steph', householdId: smithHousehold.id } },
       update: {},
-      create: { name: 'Steph' },
+      create: { 
+        name: 'Steph',
+        householdId: smithHousehold.id,
+        annualBudget: 20000
+      },
+    }),
+    // Johnson Family users
+    prisma.householdUser.upsert({
+      where: { name_householdId: { name: 'Mike', householdId: johnsonHousehold.id } },
+      update: {},
+      create: { 
+        name: 'Mike',
+        householdId: johnsonHousehold.id,
+        annualBudget: 30000
+      },
+    }),
+    prisma.householdUser.upsert({
+      where: { name_householdId: { name: 'Sarah', householdId: johnsonHousehold.id } },
+      update: {},
+      create: { 
+        name: 'Sarah',
+        householdId: johnsonHousehold.id,
+        annualBudget: 15000
+      },
     }),
   ])
 
-  // Create categories
-  const categories = await Promise.all([
-    prisma.transactionCategory.upsert({
-      where: { name: 'Groceries' },
-      update: {},
-      create: { name: 'Groceries', annualBudget: 6000 },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Travel' },
-      update: {},
-      create: { name: 'Travel', annualBudget: 3000 },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Health & Wellness' },
-      update: {},
-      create: { name: 'Health & Wellness', annualBudget: 2400 },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Shopping' },
-      update: {},
-      create: { name: 'Shopping' },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Food & Drink' },
-      update: {},
-      create: { name: 'Food & Drink', annualBudget: 4800 },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Gas' },
-      update: {},
-      create: { name: 'Gas', annualBudget: 1800 },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Personal' },
-      update: {},
-      create: { name: 'Personal' },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Other' },
-      update: {},
-      create: { name: 'Other' },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Bills & Utilities' },
-      update: {},
-      create: { name: 'Bills & Utilities', annualBudget: 24000 },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Entertainment' },
-      update: {},
-      create: { name: 'Entertainment', annualBudget: 1200 },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Automotive' },
-      update: {},
-      create: { name: 'Automotive' },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Professional Services' },
-      update: {},
-      create: { name: 'Professional Services' },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Dogs' },
-      update: {},
-      create: { name: 'Dogs' },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Refund' },
-      update: {},
-      create: { name: 'Refund' },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Gift' },
-      update: {},
-      create: { name: 'Gift' },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Home Maintenance' },
-      update: {},
-      create: { name: 'Home Maintenance' },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Subscriptions' },
-      update: {},
-      create: { name: 'Subscriptions' },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Car Maintenance' },
-      update: {},
-      create: { name: 'Car Maintenance' },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Work Lunch' },
-      update: {},
-      create: { name: 'Work Lunch' },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Business' },
-      update: {},
-      create: { name: 'Business' },
-    }),
-    prisma.transactionCategory.upsert({
-      where: { name: 'Paycheck' },
-      update: {},
-      create: { name: 'Paycheck' },
-    }),
-  ])
+  // Create categories for each household
+  const categoryData = [
+    { name: 'Groceries', annualBudget: 6000 },
+    { name: 'Travel', annualBudget: 3000 },
+    { name: 'Health & Wellness', annualBudget: 2400 },
+    { name: 'Shopping' },
+    { name: 'Food & Drink', annualBudget: 4800 },
+    { name: 'Gas', annualBudget: 1800 },
+    { name: 'Personal' },
+    { name: 'Other' },
+    { name: 'Bills & Utilities', annualBudget: 24000 },
+    { name: 'Entertainment', annualBudget: 1200 },
+    { name: 'Automotive' },
+    { name: 'Professional Services' },
+    { name: 'Dogs' },
+    { name: 'Refund' },
+    { name: 'Gift' },
+    { name: 'Home Maintenance' },
+    { name: 'Subscriptions' },
+    { name: 'Car Maintenance' },
+    { name: 'Work Lunch' },
+    { name: 'Business' },
+    { name: 'Paycheck' },
+  ]
 
-  // Create transaction types
-  const types = await Promise.all([
-    prisma.transactionType.upsert({
-      where: { name: 'Sale' },
-      update: {},
-      create: {
-        name: 'Sale',
-        isOutflow: true,
-      },
-    }),
-    prisma.transactionType.upsert({
-      where: { name: 'Income' },
-      update: {},
-      create: {
-        name: 'Income',
-        isOutflow: false,
-      },
-    }),
-    prisma.transactionType.upsert({
-      where: { name: 'Return' },
-      update: {},
-      create: {
-        name: 'Return',
-        isOutflow: false,
-      },
-    }),
-  ])
+  const categories = []
+  for (const household of households) {
+    for (const categoryInfo of categoryData) {
+      const category = await prisma.householdCategory.upsert({
+        where: { name_householdId: { name: categoryInfo.name, householdId: household.id } },
+        update: {},
+        create: { 
+          name: categoryInfo.name,
+          householdId: household.id,
+          annualBudget: categoryInfo.annualBudget
+        },
+      })
+      categories.push(category)
+    }
+  }
+
+  // Create transaction types for each household
+  const typeData = [
+    { name: 'Sale', isOutflow: true },
+    { name: 'Income', isOutflow: false },
+    { name: 'Return', isOutflow: false },
+  ]
+
+  const types = []
+  for (const household of households) {
+    for (const typeInfo of typeData) {
+      const type = await prisma.householdType.upsert({
+        where: { name_householdId: { name: typeInfo.name, householdId: household.id } },
+        update: {},
+        create: { 
+          name: typeInfo.name,
+          householdId: household.id,
+          isOutflow: typeInfo.isOutflow
+        },
+      })
+      types.push(type)
+    }
+  }
 
   console.log('Seed data created successfully!')
+  console.log('Households:', households.length)
   console.log('Accounts:', accounts.length)
   console.log('Users:', users.length)
   console.log('Categories:', categories.length)

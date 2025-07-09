@@ -4,8 +4,9 @@ import { db } from '@/lib/db'
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const type = await db.transactionType.findUnique({
+    const type = await db.householdType.findUnique({
       where: { id },
+      include: { household: true },
     })
 
     if (!type) {
@@ -33,9 +34,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       updateData.isOutflow = isOutflow
     }
 
-    const type = await db.transactionType.update({
+    const type = await db.householdType.update({
       where: { id },
       data: updateData,
+      include: { household: true },
     })
 
     return NextResponse.json(type)
@@ -51,7 +53,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    await db.transactionType.delete({
+    await db.householdType.delete({
       where: { id },
     })
 

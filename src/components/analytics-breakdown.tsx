@@ -20,6 +20,7 @@ import {
   getCurrentMonth,
   getCurrentQuarter,
 } from '@/lib/utils'
+import { useHousehold } from '@/contexts/household-context'
 
 interface AnalyticsData {
   name: string
@@ -55,6 +56,7 @@ const COLORS = [
 ]
 
 export function AnalyticsBreakdown() {
+  const { selectedHousehold } = useHousehold()
   const [data, setData] = useState<AnalyticsData[]>([])
   const [loading, setLoading] = useState(true)
   const [groupBy, setGroupBy] = useState('category')
@@ -78,10 +80,12 @@ export function AnalyticsBreakdown() {
   }
 
   const fetchAnalytics = async () => {
+    if (!selectedHousehold) return
     setLoading(true)
     try {
       const params = new URLSearchParams({
         groupBy,
+        householdId: selectedHousehold.id,
       })
 
       const dateRange = getDateRangeFromPeriod(timePeriod)
@@ -100,6 +104,9 @@ export function AnalyticsBreakdown() {
           value: Math.abs(item.value), // Use absolute value for pie chart
         }))
         setData(transformedData)
+      } else {
+        console.error('API Error:', await response.json())
+        setData([])
       }
     } catch (error) {
       console.error('Error fetching analytics:', error)
@@ -108,11 +115,12 @@ export function AnalyticsBreakdown() {
     }
   }
 
-  // Fetch types and date ranges on mount
+  // Fetch types and date ranges when household changes
   useEffect(() => {
     const fetchTypes = async () => {
+      if (!selectedHousehold) return
       try {
-        const response = await fetch('/api/types')
+        const response = await fetch(`/api/types?householdId=${selectedHousehold.id}`)
         if (response.ok) {
           const data = await response.json()
           setTypes(data)
@@ -123,8 +131,9 @@ export function AnalyticsBreakdown() {
     }
 
     const fetchDateRanges = async () => {
+      if (!selectedHousehold) return
       try {
-        const response = await fetch('/api/transactions/date-ranges')
+        const response = await fetch(`/api/transactions/date-ranges?householdId=${selectedHousehold.id}`)
         if (response.ok) {
           const data = await response.json()
           setDateRanges(data)
@@ -140,14 +149,16 @@ export function AnalyticsBreakdown() {
       }
     }
 
-    fetchTypes()
-    fetchDateRanges()
-  }, [])
+    if (selectedHousehold) {
+      fetchTypes()
+      fetchDateRanges()
+    }
+  }, [selectedHousehold])
 
   useEffect(() => {
     fetchAnalytics()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupBy, timePeriod, typeFilter])
+  }, [groupBy, timePeriod, typeFilter, selectedHousehold])
 
   const CustomTooltip = ({
     active,
@@ -176,6 +187,14 @@ export function AnalyticsBreakdown() {
     const valueToUse = item.originalValue !== undefined ? item.originalValue : item.value
     return sum + valueToUse
   }, 0)
+
+  if (!selectedHousehold) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Please select a household to view analytics.
+      </div>
+    )
+  }
 
   if (loading) {
     return <div className="text-center py-8 text-muted-foreground">Loading analytics...</div>

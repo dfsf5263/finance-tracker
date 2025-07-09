@@ -7,66 +7,95 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model TransactionAccount {
-  id           String        @id @default(uuid()) @db.Uuid
-  name         String        @unique
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
+model Household {
+  id           String                    @id @default(uuid()) @db.Uuid
+  name         String                    @unique
+  annualBudget Decimal?                  @map("annual_budget") @db.Decimal(12, 2)
+  createdAt    DateTime                  @default(now()) @map("created_at")
+  updatedAt    DateTime                  @updatedAt @map("updated_at")
+  accounts     HouseholdAccount[]
+  users        HouseholdUser[]
+  categories   HouseholdCategory[]
+  types        HouseholdType[]
   transactions Transaction[]
 
-  @@map("transaction_account")
+  @@map("household")
 }
 
-model TransactionUser {
+model HouseholdAccount {
   id           String        @id @default(uuid()) @db.Uuid
-  name         String        @unique
+  name         String
+  householdId  String        @map("household_id") @db.Uuid
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  household    Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([name, householdId])
+  @@map("household_account")
+}
+
+model HouseholdUser {
+  id           String        @id @default(uuid()) @db.Uuid
+  name         String
+  householdId  String        @map("household_id") @db.Uuid
   annualBudget Decimal?      @map("annual_budget") @db.Decimal(12, 2)
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
+  household    Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 
-  @@map("transaction_user")
+  @@unique([name, householdId])
+  @@map("household_user")
 }
 
-model TransactionCategory {
+model HouseholdCategory {
   id           String        @id @default(uuid()) @db.Uuid
-  name         String        @unique
+  name         String
+  householdId  String        @map("household_id") @db.Uuid
   annualBudget Decimal?      @map("annual_budget") @db.Decimal(12, 2)
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
+  household    Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 
-  @@map("transaction_category")
+  @@unique([name, householdId])
+  @@map("household_category")
 }
 
-model TransactionType {
+model HouseholdType {
   id           String        @id @default(uuid()) @db.Uuid
-  name         String        @unique
+  name         String
+  householdId  String        @map("household_id") @db.Uuid
   isOutflow    Boolean       @default(true) @map("is_outflow")
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
+  household    Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 
-  @@map("transaction_type")
+  @@unique([name, householdId])
+  @@map("household_type")
 }
 
 model Transaction {
-  id              String              @id @default(uuid()) @db.Uuid
-  accountId       String              @map("account_id") @db.Uuid
-  userId          String              @map("user_id") @db.Uuid
-  transactionDate DateTime            @map("transaction_date")
-  postDate        DateTime            @map("post_date")
+  id              String            @id @default(uuid()) @db.Uuid
+  householdId     String            @map("household_id") @db.Uuid
+  accountId       String            @map("account_id") @db.Uuid
+  userId          String?           @map("user_id") @db.Uuid
+  transactionDate DateTime          @map("transaction_date")
+  postDate        DateTime          @map("post_date")
   description     String
-  categoryId      String              @map("category_id") @db.Uuid
-  typeId          String              @map("type_id") @db.Uuid
-  amount          Decimal             @db.Decimal(10, 2)
+  categoryId      String            @map("category_id") @db.Uuid
+  typeId          String            @map("type_id") @db.Uuid
+  amount          Decimal           @db.Decimal(10, 2)
   memo            String?
-  createdAt       DateTime            @default(now()) @map("created_at")
-  updatedAt       DateTime            @updatedAt @map("updated_at")
-  account         TransactionAccount  @relation(fields: [accountId], references: [id])
-  category        TransactionCategory @relation(fields: [categoryId], references: [id])
-  type            TransactionType     @relation(fields: [typeId], references: [id])
-  user            TransactionUser     @relation(fields: [userId], references: [id])
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  household       Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  account         HouseholdAccount  @relation(fields: [accountId], references: [id])
+  category        HouseholdCategory @relation(fields: [categoryId], references: [id])
+  type            HouseholdType     @relation(fields: [typeId], references: [id])
+  user            HouseholdUser?    @relation(fields: [userId], references: [id])
 
   @@map("transaction")
 }

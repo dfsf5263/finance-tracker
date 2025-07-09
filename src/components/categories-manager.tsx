@@ -5,14 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Edit, Trash2, Plus } from 'lucide-react'
 import { TransactionCategoryForm } from './category-form'
 import { useCRUD } from '@/hooks/useCRUD'
+import { useHousehold } from '@/contexts/household-context'
 
 interface TransactionCategory {
   id: string
   name: string
   annualBudget?: string | number | null
+  householdId?: string
 }
 
 export function CategoriesManager() {
+  const { selectedHousehold } = useHousehold()
   const {
     items: categories,
     formOpen,
@@ -22,7 +25,21 @@ export function CategoriesManager() {
     handleEdit,
     handleDelete,
     closeForm,
-  } = useCRUD<TransactionCategory>('categories', 'Category')
+  } = useCRUD<TransactionCategory>('categories', 'Category', selectedHousehold?.id)
+
+  if (!selectedHousehold) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-center text-muted-foreground">
+              Please select a household to manage categories.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

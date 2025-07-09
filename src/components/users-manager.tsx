@@ -5,14 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Edit, Trash2, Plus } from 'lucide-react'
 import { TransactionUserForm } from './user-form'
 import { useCRUD } from '@/hooks/useCRUD'
+import { useHousehold } from '@/contexts/household-context'
 
 interface TransactionUser {
   id: string
   name: string
   annualBudget?: string | number | null
+  householdId?: string
 }
 
 export function UsersManager() {
+  const { selectedHousehold } = useHousehold()
   const {
     items: users,
     formOpen,
@@ -22,7 +25,21 @@ export function UsersManager() {
     handleEdit,
     handleDelete,
     closeForm,
-  } = useCRUD<TransactionUser>('users', 'User')
+  } = useCRUD<TransactionUser>('users', 'User', selectedHousehold?.id)
+
+  if (!selectedHousehold) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-center text-muted-foreground">
+              Please select a household to manage users.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

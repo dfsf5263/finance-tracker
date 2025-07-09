@@ -5,13 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Edit, Trash2, Plus } from 'lucide-react'
 import { AccountForm } from './account-form'
 import { useCRUD } from '@/hooks/useCRUD'
+import { useHousehold } from '@/contexts/household-context'
 
 interface TransactionAccount {
   id: string
   name: string
+  householdId?: string
 }
 
 export function AccountsManager() {
+  const { selectedHousehold } = useHousehold()
   const {
     items: accounts,
     formOpen,
@@ -21,7 +24,21 @@ export function AccountsManager() {
     handleEdit,
     handleDelete,
     closeForm,
-  } = useCRUD<TransactionAccount>('accounts', 'Account')
+  } = useCRUD<TransactionAccount>('accounts', 'Account', selectedHousehold?.id)
+
+  if (!selectedHousehold) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-center text-muted-foreground">
+              Please select a household to manage accounts.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

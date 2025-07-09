@@ -20,8 +20,15 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     const typeId = searchParams.get('typeId')
+    const householdId = searchParams.get('householdId')
 
-    const where: Prisma.TransactionWhereInput = {}
+    if (!householdId) {
+      return NextResponse.json({ error: 'householdId is required' }, { status: 400 })
+    }
+
+    const where: Prisma.TransactionWhereInput = {
+      householdId: householdId
+    }
     if (startDate || endDate) {
       where.transactionDate = {}
       if (startDate) where.transactionDate.gte = new Date(startDate)

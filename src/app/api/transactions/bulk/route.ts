@@ -53,10 +53,14 @@ function parseMMDDYYYY(dateString: string): Date | null {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { transactions } = body
+    const { transactions, householdId } = body
 
     if (!Array.isArray(transactions)) {
       return NextResponse.json({ error: 'Transactions must be an array' }, { status: 400 })
+    }
+
+    if (!householdId) {
+      return NextResponse.json({ error: 'Household ID is required' }, { status: 400 })
     }
 
     // Collect all unique names from the CSV
@@ -69,12 +73,12 @@ export async function POST(request: NextRequest) {
     ]
     const typeNames = [...new Set(transactions.map((t: CSVTransaction) => t.type).filter(Boolean))]
 
-    // Fetch all entities from database
+    // Fetch all entities from database for the specific household
     const [accounts, users, categories, types] = await Promise.all([
-      db.transactionAccount.findMany({ where: { name: { in: accountNames } } }),
-      db.transactionUser.findMany({ where: { name: { in: userNames } } }),
-      db.transactionCategory.findMany({ where: { name: { in: categoryNames } } }),
-      db.transactionType.findMany({ where: { name: { in: typeNames } } }),
+      db.householdAccount.findMany({ where: { name: { in: accountNames }, householdId } }),
+      db.householdUser.findMany({ where: { name: { in: userNames }, householdId } }),
+      db.householdCategory.findMany({ where: { name: { in: categoryNames }, householdId } }),
+      db.householdType.findMany({ where: { name: { in: typeNames }, householdId } }),
     ])
 
     // Create lookup maps
@@ -144,6 +148,7 @@ export async function POST(request: NextRequest) {
       const hasRowErrors = validationErrors.some((e) => e.row === rowNumber)
       if (!hasRowErrors && transactionDate) {
         validTransactions.push({
+          householdId,
           accountId: accountMap.get(transaction.account)!,
           userId: userMap.get(transaction.user)!,
           transactionDate: transactionDate,

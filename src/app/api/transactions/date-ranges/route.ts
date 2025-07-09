@@ -1,11 +1,21 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentYear, getCurrentMonth } from '@/lib/utils'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Get the earliest and latest transaction dates
+    const { searchParams } = new URL(request.url)
+    const householdId = searchParams.get('householdId')
+
+    if (!householdId) {
+      return NextResponse.json({ error: 'householdId is required' }, { status: 400 })
+    }
+
+    // Get the earliest and latest transaction dates for the household
     const dateRange = await db.transaction.aggregate({
+      where: {
+        householdId: householdId
+      },
       _min: {
         transactionDate: true,
       },

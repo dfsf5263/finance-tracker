@@ -18,6 +18,7 @@ import {
 import { NavMain } from '@/components/nav-main'
 import { NavGroup } from '@/components/nav-group'
 import { NavUser } from '@/components/nav-user'
+import { HouseholdSelector } from '@/components/household-selector'
 import {
   Sidebar,
   SidebarContent,
@@ -109,6 +110,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <div className="px-2 pb-2">
+          <HouseholdSelector />
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />

@@ -1,14 +1,21 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 
-export function useCRUD<T extends { id: string }>(apiEndpoint: string, entityName: string) {
+export function useCRUD<T extends { id: string }>(
+  apiEndpoint: string, 
+  entityName: string,
+  householdId?: string
+) {
   const [items, setItems] = useState<T[]>([])
   const [formOpen, setFormOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<T | undefined>()
 
   const fetchItems = useCallback(async () => {
     try {
-      const response = await fetch(`/api/${apiEndpoint}`)
+      const url = householdId 
+        ? `/api/${apiEndpoint}?householdId=${householdId}`
+        : `/api/${apiEndpoint}`
+      const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
         setItems(data)
@@ -16,7 +23,7 @@ export function useCRUD<T extends { id: string }>(apiEndpoint: string, entityNam
     } catch (error) {
       console.error(`Failed to fetch ${entityName}:`, error)
     }
-  }, [apiEndpoint, entityName])
+  }, [apiEndpoint, entityName, householdId])
 
   useEffect(() => {
     fetchItems()
@@ -28,10 +35,15 @@ export function useCRUD<T extends { id: string }>(apiEndpoint: string, entityNam
       const url = isEditing ? `/api/${apiEndpoint}/${editingItem.id}` : `/api/${apiEndpoint}`
       const method = isEditing ? 'PUT' : 'POST'
 
+      // Include householdId in the request body for create operations
+      const bodyData = !isEditing && householdId 
+        ? { ...itemData, householdId }
+        : itemData
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(itemData),
+        body: JSON.stringify(bodyData),
       })
       if (response.ok) {
         setFormOpen(false)

@@ -36,25 +36,30 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
+import { useHousehold } from '@/contexts/household-context'
 
 interface Account {
   id: string
   name: string
+  householdId: string
 }
 
 interface TransactionUser {
   id: string
   name: string
+  householdId: string
 }
 
 interface TransactionCategory {
   id: string
   name: string
+  householdId: string
 }
 
 interface TransactionType {
   id: string
   name: string
+  householdId: string
 }
 
 interface Transaction {
@@ -68,6 +73,7 @@ interface Transaction {
   typeId: string
   amount: number
   memo?: string
+  householdId: string
   account?: Account
   user?: TransactionUser
   category?: TransactionCategory
@@ -82,6 +88,7 @@ interface TransactionGridProps {
 }
 
 export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridProps) {
+  const { selectedHousehold } = useHousehold()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -105,11 +112,13 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
 
   const fetchTransactions = async () => {
+    if (!selectedHousehold) return
     setLoading(true)
     try {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: pageSize.toString(),
+        householdId: selectedHousehold.id,
       })
 
       if (filters.category && filters.category !== 'all')
@@ -138,6 +147,11 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
 
         setTransactions(filteredTransactions)
         setTotalPages(data.pagination.pages)
+      } else {
+        const errorData = await response.json()
+        console.error('API Error:', errorData)
+        setTransactions([])
+        setTotalPages(1)
       }
     } catch (error) {
       console.error('Error fetching transactions:', error)
@@ -147,8 +161,9 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   }
 
   const fetchCategories = async () => {
+    if (!selectedHousehold) return
     try {
-      const response = await fetch('/api/categories')
+      const response = await fetch(`/api/categories?householdId=${selectedHousehold.id}`)
       if (response.ok) {
         const data = await response.json()
         setCategories(data)
@@ -159,8 +174,9 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   }
 
   const fetchTypes = async () => {
+    if (!selectedHousehold) return
     try {
-      const response = await fetch('/api/types')
+      const response = await fetch(`/api/types?householdId=${selectedHousehold.id}`)
       if (response.ok) {
         const data = await response.json()
         setTypes(data)
@@ -171,8 +187,9 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   }
 
   const fetchAccounts = async () => {
+    if (!selectedHousehold) return
     try {
-      const response = await fetch('/api/accounts')
+      const response = await fetch(`/api/accounts?householdId=${selectedHousehold.id}`)
       if (response.ok) {
         const data = await response.json()
         setAccounts(data)
@@ -183,8 +200,9 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   }
 
   const fetchUsers = async () => {
+    if (!selectedHousehold) return
     try {
-      const response = await fetch('/api/users')
+      const response = await fetch(`/api/users?householdId=${selectedHousehold.id}`)
       if (response.ok) {
         const data = await response.json()
         setUsers(data)
@@ -197,14 +215,16 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   useEffect(() => {
     fetchTransactions()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, filters, refreshTrigger])
+  }, [page, pageSize, filters, refreshTrigger, selectedHousehold])
 
   useEffect(() => {
-    fetchCategories()
-    fetchTypes()
-    fetchAccounts()
-    fetchUsers()
-  }, [])
+    if (selectedHousehold) {
+      fetchCategories()
+      fetchTypes()
+      fetchAccounts()
+      fetchUsers()
+    }
+  }, [selectedHousehold])
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this transaction?')) {
@@ -296,6 +316,20 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     }
     setEditingTransaction(formTransaction)
     setShowTransactionForm(true)
+  }
+
+  if (!selectedHousehold) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-center text-muted-foreground">
+              Please select a household to view transactions.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -420,7 +454,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                   <SelectContent>
                     <SelectItem value="all">All Accounts</SelectItem>
                     {accounts.map((account) => (
-                      <SelectItem key={account.id} value={account.name}>
+                      <SelectItem key={account.id} value={account.id}>
                         {account.name}
                       </SelectItem>
                     ))}
@@ -443,7 +477,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                   <SelectContent>
                     <SelectItem value="all">All Users</SelectItem>
                     {users.map((user) => (
-                      <SelectItem key={user.id} value={user.name}>
+                      <SelectItem key={user.id} value={user.id}>
                         {user.name}
                       </SelectItem>
                     ))}
@@ -466,7 +500,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
                     {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.name}>
+                      <SelectItem key={category.id} value={category.id}>
                         {category.name}
                       </SelectItem>
                     ))}
@@ -489,7 +523,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
                     {types.map((type) => (
-                      <SelectItem key={type.id} value={type.name}>
+                      <SelectItem key={type.id} value={type.id}>
                         {type.name}
                       </SelectItem>
                     ))}

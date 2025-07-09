@@ -1,36 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const types = await db.transactionType.findMany({
+    const { searchParams } = new URL(request.url)
+    const householdId = searchParams.get('householdId')
+
+    if (!householdId) {
+      return NextResponse.json({ error: 'Household ID is required' }, { status: 400 })
+    }
+
+    const types = await db.householdType.findMany({
+      where: { householdId },
       orderBy: { name: 'asc' },
+      include: { household: true },
     })
     return NextResponse.json(types)
   } catch (error) {
-    console.error('Error fetching transaction types:', error)
-    return NextResponse.json({ error: 'Failed to fetch transaction types' }, { status: 500 })
+    console.error('Error fetching types:', error)
+    return NextResponse.json({ error: 'Failed to fetch types' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, isOutflow } = await request.json()
+    const { name, isOutflow, householdId } = await request.json()
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
-    const type = await db.transactionType.create({
+    if (!householdId) {
+      return NextResponse.json({ error: 'Household ID is required' }, { status: 400 })
+    }
+
+    const type = await db.householdType.create({
       data: {
         name,
-        isOutflow: isOutflow !== undefined ? isOutflow : true,
+        householdId,
+        isOutflow: isOutflow ?? true,
       },
+      include: { household: true },
     })
 
     return NextResponse.json(type, { status: 201 })
   } catch (error) {
-    console.error('Error creating transaction type:', error)
-    return NextResponse.json({ error: 'Failed to create transaction type' }, { status: 500 })
+    console.error('Error creating type:', error)
+    return NextResponse.json({ error: 'Failed to create type' }, { status: 500 })
   }
 }

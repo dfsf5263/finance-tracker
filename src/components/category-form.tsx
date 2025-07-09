@@ -10,6 +10,7 @@ interface TransactionCategory {
   id?: string
   name: string
   annualBudget?: string | number | null
+  householdId?: string
 }
 
 interface TransactionCategoryFormProps {

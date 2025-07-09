@@ -22,6 +22,7 @@ import {
   parseMonthDayYearDate,
   isValidMonthDayYearDate,
 } from '@/lib/utils'
+import { useHousehold } from '@/contexts/household-context'
 
 interface CSVUploadPageProps {
   onUploadComplete: () => void
@@ -42,21 +43,25 @@ interface CSVTransaction {
 interface Account {
   id: string
   name: string
+  householdId: string
 }
 
 interface TransactionUser {
   id: string
   name: string
+  householdId: string
 }
 
 interface TransactionCategory {
   id: string
   name: string
+  householdId: string
 }
 
 interface TransactionType {
   id: string
   name: string
+  householdId: string
 }
 
 interface ValidationError {
@@ -92,6 +97,7 @@ const headerMapping: Record<string, keyof CSVTransaction> = {
 }
 
 export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
+  const { selectedHousehold } = useHousehold()
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'complete'>('upload')
@@ -217,8 +223,9 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
   }
 
   const fetchCategories = async () => {
+    if (!selectedHousehold) return
     try {
-      const response = await fetch('/api/categories')
+      const response = await fetch(`/api/categories?householdId=${selectedHousehold.id}`)
       if (response.ok) {
         const data = await response.json()
         setCategories(data)
@@ -229,8 +236,9 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
   }
 
   const fetchTypes = async () => {
+    if (!selectedHousehold) return
     try {
-      const response = await fetch('/api/types')
+      const response = await fetch(`/api/types?householdId=${selectedHousehold.id}`)
       if (response.ok) {
         const data = await response.json()
         setTypes(data)
@@ -241,8 +249,9 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
   }
 
   const fetchAccounts = async () => {
+    if (!selectedHousehold) return
     try {
-      const response = await fetch('/api/accounts')
+      const response = await fetch(`/api/accounts?householdId=${selectedHousehold.id}`)
       if (response.ok) {
         const data = await response.json()
         setAccounts(data)
@@ -253,8 +262,9 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
   }
 
   const fetchUsers = async () => {
+    if (!selectedHousehold) return
     try {
-      const response = await fetch('/api/users')
+      const response = await fetch(`/api/users?householdId=${selectedHousehold.id}`)
       if (response.ok) {
         const data = await response.json()
         setUsers(data)
@@ -272,14 +282,18 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     )
   }
 
-  // Load entities on component mount
+  // Load entities when household is selected
   React.useEffect(() => {
     const loadEntities = async () => {
-      await Promise.all([fetchCategories(), fetchTypes(), fetchAccounts(), fetchUsers()])
-      setEntitiesLoaded(true)
+      if (selectedHousehold) {
+        await Promise.all([fetchCategories(), fetchTypes(), fetchAccounts(), fetchUsers()])
+        setEntitiesLoaded(true)
+      } else {
+        setEntitiesLoaded(false)
+      }
     }
     loadEntities()
-  }, [])
+  }, [selectedHousehold])
 
   const validateAndPreviewData = () => {
     const errors: ValidationError[] = []
@@ -427,7 +441,10 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ transactions: processedData }),
+        body: JSON.stringify({ 
+          transactions: processedData,
+          householdId: selectedHousehold?.id 
+        }),
       })
 
       const result = await response.json()
@@ -495,6 +512,20 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     a.download = 'validation-errors.csv'
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  if (!selectedHousehold) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-center text-muted-foreground">
+              Please select a household to upload transactions.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (

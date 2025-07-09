@@ -4,8 +4,9 @@ import { db } from '@/lib/db'
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const user = await db.transactionUser.findUnique({
+    const user = await db.householdUser.findUnique({
       where: { id },
+      include: { household: true },
     })
 
     if (!user) {
@@ -38,9 +39,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       updateData.annualBudget = annualBudget
     }
 
-    const user = await db.transactionUser.update({
+    const user = await db.householdUser.update({
       where: { id },
       data: updateData,
+      include: { household: true },
     })
 
     return NextResponse.json(user)
@@ -56,7 +58,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    await db.transactionUser.delete({
+    await db.householdUser.delete({
       where: { id },
     })
 
