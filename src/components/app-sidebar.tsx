@@ -65,13 +65,13 @@ const data = {
   ],
   budgeting: [
     {
-      name: 'Audit',
-      url: '/dashboard/budgeting/audit',
+      name: 'Household Budget',
+      url: '/dashboard/budgeting/household-budget',
       icon: Target,
     },
     {
-      name: 'Allowance',
-      url: '/dashboard/budgeting/allowance',
+      name: 'User Budget',
+      url: '/dashboard/budgeting/user-budget',
       icon: Wallet,
     },
   ],

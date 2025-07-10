@@ -1,13 +1,13 @@
 'use client'
 
-import { UserAllowance } from '@/components/user-allowance'
+import { HouseholdBudget } from '@/components/household-budget'
 
-export default function AllowancePage() {
+export default function HouseholdBudgetPage() {
   return (
     <div className="@container/main flex flex-1 flex-col gap-2">
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         <div className="px-4 lg:px-6">
-          <UserAllowance />
+          <HouseholdBudget />
         </div>
       </div>
     </div>

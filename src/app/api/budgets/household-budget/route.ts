@@ -11,14 +11,14 @@ export async function GET(request: NextRequest) {
     const householdId = searchParams.get('householdId')
     const categoryId = searchParams.get('categoryId')
     const timePeriodType = searchParams.get('timePeriodType') || 'month' // month, quarter, year, all
-    const auditType = searchParams.get('auditType') || 'category' // category or household
+    const budgetType = searchParams.get('budgetType') || 'category' // category or household
 
     if (!householdId) {
       return NextResponse.json({ error: 'householdId is required' }, { status: 400 })
     }
 
     // Handle household audit type
-    if (auditType === 'household') {
+    if (budgetType === 'household') {
       // Fetch household with budget
       const household = await db.household.findUnique({
         where: { id: householdId },
@@ -229,7 +229,7 @@ export async function GET(request: NextRequest) {
     const budgetDivisor = getPeriodBudgetDivisor(timePeriodType)
 
     // Build response data
-    const budgetAuditData = categories.map((category) => {
+    const householdBudgetData = categories.map((category) => {
       const actualSpending = Math.abs(spendingMap.get(category.id) || 0) // Use absolute value for comparison
       const annualBudget = category.annualBudget
         ? parseFloat(category.annualBudget.toString())
@@ -254,27 +254,27 @@ export async function GET(request: NextRequest) {
     })
 
     // Check if no categories with budgets exist
-    if (budgetAuditData.length === 0) {
+    if (householdBudgetData.length === 0) {
       return NextResponse.json({ noBudget: true })
     }
 
     // Sort by overspend first, then by budget usage percentage
-    budgetAuditData.sort((a, b) => {
+    householdBudgetData.sort((a, b) => {
       if (a.overspend && !b.overspend) return -1
       if (!a.overspend && b.overspend) return 1
       return b.budgetUsedPercentage - a.budgetUsedPercentage
     })
 
-    return NextResponse.json(budgetAuditData)
+    return NextResponse.json(householdBudgetData)
   } catch (error) {
     await logApiError({
       request,
       error,
-      operation: 'fetch budget audit data',
+      operation: 'fetch household budget data',
       context: {
         searchParams: Object.fromEntries(new URL(request.url).searchParams.entries()),
       },
     })
-    return NextResponse.json({ error: 'Failed to fetch budget audit data' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to fetch household budget data' }, { status: 500 })
   }
 }

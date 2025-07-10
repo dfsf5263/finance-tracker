@@ -37,7 +37,7 @@ import {
 } from '@/lib/utils'
 import { useHousehold } from '@/contexts/household-context'
 
-interface BudgetAuditData {
+interface HouseholdBudgetData {
   categoryId: string
   categoryName: string
   annualBudget: number | null
@@ -61,7 +61,7 @@ interface TimePeriod {
   quarter: number
 }
 
-interface HouseholdAuditData {
+interface HouseholdSummaryData {
   householdBudget: number
   periodBudget: number
   totalSpending: number
@@ -87,7 +87,7 @@ const CustomTooltip = ({
   label,
 }: {
   active?: boolean
-  payload?: Array<{ payload: BudgetAuditData & { budget: number; actual: number } }>
+  payload?: Array<{ payload: HouseholdBudgetData & { budget: number; actual: number } }>
   label?: string
 }) => {
   if (active && payload && payload.length) {
@@ -143,13 +143,13 @@ const LineChartTooltip = ({
   return null
 }
 
-export function BudgetAudit() {
+export function HouseholdBudget() {
   const { selectedHousehold } = useHousehold()
   const router = useRouter()
-  const [data, setData] = useState<BudgetAuditData[]>([])
-  const [householdData, setHouseholdData] = useState<HouseholdAuditData | null>(null)
+  const [data, setData] = useState<HouseholdBudgetData[]>([])
+  const [householdData, setHouseholdData] = useState<HouseholdSummaryData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [auditType, setAuditType] = useState<'category' | 'household'>('category')
+  const [budgetType, setBudgetType] = useState<'category' | 'household'>('category')
   const [householdNoBudget, setHouseholdNoBudget] = useState(false)
   const [categoryNoBudget, setCategoryNoBudget] = useState(false)
   const [timePeriod, setTimePeriod] = useState<TimePeriod>({
@@ -190,29 +190,29 @@ export function BudgetAudit() {
     return getDateRange(period.type, period.year, period.month, period.quarter)
   }
 
-  const fetchBudgetAudit = async () => {
+  const fetchHouseholdBudget = async () => {
     if (!selectedHousehold) return
     setLoading(true)
     try {
       const params = new URLSearchParams({
         householdId: selectedHousehold.id,
         timePeriodType: timePeriod.type,
-        auditType: auditType,
+        budgetType: budgetType,
       })
 
       const dateRange = getDateRangeFromPeriod(timePeriod)
       if (dateRange.startDate) params.append('startDate', dateRange.startDate)
       if (dateRange.endDate) params.append('endDate', dateRange.endDate)
-      if (categoryFilter && categoryFilter !== 'all' && auditType === 'category') {
+      if (categoryFilter && categoryFilter !== 'all' && budgetType === 'category') {
         params.append('categoryId', categoryFilter)
       }
 
-      const response = await fetch(`/api/budgets/audit?${params}`)
+      const response = await fetch(`/api/budgets/household-budget?${params}`)
       if (response.ok) {
-        const auditData = await response.json()
+        const householdBudgetData = await response.json()
 
-        if (auditData.noBudget) {
-          if (auditType === 'category') {
+        if (householdBudgetData.noBudget) {
+          if (budgetType === 'category') {
             setCategoryNoBudget(true)
             setData([])
           } else {
@@ -220,12 +220,12 @@ export function BudgetAudit() {
             setHouseholdData(null)
           }
         } else {
-          if (auditType === 'category') {
+          if (budgetType === 'category') {
             setCategoryNoBudget(false)
-            setData(auditData)
+            setData(householdBudgetData)
           } else {
             setHouseholdNoBudget(false)
-            setHouseholdData(auditData)
+            setHouseholdData(householdBudgetData)
           }
         }
       } else {
@@ -239,9 +239,9 @@ export function BudgetAudit() {
   }
 
   useEffect(() => {
-    fetchBudgetAudit()
+    fetchHouseholdBudget()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedHousehold, timePeriod, categoryFilter, auditType])
+  }, [selectedHousehold, timePeriod, categoryFilter, budgetType])
 
   // Prepare chart data
   const chartData = data.map((item) => ({
@@ -257,7 +257,7 @@ export function BudgetAudit() {
   const categoriesOverBudget = data.filter((item) => item.overspend).length
   const totalOverspend = data.reduce((sum, item) => sum + item.overspendAmount, 0)
 
-  const getBarColor = (item: BudgetAuditData & { budget: number; actual: number }) => {
+  const getBarColor = (item: HouseholdBudgetData & { budget: number; actual: number }) => {
     if (!item.periodBudget) return '#94a3b8' // Slate-400
     if (item.overspend) return '#ef4444' // Red-500
     if (item.budgetUsedPercentage >= 80) return '#f59e0b' // Amber-500
@@ -283,7 +283,7 @@ export function BudgetAudit() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
-            Budget Audit
+            Household Budget
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -305,7 +305,7 @@ export function BudgetAudit() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
-            Budget Audit - {getPeriodLabel(timePeriod)}
+            Household Budget - {getPeriodLabel(timePeriod)}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -391,7 +391,7 @@ export function BudgetAudit() {
             </div>
 
             {/* Category Filter - Only show for category audit */}
-            {auditType === 'category' && (
+            {budgetType === 'category' && (
               <div className="space-y-2">
                 <Label>Category</Label>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -414,13 +414,13 @@ export function BudgetAudit() {
       </Card>
 
       <Tabs
-        value={auditType}
-        onValueChange={(value) => setAuditType(value as 'category' | 'household')}
+        value={budgetType}
+        onValueChange={(value) => setBudgetType(value as 'category' | 'household')}
         className="w-full"
       >
         <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
-          <TabsTrigger value="category">Category Audit</TabsTrigger>
-          <TabsTrigger value="household">Household Audit</TabsTrigger>
+          <TabsTrigger value="category">Category Summary</TabsTrigger>
+          <TabsTrigger value="household">Household Summary</TabsTrigger>
         </TabsList>
 
         <TabsContent value="category" className="space-y-6">
@@ -607,7 +607,7 @@ export function BudgetAudit() {
         </TabsContent>
 
         <TabsContent value="household" className="space-y-6">
-          {/* Household Audit Content */}
+          {/* Household Summary Content */}
           {householdNoBudget ? (
             <Card>
               <CardContent className="p-8">

@@ -35,7 +35,7 @@ import {
 } from '@/lib/utils'
 import { useHousehold } from '@/contexts/household-context'
 
-interface UserAllowanceData {
+interface UserBudgetData {
   user: {
     id: string
     name: string
@@ -43,9 +43,9 @@ interface UserAllowanceData {
   }
   basePeriodBudget: number
   inflowTotal: number
-  totalAllowance: number
+  totalBudget: number
   totalSpending: number
-  remainingAllowance: number
+  remainingBudget: number
   spendingPercentage: number
   isOverBudget: boolean
   overspendAmount: number
@@ -80,10 +80,10 @@ interface TimePeriod {
   quarter?: number
 }
 
-export function UserAllowance() {
+export function UserBudget() {
   const router = useRouter()
   const { selectedHousehold } = useHousehold()
-  const [data, setData] = useState<UserAllowanceData | null>(null)
+  const [data, setData] = useState<UserBudgetData | null>(null)
   const [users, setUsers] = useState<HouseholdUser[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -155,8 +155,8 @@ export function UserAllowance() {
         if (startDate) params.append('startDate', startDate)
         if (endDate) params.append('endDate', endDate)
 
-        const response = await fetch(`/api/budgets/allowance?${params}`)
-        if (!response.ok) throw new Error('Failed to fetch allowance data')
+        const response = await fetch(`/api/budgets/user-budget?${params}`)
+        if (!response.ok) throw new Error('Failed to fetch budget data')
 
         const result = await response.json()
 
@@ -167,8 +167,8 @@ export function UserAllowance() {
           setData(result)
         }
       } catch (error) {
-        console.error('Error fetching allowance data:', error)
-        setError('Failed to fetch allowance data')
+        console.error('Error fetching budget data:', error)
+        setError('Failed to fetch budget data')
       } finally {
         setLoading(false)
       }
@@ -240,11 +240,11 @@ export function UserAllowance() {
       }
     })
 
-    // Add remaining budget slice if there's remaining allowance
-    if (data.remainingAllowance > 0 && !data.isOverBudget) {
+    // Add remaining budget slice if there's remaining budget
+    if (data.remainingBudget > 0 && !data.isOverBudget) {
       pieData.push({
         name: 'Remaining Budget',
-        value: data.remainingAllowance,
+        value: data.remainingBudget,
         fill: 'transparent',
       })
     }
@@ -293,7 +293,7 @@ export function UserAllowance() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
-            User Allowance
+            User Budget
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
@@ -301,7 +301,7 @@ export function UserAllowance() {
             <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No User Budgets Found</h3>
             <p className="text-muted-foreground mb-4">
-              To use the allowance tracker, you need to set annual budgets for users.
+              To use the budget tracker, you need to set annual budgets for users.
             </p>
             <Button onClick={() => router.push('/dashboard/definitions/users')}>
               <Settings className="h-4 w-4 mr-2" />
@@ -319,13 +319,13 @@ export function UserAllowance() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
-            User Allowance
+            User Budget
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="text-center py-8">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading allowance data...</p>
+            <p className="text-muted-foreground">Loading budget data...</p>
           </div>
         </CardContent>
       </Card>
@@ -338,7 +338,7 @@ export function UserAllowance() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
-            User Allowance
+            User Budget
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
@@ -358,7 +358,7 @@ export function UserAllowance() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
-            User Allowance
+            User Budget
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
@@ -387,7 +387,7 @@ export function UserAllowance() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
-            User Allowance - {getPeriodLabel(timePeriod)}
+            User Budget - {getPeriodLabel(timePeriod)}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
@@ -513,11 +513,11 @@ export function UserAllowance() {
                     <p className="font-medium">Include Inflow Transactions</p>
                     <p className="text-sm">
                       When enabled, this adds any income transactions (salary, bonuses, etc.) to
-                      your allowance calculation for this period.
+                      your budget calculation for this period.
                     </p>
                     <p className="text-sm">
                       💡 <strong>Financial Tip:</strong> Consider saving or investing any surplus
-                      income instead of increasing your spending allowance!
+                      income instead of increasing your spending budget!
                     </p>
                   </div>
                 </TooltipContent>
@@ -549,14 +549,14 @@ export function UserAllowance() {
           </CardContent>
         </Card>
 
-        {/* Total Allowance Card - Second Position */}
+        {/* Total Budget Card - Second Position */}
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">Total Allowance</span>
+              <span className="text-sm font-medium text-muted-foreground">Total Budget</span>
             </div>
-            <div className="text-2xl font-bold">{formatCurrency(data.totalAllowance)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(data.totalBudget)}</div>
             {data.includeInflow && data.inflowTotal > 0 && (
               <p className="text-xs text-muted-foreground">
                 Base: {formatCurrency(data.basePeriodBudget)} + Inflow:{' '}
@@ -575,7 +575,7 @@ export function UserAllowance() {
             </div>
             <div className="text-2xl font-bold">{formatCurrency(data.totalSpending)}</div>
             <p className="text-xs text-muted-foreground">
-              {data.spendingPercentage.toFixed(1)}% of allowance
+              {data.spendingPercentage.toFixed(1)}% of budget
             </p>
           </CardContent>
         </Card>
@@ -596,7 +596,7 @@ export function UserAllowance() {
             <div
               className={`text-2xl font-bold ${data.isOverBudget ? 'text-red-600' : 'text-green-600'}`}
             >
-              {formatCurrency(data.isOverBudget ? data.overspendAmount : data.remainingAllowance)}
+              {formatCurrency(data.isOverBudget ? data.overspendAmount : data.remainingBudget)}
             </div>
           </CardContent>
         </Card>
@@ -636,7 +636,7 @@ export function UserAllowance() {
 
                       if (isRemainingBudget) {
                         percentage =
-                          data?.totalAllowance > 0 ? (pieData.value / data.totalAllowance) * 100 : 0
+                          data?.totalBudget > 0 ? (pieData.value / data.totalBudget) * 100 : 0
                         percentageLabel = 'of total budget'
                       } else {
                         percentage =
@@ -682,7 +682,7 @@ export function UserAllowance() {
           </div>
           <div className="text-center mt-4">
             <p className="text-sm text-muted-foreground">
-              {formatCurrency(data.totalSpending)} of {formatCurrency(data.totalAllowance)}
+              {formatCurrency(data.totalSpending)} of {formatCurrency(data.totalBudget)}
             </p>
           </div>
         </CardContent>

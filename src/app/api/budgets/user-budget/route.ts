@@ -86,8 +86,8 @@ export async function GET(request: NextRequest) {
       inflowTotal = Math.abs(inflowResult._sum.amount?.toNumber() || 0)
     }
 
-    // Calculate total allowance (base budget + inflow if enabled)
-    const totalAllowance = basePeriodBudget + inflowTotal
+    // Calculate total budget (base budget + inflow if enabled)
+    const totalBudget = basePeriodBudget + inflowTotal
 
     // Get outflow spending
     const outflowWhere = {
@@ -131,10 +131,10 @@ export async function GET(request: NextRequest) {
     categoryBreakdown.sort((a, b) => b.amount - a.amount)
 
     // Calculate percentages and status
-    const spendingPercentage = totalAllowance > 0 ? (totalSpending / totalAllowance) * 100 : 0
-    const remainingAllowance = totalAllowance - totalSpending
-    const isOverBudget = totalSpending > totalAllowance
-    const overspendAmount = isOverBudget ? totalSpending - totalAllowance : 0
+    const spendingPercentage = totalBudget > 0 ? (totalSpending / totalBudget) * 100 : 0
+    const remainingBudget = totalBudget - totalSpending
+    const isOverBudget = totalSpending > totalBudget
+    const overspendAmount = isOverBudget ? totalSpending - totalBudget : 0
 
     // Get top 10 transactions for detail view
     const topTransactions = await db.transaction.findMany({
@@ -164,9 +164,9 @@ export async function GET(request: NextRequest) {
       },
       basePeriodBudget,
       inflowTotal,
-      totalAllowance,
+      totalBudget,
       totalSpending,
-      remainingAllowance,
+      remainingBudget,
       spendingPercentage: Math.round(spendingPercentage * 100) / 100,
       isOverBudget,
       overspendAmount,
@@ -178,11 +178,11 @@ export async function GET(request: NextRequest) {
     await logApiError({
       request,
       error,
-      operation: 'fetch user allowance data',
+      operation: 'fetch user budget data',
       context: {
         searchParams: Object.fromEntries(new URL(request.url).searchParams.entries()),
       },
     })
-    return NextResponse.json({ error: 'Failed to fetch user allowance data' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to fetch user budget data' }, { status: 500 })
   }
 }
