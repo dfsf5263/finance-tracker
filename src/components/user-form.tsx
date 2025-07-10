@@ -46,7 +46,7 @@ export function TransactionUserForm({ user, open, onClose, onSubmit }: Transacti
     e.preventDefault()
     const submitData = {
       name: formData.name,
-      ...(formData.annualBudget && { annualBudget: formData.annualBudget }),
+      annualBudget: formData.annualBudget,
     }
     onSubmit(submitData)
   }

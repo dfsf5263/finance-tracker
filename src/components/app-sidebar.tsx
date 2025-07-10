@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Upload,
   Users,
+  Wallet,
 } from 'lucide-react'
 
 import { NavMain } from '@/components/nav-main'
@@ -67,6 +68,11 @@ const data = {
       name: 'Audit',
       url: '/dashboard/budgeting/audit',
       icon: Target,
+    },
+    {
+      name: 'Allowance',
+      url: '/dashboard/budgeting/allowance',
+      icon: Wallet,
     },
   ],
   definitions: [

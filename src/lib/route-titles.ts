@@ -7,6 +7,7 @@ export function getPageTitle(pathname: string): string {
     '/dashboard/analytics/breakdown': 'Analytics - Breakdown',
     '/dashboard/analytics/money-flow': 'Analytics - Money Flow',
     '/dashboard/budgeting/audit': 'Budgeting - Audit',
+    '/dashboard/budgeting/allowance': 'Budgeting - Allowance',
     '/dashboard/definitions': 'Definitions',
     '/dashboard/definitions/households': 'Definitions - Households',
     '/dashboard/definitions/categories': 'Definitions - Categories',
