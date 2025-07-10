@@ -67,7 +67,14 @@ export async function POST(request: NextRequest) {
     const accountNames = [
       ...new Set(transactions.map((t: CSVTransaction) => t.account).filter(Boolean)),
     ]
-    const userNames = [...new Set(transactions.map((t: CSVTransaction) => t.user).filter(Boolean))]
+    const userNames = [
+      ...new Set(
+        transactions
+          .map((t: CSVTransaction) => t.user)
+          .filter(Boolean)
+          .filter((name: string) => name.trim() !== '')
+      ),
+    ]
     const categoryNames = [
       ...new Set(transactions.map((t: CSVTransaction) => t.category).filter(Boolean)),
     ]
@@ -97,12 +104,13 @@ export async function POST(request: NextRequest) {
 
       // Entity existence is now validated client-side
       // Keep minimal server-side validation as backup security check
-      if (
-        !accountMap.has(transaction.account) ||
-        !userMap.has(transaction.user) ||
-        !categoryMap.has(transaction.category) ||
-        !typeMap.has(transaction.type)
-      ) {
+      const missingEntities = []
+      if (!accountMap.has(transaction.account)) missingEntities.push('account')
+      if (transaction.user?.trim() && !userMap.has(transaction.user)) missingEntities.push('user')
+      if (!categoryMap.has(transaction.category)) missingEntities.push('category')
+      if (!typeMap.has(transaction.type)) missingEntities.push('type')
+
+      if (missingEntities.length > 0) {
         validationErrors.push({
           row: rowNumber,
           field: 'entities',
@@ -150,7 +158,7 @@ export async function POST(request: NextRequest) {
         validTransactions.push({
           householdId,
           accountId: accountMap.get(transaction.account)!,
-          userId: userMap.get(transaction.user)!,
+          userId: transaction.user?.trim() ? userMap.get(transaction.user)! : null,
           transactionDate: transactionDate,
           postDate: postDate || transactionDate,
           description: transaction.description,

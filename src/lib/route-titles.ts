@@ -2,6 +2,8 @@ export function getPageTitle(pathname: string): string {
   const routeTitles: Record<string, string> = {
     '/dashboard': 'Dashboard',
     '/dashboard/transactions': 'Transactions',
+    '/dashboard/transactions/manage': 'Manage Transactions',
+    '/dashboard/transactions/upload': 'Upload Transactions',
     '/dashboard/analytics/breakdown': 'Analytics - Breakdown',
     '/dashboard/analytics/money-flow': 'Analytics - Money Flow',
     '/dashboard/budgeting/audit': 'Budgeting - Audit',

@@ -43,7 +43,7 @@ interface TransactionType {
 interface Transaction {
   id?: string
   accountId: string
-  userId: string
+  userId: string | null
   transactionDate: string
   postDate: string
   description: string
@@ -67,7 +67,6 @@ interface TransactionFormProps {
 
 interface ValidationErrors {
   accountId?: string
-  userId?: string
   transactionDate?: string
   description?: string
   categoryId?: string
@@ -83,9 +82,9 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
   const [types, setTypes] = useState<TransactionType[]>([])
   const [errors, setErrors] = useState<ValidationErrors>({})
 
-  const [formData, setFormData] = useState<Omit<Transaction, 'id'>>({
+  const [formData, setFormData] = useState<Omit<Transaction, 'id'> & { userId: string }>({
     accountId: transaction?.accountId || '',
-    userId: transaction?.userId || '',
+    userId: transaction?.userId || '__none__',
     transactionDate: transaction?.transactionDate
       ? formatDateForInput(parseLocalDate(transaction.transactionDate))
       : formatDateForInput(new Date()),
@@ -103,7 +102,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     if (transaction) {
       setFormData({
         accountId: transaction.accountId || '',
-        userId: transaction.userId || '',
+        userId: transaction.userId || '__none__',
         transactionDate: transaction.transactionDate
           ? formatDateForInput(parseLocalDate(transaction.transactionDate))
           : formatDateForInput(new Date()),
@@ -121,7 +120,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
       // Reset form for new transaction
       setFormData({
         accountId: '',
-        userId: '',
+        userId: '__none__',
         transactionDate: formatDateForInput(new Date()),
         postDate: '',
         description: '',
@@ -203,9 +202,6 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     if (!formData.accountId) {
       newErrors.accountId = 'Account is required'
     }
-    if (!formData.userId) {
-      newErrors.userId = 'User is required'
-    }
     if (!formData.transactionDate) {
       newErrors.transactionDate = 'Transaction date is required'
     }
@@ -240,6 +236,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
 
     const submitData = {
       ...formData,
+      userId: formData.userId === '__none__' || !formData.userId ? null : formData.userId, // Convert __none__ or empty string to null
       amount:
         typeof formData.amount === 'string' ? parseFloat(formData.amount) || 0 : formData.amount,
       postDate: formData.postDate || formData.transactionDate, // Default to transaction date if not provided
@@ -304,16 +301,17 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
           </div>
 
           <div>
-            <Label htmlFor="user">User</Label>
+            <Label htmlFor="user">User (optional)</Label>
             <div className="mt-2">
               <Select
                 value={formData.userId}
                 onValueChange={(value) => handleInputChange('userId', value)}
               >
-                <SelectTrigger aria-invalid={!!errors.userId}>
+                <SelectTrigger>
                   <SelectValue placeholder="Select user" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.name}
@@ -321,7 +319,6 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
                   ))}
                 </SelectContent>
               </Select>
-              {errors.userId && <p className="text-sm text-destructive mt-1">{errors.userId}</p>}
             </div>
           </div>
 

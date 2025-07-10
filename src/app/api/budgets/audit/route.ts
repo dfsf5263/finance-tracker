@@ -10,14 +10,153 @@ export async function GET(request: NextRequest) {
     const householdId = searchParams.get('householdId')
     const categoryId = searchParams.get('categoryId')
     const timePeriodType = searchParams.get('timePeriodType') || 'month' // month, quarter, year, all
+    const auditType = searchParams.get('auditType') || 'category' // category or household
 
     if (!householdId) {
       return NextResponse.json({ error: 'householdId is required' }, { status: 400 })
     }
 
-    // Build transaction filter
+    // Handle household audit type
+    if (auditType === 'household') {
+      // Fetch household with budget
+      const household = await db.household.findUnique({
+        where: { id: householdId },
+        select: {
+          annualBudget: true,
+        },
+      })
+
+      if (!household || !household.annualBudget) {
+        return NextResponse.json({ noBudget: true })
+      }
+
+      // Calculate period budget divisor
+      const getPeriodBudgetDivisor = (timePeriodType: string): number => {
+        switch (timePeriodType) {
+          case 'month':
+            return 12
+          case 'quarter':
+            return 4
+          case 'year':
+          case 'all':
+            return 1
+          default:
+            return 12
+        }
+      }
+
+      const budgetDivisor = getPeriodBudgetDivisor(timePeriodType)
+      const householdBudget = parseFloat(household.annualBudget.toString())
+      const periodBudget = householdBudget / budgetDivisor
+
+      // Build transaction filter - only outflow transactions
+      const transactionWhere: Prisma.TransactionWhereInput = {
+        householdId: householdId,
+        type: {
+          isOutflow: true,
+        },
+      }
+
+      if (startDate || endDate) {
+        transactionWhere.transactionDate = {}
+        if (startDate) transactionWhere.transactionDate.gte = new Date(startDate)
+        if (endDate) transactionWhere.transactionDate.lte = new Date(endDate)
+      }
+
+      // Get total spending
+      const totalSpendingResult = await db.transaction.aggregate({
+        where: transactionWhere,
+        _sum: {
+          amount: true,
+        },
+      })
+
+      const totalSpending = Math.abs(totalSpendingResult._sum.amount?.toNumber() || 0)
+
+      // Get spending over time
+      const transactions = await db.transaction.findMany({
+        where: transactionWhere,
+        orderBy: {
+          transactionDate: 'asc',
+        },
+        select: {
+          transactionDate: true,
+          amount: true,
+        },
+      })
+
+      // Group by date and calculate cumulative
+      const dailySpending = new Map<string, number>()
+      transactions.forEach((transaction) => {
+        const dateKey = transaction.transactionDate.toISOString().split('T')[0]
+        const current = dailySpending.get(dateKey) || 0
+        dailySpending.set(dateKey, current + Math.abs(transaction.amount.toNumber()))
+      })
+
+      // Create cumulative spending array with budget progress
+      let cumulative = 0
+      const sortedDates = Array.from(dailySpending.entries()).sort(([a], [b]) => a.localeCompare(b))
+
+      // Calculate daily budget rate
+      const totalDays = sortedDates.length || 1
+      const dailyBudgetRate = periodBudget / totalDays
+
+      const spendingOverTime = sortedDates.map(([date, amount], index) => {
+        cumulative += amount
+        const budgetProgress = dailyBudgetRate * (index + 1) // Expected cumulative budget at this point
+
+        return {
+          date,
+          dailyAmount: amount,
+          cumulativeAmount: cumulative,
+          budgetProgress,
+        }
+      })
+
+      // Calculate daily average
+      const dayCount = spendingOverTime.length || 1
+      const dailyAverage = totalSpending / dayCount
+
+      // Get top 10 transactions
+      const topTransactions = await db.transaction.findMany({
+        where: transactionWhere,
+        orderBy: {
+          amount: 'asc', // Most negative (highest spending) first
+        },
+        take: 10,
+        include: {
+          category: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      })
+
+      const formattedTopTransactions = topTransactions.map((t) => ({
+        id: t.id,
+        date: t.transactionDate.toISOString().split('T')[0],
+        description: t.description,
+        category: t.category.name,
+        amount: t.amount.toNumber(),
+      }))
+
+      return NextResponse.json({
+        householdBudget,
+        periodBudget,
+        totalSpending,
+        dailyAverage,
+        spendingOverTime,
+        topTransactions: formattedTopTransactions,
+      })
+    }
+
+    // Build transaction filter - only outflow transactions
     const transactionWhere: Prisma.TransactionWhereInput = {
       householdId: householdId,
+      type: {
+        isOutflow: true,
+      },
     }
 
     if (startDate || endDate) {
@@ -112,6 +251,11 @@ export async function GET(request: NextRequest) {
         budgetUsedPercentage: Math.round(budgetUsedPercentage * 100) / 100, // Round to 2 decimal places
       }
     })
+
+    // Check if no categories with budgets exist
+    if (budgetAuditData.length === 0) {
+      return NextResponse.json({ noBudget: true })
+    }
 
     // Sort by overspend first, then by budget usage percentage
     budgetAuditData.sort((a, b) => {

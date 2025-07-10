@@ -321,15 +321,6 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
         })
       }
 
-      if (!transaction.user?.trim()) {
-        rowErrors.push({
-          row: index + 1,
-          field: 'user',
-          value: transaction.user || '',
-          message: 'User is required',
-        })
-      }
-
       if (!transaction.transactionDate?.trim()) {
         rowErrors.push({
           row: index + 1,
@@ -612,10 +603,17 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
               <h4 className="text-sm font-medium">Required Columns</h4>
               <div className="text-xs text-muted-foreground space-y-1">
                 <div>• Account - Financial account name</div>
-                <div>• User - Person who made the transaction</div>
                 <div>• Transaction Date - Date of the transaction</div>
                 <div>• Description - Transaction description</div>
+                <div>• Category - Expense/income category</div>
+                <div>• Type - Transaction type</div>
                 <div>• Amount - Transaction amount</div>
+              </div>
+              <h4 className="text-sm font-medium">Optional Columns</h4>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <div>• User - Person who made the transaction</div>
+                <div>• Post Date - When transaction posted</div>
+                <div>• Memo - Additional notes</div>
               </div>
             </div>
           </CardContent>

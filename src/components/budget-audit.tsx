@@ -1,15 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   Cell,
+  ReferenceLine,
 } from 'recharts'
 import {
   Select,
@@ -19,8 +23,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Filter, TrendingUp, TrendingDown, Target } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Filter, TrendingUp, TrendingDown, Target, AlertCircle, Settings } from 'lucide-react'
 import {
   formatCurrency,
   getDateRange,
@@ -48,17 +54,31 @@ interface Category {
   annualBudget?: number | null
 }
 
-interface DateRanges {
-  years: number[]
-  currentYear: number
-  currentMonth: number
-}
-
 interface TimePeriod {
-  type: 'all' | 'year' | 'month' | 'quarter'
+  type: 'year' | 'month' | 'quarter'
   year: number
   month: number
   quarter: number
+}
+
+interface HouseholdAuditData {
+  householdBudget: number
+  periodBudget: number
+  totalSpending: number
+  dailyAverage: number
+  spendingOverTime: Array<{
+    date: string
+    cumulativeAmount: number
+    dailyAmount: number
+    budgetProgress: number
+  }>
+  topTransactions: Array<{
+    id: string
+    date: string
+    description: string
+    category: string
+    amount: number
+  }>
 }
 
 const CustomTooltip = ({
@@ -97,10 +117,41 @@ const CustomTooltip = ({
   return null
 }
 
+const LineChartTooltip = ({
+  active,
+  payload,
+}: {
+  active?: boolean
+  payload?: Array<{
+    value: number
+    payload: { date: string; cumulativeAmount: number; dailyAmount: number; budgetProgress: number }
+  }>
+}) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload
+    return (
+      <div className="bg-card p-3 border border-border rounded-lg shadow-lg">
+        <p className="font-medium text-sm">{data.date}</p>
+        <p className="text-sm text-muted-foreground">Daily: {formatCurrency(data.dailyAmount)}</p>
+        <p className="text-sm text-primary">Total: {formatCurrency(data.cumulativeAmount)}</p>
+        <p className="text-sm text-muted-foreground">
+          Expected: {formatCurrency(data.budgetProgress)}
+        </p>
+      </div>
+    )
+  }
+  return null
+}
+
 export function BudgetAudit() {
   const { selectedHousehold } = useHousehold()
+  const router = useRouter()
   const [data, setData] = useState<BudgetAuditData[]>([])
+  const [householdData, setHouseholdData] = useState<HouseholdAuditData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [auditType, setAuditType] = useState<'category' | 'household'>('category')
+  const [householdNoBudget, setHouseholdNoBudget] = useState(false)
+  const [categoryNoBudget, setCategoryNoBudget] = useState(false)
   const [timePeriod, setTimePeriod] = useState<TimePeriod>({
     type: 'month',
     year: getCurrentYear(),
@@ -109,30 +160,9 @@ export function BudgetAudit() {
   })
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [categories, setCategories] = useState<Category[]>([])
-  const [dateRanges, setDateRanges] = useState<DateRanges>({
-    years: [],
-    currentYear: getCurrentYear(),
-    currentMonth: getCurrentMonth(),
-  })
 
-  // Fetch available date ranges
-  useEffect(() => {
-    const fetchDateRanges = async () => {
-      if (!selectedHousehold) return
-      try {
-        const response = await fetch(
-          `/api/transactions/date-ranges?householdId=${selectedHousehold.id}`
-        )
-        if (response.ok) {
-          const ranges = await response.json()
-          setDateRanges(ranges)
-        }
-      } catch (error) {
-        console.error('Failed to fetch date ranges:', error)
-      }
-    }
-    fetchDateRanges()
-  }, [selectedHousehold])
+  // Generate static year list for last 5 years
+  const yearOptions = Array.from({ length: 5 }, (_, i) => getCurrentYear() - i)
 
   // Fetch categories
   useEffect(() => {
@@ -167,17 +197,37 @@ export function BudgetAudit() {
       const params = new URLSearchParams({
         householdId: selectedHousehold.id,
         timePeriodType: timePeriod.type,
+        auditType: auditType,
       })
 
       const dateRange = getDateRangeFromPeriod(timePeriod)
       if (dateRange.startDate) params.append('startDate', dateRange.startDate)
       if (dateRange.endDate) params.append('endDate', dateRange.endDate)
-      if (categoryFilter && categoryFilter !== 'all') params.append('categoryId', categoryFilter)
+      if (categoryFilter && categoryFilter !== 'all' && auditType === 'category') {
+        params.append('categoryId', categoryFilter)
+      }
 
       const response = await fetch(`/api/budgets/audit?${params}`)
       if (response.ok) {
         const auditData = await response.json()
-        setData(auditData)
+
+        if (auditData.noBudget) {
+          if (auditType === 'category') {
+            setCategoryNoBudget(true)
+            setData([])
+          } else {
+            setHouseholdNoBudget(true)
+            setHouseholdData(null)
+          }
+        } else {
+          if (auditType === 'category') {
+            setCategoryNoBudget(false)
+            setData(auditData)
+          } else {
+            setHouseholdNoBudget(false)
+            setHouseholdData(auditData)
+          }
+        }
       } else {
         console.error('Failed to fetch budget audit data')
       }
@@ -191,7 +241,7 @@ export function BudgetAudit() {
   useEffect(() => {
     fetchBudgetAudit()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedHousehold, timePeriod, categoryFilter])
+  }, [selectedHousehold, timePeriod, categoryFilter, auditType])
 
   // Prepare chart data
   const chartData = data.map((item) => ({
@@ -222,8 +272,6 @@ export function BudgetAudit() {
         return `Q${period.quarter} ${period.year}`
       case 'year':
         return period.year.toString()
-      case 'all':
-        return 'All Time'
       default:
         return 'Current Period'
     }
@@ -271,7 +319,7 @@ export function BudgetAudit() {
               <div className="flex space-x-2">
                 <Select
                   value={timePeriod.type}
-                  onValueChange={(value: 'all' | 'year' | 'month' | 'quarter') =>
+                  onValueChange={(value: 'year' | 'month' | 'quarter') =>
                     setTimePeriod({ ...timePeriod, type: value })
                   }
                 >
@@ -282,29 +330,24 @@ export function BudgetAudit() {
                     <SelectItem value="month">Month</SelectItem>
                     <SelectItem value="quarter">Quarter</SelectItem>
                     <SelectItem value="year">Year</SelectItem>
-                    <SelectItem value="all">All Time</SelectItem>
                   </SelectContent>
                 </Select>
 
-                {timePeriod.type !== 'all' && (
-                  <Select
-                    value={timePeriod.year.toString()}
-                    onValueChange={(value) =>
-                      setTimePeriod({ ...timePeriod, year: parseInt(value) })
-                    }
-                  >
-                    <SelectTrigger className="w-[100px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dateRanges.years.map((year) => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                <Select
+                  value={timePeriod.year.toString()}
+                  onValueChange={(value) => setTimePeriod({ ...timePeriod, year: parseInt(value) })}
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
                 {timePeriod.type === 'month' && (
                   <Select
@@ -347,164 +390,414 @@ export function BudgetAudit() {
               </div>
             </div>
 
-            {/* Category Filter */}
-            <div className="space-y-2">
-              <Label>Category</Label>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Target className="h-4 w-4 text-blue-500" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Budget</p>
-                <p className="text-lg font-bold">{formatCurrency(totalBudget)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="h-4 w-4 text-green-500" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Spending</p>
-                <p className="text-lg font-bold">{formatCurrency(totalSpending)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <TrendingDown className="h-4 w-4 text-red-500" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Categories Over Budget</p>
-                <p className="text-lg font-bold">{categoriesOverBudget}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <TrendingDown className="h-4 w-4 text-red-500" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Overspend</p>
-                <p className="text-lg font-bold text-red-600">{formatCurrency(totalOverspend)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Budget vs Actual Chart */}
-      <Card className="p-4">
-        <CardHeader>
-          <CardTitle>Budget vs Actual Spending</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {data.length === 0 ? (
-            <div className="flex items-center justify-center py-8">
-              <p className="text-muted-foreground">No data available for the selected period</p>
-            </div>
-          ) : (
-            <div className="w-full h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 30, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--foreground)" opacity={0.5} />
-                  <XAxis
-                    dataKey="name"
-                    angle={-45}
-                    textAnchor="end"
-                    height={100}
-                    interval={0}
-                    fontSize={12}
-                    tick={{ fill: 'var(--foreground)' }}
-                  />
-                  <YAxis
-                    tickFormatter={(value) => formatCurrency(value)}
-                    tick={{ fill: 'var(--foreground)' }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="budget" fill="#60a5fa" opacity={0.6} name="Budget" />
-                  <Bar dataKey="actual" name="Actual">
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={getBarColor(entry)} />
+            {/* Category Filter - Only show for category audit */}
+            {auditType === 'category' && (
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
                     ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Detailed Table */}
-      <Card className="p-4">
-        <CardHeader>
-          <CardTitle>Detailed Budget Analysis</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Category</th>
-                  <th className="text-right p-2">Budget</th>
-                  <th className="text-right p-2">Actual</th>
-                  <th className="text-right p-2">% Used</th>
-                  <th className="text-right p-2">Variance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((item) => (
-                  <tr key={item.categoryId} className="border-b">
-                    <td className="p-2 font-medium">{item.categoryName}</td>
-                    <td className="p-2 text-right">
-                      {item.periodBudget ? formatCurrency(item.periodBudget) : 'Not set'}
-                    </td>
-                    <td className="p-2 text-right">{formatCurrency(item.actualSpending)}</td>
-                    <td className="p-2 text-right">
-                      {item.periodBudget ? `${item.budgetUsedPercentage.toFixed(1)}%` : '-'}
-                    </td>
-                    <td
-                      className={`p-2 text-right font-medium ${
-                        item.overspend ? 'text-red-600' : 'text-green-600'
-                      }`}
-                    >
-                      {item.periodBudget
-                        ? formatCurrency((item.actualSpending - item.periodBudget) * -1)
-                        : '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      <Tabs
+        value={auditType}
+        onValueChange={(value) => setAuditType(value as 'category' | 'household')}
+        className="w-full"
+      >
+        <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
+          <TabsTrigger value="category">Category Audit</TabsTrigger>
+          <TabsTrigger value="household">Household Audit</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="category" className="space-y-6">
+          {categoryNoBudget ? (
+            <Card>
+              <CardContent className="p-8">
+                <div className="text-center space-y-4">
+                  <div className="flex justify-center">
+                    <AlertCircle className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold">No Category Budgets Set</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      You need to set up budgets for your categories to track spending and get
+                      budget audit insights.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => router.push('/dashboard/definitions/categories')}
+                    className="inline-flex items-center gap-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Set Up Category Budgets
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <Target className="h-4 w-4 text-blue-500" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Total Budget</p>
+                        <p className="text-lg font-bold">{formatCurrency(totalBudget)}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Total Spending</p>
+                        <p className="text-lg font-bold">{formatCurrency(totalSpending)}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <TrendingDown className="h-4 w-4 text-red-500" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Categories Over Budget
+                        </p>
+                        <p className="text-lg font-bold">{categoriesOverBudget}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <TrendingDown className="h-4 w-4 text-red-500" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Total Overspend</p>
+                        <p className="text-lg font-bold text-red-600">
+                          {formatCurrency(totalOverspend)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Budget vs Actual Chart */}
+              <Card className="p-4">
+                <CardHeader>
+                  <CardTitle>Budget vs Actual Spending</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {data.length === 0 ? (
+                    <div className="flex items-center justify-center py-8">
+                      <p className="text-muted-foreground">
+                        No data available for the selected period
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="w-full h-[400px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={chartData}
+                          margin={{ top: 20, right: 30, left: 30, bottom: 5 }}
+                        >
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="var(--foreground)"
+                            opacity={0.5}
+                          />
+                          <XAxis
+                            dataKey="name"
+                            angle={-45}
+                            textAnchor="end"
+                            height={100}
+                            interval={0}
+                            fontSize={12}
+                            tick={{ fill: 'var(--foreground)' }}
+                          />
+                          <YAxis
+                            tickFormatter={(value) => formatCurrency(value)}
+                            tick={{ fill: 'var(--foreground)' }}
+                          />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Bar dataKey="budget" fill="#60a5fa" opacity={0.6} name="Budget" />
+                          <Bar dataKey="actual" name="Actual">
+                            {chartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={getBarColor(entry)} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Detailed Table */}
+              <Card className="p-4">
+                <CardHeader>
+                  <CardTitle>Detailed Budget Analysis</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2">Category</th>
+                          <th className="text-right p-2">Budget</th>
+                          <th className="text-right p-2">Actual</th>
+                          <th className="text-right p-2">% Used</th>
+                          <th className="text-right p-2">Variance</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.map((item) => (
+                          <tr key={item.categoryId} className="border-b">
+                            <td className="p-2 font-medium">{item.categoryName}</td>
+                            <td className="p-2 text-right">
+                              {item.periodBudget ? formatCurrency(item.periodBudget) : 'Not set'}
+                            </td>
+                            <td className="p-2 text-right">
+                              {formatCurrency(item.actualSpending)}
+                            </td>
+                            <td className="p-2 text-right">
+                              {item.periodBudget ? `${item.budgetUsedPercentage.toFixed(1)}%` : '-'}
+                            </td>
+                            <td
+                              className={`p-2 text-right font-medium ${
+                                item.overspend ? 'text-red-600' : 'text-green-600'
+                              }`}
+                            >
+                              {item.periodBudget
+                                ? formatCurrency((item.actualSpending - item.periodBudget) * -1)
+                                : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="household" className="space-y-6">
+          {/* Household Audit Content */}
+          {householdNoBudget ? (
+            <Card>
+              <CardContent className="p-8">
+                <div className="text-center space-y-4">
+                  <div className="flex justify-center">
+                    <AlertCircle className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold">No Household Budget Set</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      You need to set up an annual budget for your household to track overall
+                      spending and get budget audit insights.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => router.push('/dashboard/definitions/households')}
+                    className="inline-flex items-center gap-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Set Up Household Budget
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : householdData ? (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <Target className="h-4 w-4 text-blue-500" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Household Budget
+                        </p>
+                        <p className="text-lg font-bold">
+                          {formatCurrency(householdData.periodBudget)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Total Spending</p>
+                        <p className="text-lg font-bold">
+                          {formatCurrency(householdData.totalSpending)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <TrendingDown
+                        className={`h-4 w-4 ${householdData.totalSpending > householdData.periodBudget ? 'text-red-500' : 'text-green-500'}`}
+                      />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {householdData.totalSpending > householdData.periodBudget
+                            ? 'Over Budget'
+                            : 'Budget Remaining'}
+                        </p>
+                        <p
+                          className={`text-lg font-bold ${householdData.totalSpending > householdData.periodBudget ? 'text-red-600' : 'text-green-600'}`}
+                        >
+                          {formatCurrency(
+                            Math.abs(householdData.periodBudget - householdData.totalSpending)
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <TrendingUp className="h-4 w-4 text-blue-500" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Daily Average</p>
+                        <p className="text-lg font-bold">
+                          {formatCurrency(householdData.dailyAverage)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Spending Over Time Chart */}
+              <Card className="p-4">
+                <CardHeader>
+                  <CardTitle>Spending Over Time</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="w-full h-[400px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={householdData.spendingOverTime}
+                        margin={{ top: 20, right: 30, left: 30, bottom: 5 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="var(--foreground)"
+                          opacity={0.1}
+                        />
+                        <XAxis dataKey="date" tick={{ fill: 'var(--foreground)', fontSize: 12 }} />
+                        <YAxis
+                          tickFormatter={(value) => formatCurrency(value)}
+                          tick={{ fill: 'var(--foreground)' }}
+                        />
+                        <Tooltip content={<LineChartTooltip />} />
+                        <ReferenceLine
+                          y={householdData.periodBudget}
+                          stroke="#94a3b8"
+                          strokeDasharray="8 8"
+                          label={{
+                            value: 'Budget',
+                            position: 'insideTopRight',
+                            fill: 'var(--foreground)',
+                          }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="budgetProgress"
+                          stroke="#94a3b8"
+                          strokeWidth={2}
+                          strokeDasharray="5 5"
+                          dot={false}
+                          name="Budget Progress"
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="cumulativeAmount"
+                          stroke="#3b82f6"
+                          strokeWidth={2}
+                          dot={{ fill: '#3b82f6', r: 3 }}
+                          activeDot={{ r: 5 }}
+                          name="Actual Spending"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Top 10 Transactions */}
+              <Card className="p-4">
+                <CardHeader>
+                  <CardTitle>Top 10 Highest Transactions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2">Date</th>
+                          <th className="text-left p-2">Description</th>
+                          <th className="text-left p-2">Category</th>
+                          <th className="text-right p-2">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {householdData.topTransactions.map((transaction) => (
+                          <tr key={transaction.id} className="border-b">
+                            <td className="p-2">{transaction.date}</td>
+                            <td className="p-2 font-medium">{transaction.description}</td>
+                            <td className="p-2">{transaction.category}</td>
+                            <td className="p-2 text-right font-medium">
+                              {formatCurrency(Math.abs(transaction.amount))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : null}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

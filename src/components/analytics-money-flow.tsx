@@ -26,14 +26,8 @@ interface SankeyData {
   links: Array<{ source: number; target: number; value: number; type: 'income' | 'expense' }>
 }
 
-interface DateRanges {
-  years: number[]
-  currentYear: number
-  currentMonth: number
-}
-
 interface TimePeriod {
-  type: 'all' | 'year' | 'month' | 'quarter'
+  type: 'year' | 'month' | 'quarter'
   year: number
   month: number
   quarter: number
@@ -62,13 +56,11 @@ export function AnalyticsMoneyFlow() {
     month: getCurrentMonth(),
     quarter: getCurrentQuarter(),
   })
-  const [dateRanges, setDateRanges] = useState<DateRanges>({
-    years: [],
-    currentYear: getCurrentYear(),
-    currentMonth: getCurrentMonth(),
-  })
   const [containerWidth, setContainerWidth] = useState(1000)
   const sankeyContainerRef = useRef<HTMLDivElement>(null)
+
+  // Generate static year list for last 5 years
+  const yearOptions = Array.from({ length: 5 }, (_, i) => getCurrentYear() - i)
 
   // Helper function to convert timePeriod to start/end dates
   const getDateRangeFromPeriod = (period: TimePeriod): { startDate: string; endDate: string } => {
@@ -103,34 +95,6 @@ export function AnalyticsMoneyFlow() {
       setLoading(false)
     }
   }
-
-  // Fetch date ranges when household changes
-  useEffect(() => {
-    const fetchDateRanges = async () => {
-      if (!selectedHousehold) return
-      try {
-        const response = await fetch(
-          `/api/transactions/date-ranges?householdId=${selectedHousehold.id}`
-        )
-        if (response.ok) {
-          const data = await response.json()
-          setDateRanges(data)
-          // Update initial time period with current data
-          setTimePeriod((prev) => ({
-            ...prev,
-            year: data.currentYear,
-            month: data.currentMonth,
-          }))
-        }
-      } catch (error) {
-        console.error('Error fetching date ranges:', error)
-      }
-    }
-
-    if (selectedHousehold) {
-      fetchDateRanges()
-    }
-  }, [selectedHousehold])
 
   // Measure container width for responsive Sankey diagram
   useEffect(() => {
@@ -199,7 +163,7 @@ export function AnalyticsMoneyFlow() {
                 onValueChange={(value) =>
                   setTimePeriod((prev) => ({
                     ...prev,
-                    type: value as 'all' | 'year' | 'month' | 'quarter',
+                    type: value as 'year' | 'month' | 'quarter',
                   }))
                 }
               >
@@ -207,7 +171,6 @@ export function AnalyticsMoneyFlow() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
                   <SelectItem value="year">By Year</SelectItem>
                   <SelectItem value="month">By Month</SelectItem>
                   <SelectItem value="quarter">By Quarter</SelectItem>
@@ -232,7 +195,7 @@ export function AnalyticsMoneyFlow() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {dateRanges.years.map((year) => (
+                    {yearOptions.map((year) => (
                       <SelectItem key={year} value={year.toString()}>
                         {year}
                       </SelectItem>

@@ -66,7 +66,7 @@ interface TransactionType {
 interface Transaction {
   id: string
   accountId: string
-  userId: string
+  userId: string | null
   transactionDate: string
   postDate: string
   description: string
@@ -587,7 +587,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                     {transaction.account?.name || 'Unknown'}
                   </TableCell>
                   <TableCell className="p-3 text-sm text-foreground">
-                    {transaction.user?.name || 'Unknown'}
+                    {transaction.user?.name || 'Household'}
                   </TableCell>
                   <TableCell className="p-3 text-sm text-foreground">
                     {formatDate(parseLocalDate(transaction.transactionDate))}

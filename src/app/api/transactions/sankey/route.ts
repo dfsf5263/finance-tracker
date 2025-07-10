@@ -61,13 +61,13 @@ export async function GET(request: NextRequest) {
     // Collect income sources from income transactions
     for (const transaction of incomeTransactions) {
       incomeSources.add(transaction.account?.name || 'Unknown Account')
-      users.add(transaction.user?.name || 'Unknown User')
+      users.add(transaction.user?.name || 'Household')
     }
 
     // Collect expense categories from expense transactions
     for (const transaction of expenseTransactions) {
       expenseCategories.add(transaction.category?.name || 'Unknown Category')
-      users.add(transaction.user?.name || 'Unknown User')
+      users.add(transaction.user?.name || 'Household')
     }
 
     // Build nodes in order: income sources, users, expense categories
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
     // Process income transactions: income source -> user
     for (const transaction of incomeTransactions) {
       const sourceName = transaction.account?.name || 'Unknown Account'
-      const userName = transaction.user?.name || 'Unknown User'
+      const userName = transaction.user?.name || 'Household'
 
       const sourceIndex = nodeMap.get(`income:${sourceName}`)!
       const userIndex = nodeMap.get(`user:${userName}`)!
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
 
     // Process expense transactions: user -> expense category
     for (const transaction of expenseTransactions) {
-      const userName = transaction.user?.name || 'Unknown User'
+      const userName = transaction.user?.name || 'Household'
       const categoryName = transaction.category?.name || 'Unknown Category'
 
       const userIndex = nodeMap.get(`user:${userName}`)!

@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     }
 
     const formattedData = aggregations.map((item) => ({
-      name: nameMap[item[groupByField] as string] || 'Unknown',
+      name: nameMap[item[groupByField] as string] || (groupBy === 'user' ? 'Household' : 'Unknown'),
       value: parseFloat(item._sum.amount?.toString() || '0'),
       count: item._count._all,
     }))
