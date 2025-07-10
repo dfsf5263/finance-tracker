@@ -14,6 +14,14 @@ import {
 import { CustomDatePicker } from '@/components/ui/date-picker'
 import { TransactionForm } from '@/components/transaction-form'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Edit,
   Trash2,
   Filter,
@@ -38,6 +46,7 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
 import { useHousehold } from '@/contexts/household-context'
+import { invalidateActiveMonthCache } from '@/hooks/use-active-month'
 
 interface Account {
   id: string
@@ -111,6 +120,9 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   const [filtersExpanded, setFiltersExpanded] = useState(false)
   const [showTransactionForm, setShowTransactionForm] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const fetchTransactions = async () => {
     if (!selectedHousehold) return
@@ -227,18 +239,35 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     }
   }, [selectedHousehold, fetchCategories, fetchTypes, fetchAccounts, fetchUsers])
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this transaction?')) {
-      try {
-        const response = await fetch(`/api/transactions/${id}`, {
-          method: 'DELETE',
-        })
-        if (response.ok) {
-          fetchTransactions()
+  const handleDeleteClick = (transaction: Transaction) => {
+    setTransactionToDelete(transaction)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!transactionToDelete) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/transactions/${transactionToDelete.id}`, {
+        method: 'DELETE',
+      })
+      if (response.ok) {
+        fetchTransactions()
+        onRefresh?.()
+        // Invalidate active month cache to refresh dashboard components
+        if (selectedHousehold?.id) {
+          invalidateActiveMonthCache(selectedHousehold.id)
         }
-      } catch (error) {
-        console.error('Error deleting transaction:', error)
+        setDeleteDialogOpen(false)
+        setTransactionToDelete(null)
+      } else {
+        console.error('Failed to delete transaction')
       }
+    } catch (error) {
+      console.error('Error deleting transaction:', error)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -300,6 +329,10 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
         setEditingTransaction(null)
         fetchTransactions()
         onRefresh?.()
+        // Invalidate active month cache to refresh dashboard components
+        if (selectedHousehold?.id) {
+          invalidateActiveMonthCache(selectedHousehold.id)
+        }
       }
     } catch (error) {
       console.error('Error saving transaction:', error)
@@ -622,7 +655,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(transaction.id)}
+                        onClick={() => handleDeleteClick(transaction)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -688,6 +721,63 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
         }}
         onSubmit={handleTransactionSubmit}
       />
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Transaction</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this transaction? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {transactionToDelete && (
+            <div className="my-4 p-4 border rounded-lg bg-muted/50">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Description:</span>
+                  <span className="font-medium">{transactionToDelete.description}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount:</span>
+                  <span className={`font-medium ${
+                    transactionToDelete.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {formatCurrency(transactionToDelete.amount)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Date:</span>
+                  <span className="font-medium">
+                    {formatDate(parseLocalDate(transactionToDelete.transactionDate))}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Category:</span>
+                  <span className="font-medium">{transactionToDelete.category?.name || 'Unknown'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Transaction'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

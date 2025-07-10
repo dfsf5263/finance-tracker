@@ -13,8 +13,9 @@ import {
   ReferenceLine,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency, getMonthName, getCurrentYear, getCurrentMonth } from '@/lib/utils'
+import { formatCurrency, getMonthName } from '@/lib/utils'
 import { useHousehold } from '@/contexts/household-context'
+import { useActiveMonth } from '@/hooks/use-active-month'
 
 interface MonthlyData {
   month: string
@@ -59,20 +60,21 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
 
 export function MonthlySpendingChart() {
   const { selectedHousehold } = useHousehold()
+  const { activeMonth, activeYear } = useActiveMonth(selectedHousehold?.id || null)
   const [data, setData] = useState<MonthlyData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!selectedHousehold?.id) return
+    if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     const fetchMonthlyData = async () => {
       setLoading(true)
       setError(null)
 
       try {
-        const currentYear = getCurrentYear()
-        const currentMonth = getCurrentMonth()
+        const currentYear = activeYear
+        const currentMonth = activeMonth
         const monthlyData: MonthlyData[] = []
 
         // Generate last 6 months of data
@@ -135,7 +137,7 @@ export function MonthlySpendingChart() {
     }
 
     fetchMonthlyData()
-  }, [selectedHousehold?.id])
+  }, [selectedHousehold?.id, activeMonth, activeYear])
 
   if (loading) {
     return (

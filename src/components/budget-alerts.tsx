@@ -5,8 +5,9 @@ import { AlertTriangle, AlertCircle, CheckCircle, TrendingUp } from 'lucide-reac
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { formatCurrency, getCurrentYear, getCurrentMonth } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
 import { useHousehold } from '@/contexts/household-context'
+import { useActiveMonth } from '@/hooks/use-active-month'
 
 interface CategoryAlert {
   type: 'category'
@@ -41,18 +42,19 @@ type BudgetAlert = CategoryAlert | UserAlert | HouseholdAlert
 
 export function BudgetAlerts() {
   const { selectedHousehold } = useHousehold()
+  const { activeMonth, activeYear } = useActiveMonth(selectedHousehold?.id || null)
   const [alerts, setAlerts] = useState<BudgetAlert[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!selectedHousehold?.id) return
+    if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     const fetchBudgetAlerts = async () => {
       setLoading(true)
 
       try {
-        const currentYear = getCurrentYear()
-        const currentMonth = getCurrentMonth()
+        const currentYear = activeYear
+        const currentMonth = activeMonth
         const startDate = new Date(currentYear, currentMonth - 1, 1).toISOString().split('T')[0]
         const endDate = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]
 
@@ -209,7 +211,7 @@ export function BudgetAlerts() {
     }
 
     fetchBudgetAlerts()
-  }, [selectedHousehold?.id])
+  }, [selectedHousehold?.id, activeMonth, activeYear])
 
   const getAlertVariant = (severity: string) => {
     switch (severity) {
@@ -279,9 +281,8 @@ export function BudgetAlerts() {
           <AlertDescription>
             <div className="flex items-center justify-between text-sm mt-2">
               <span>
-                {formatCurrency(alert.budgetUsed)} of {formatCurrency(alert.totalBudget)}
-                {' '}
-                ({alert.percentageUsed.toFixed(1)}%)
+                {formatCurrency(alert.budgetUsed)} of {formatCurrency(alert.totalBudget)} (
+                {alert.percentageUsed.toFixed(1)}%)
               </span>
             </div>
           </AlertDescription>
@@ -306,9 +307,8 @@ export function BudgetAlerts() {
           <AlertDescription>
             <div className="flex items-center justify-between text-sm mt-2">
               <span>
-                {formatCurrency(alert.budgetUsed)} of {formatCurrency(alert.totalBudget)}
-                {' '}
-                ({alert.percentageUsed.toFixed(1)}%)
+                {formatCurrency(alert.budgetUsed)} of {formatCurrency(alert.totalBudget)} (
+                {alert.percentageUsed.toFixed(1)}%)
               </span>
             </div>
           </AlertDescription>

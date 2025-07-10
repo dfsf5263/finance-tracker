@@ -23,6 +23,7 @@ import {
   isValidMonthDayYearDate,
 } from '@/lib/utils'
 import { useHousehold } from '@/contexts/household-context'
+import { invalidateActiveMonthCache } from '@/hooks/use-active-month'
 
 interface CSVUploadPageProps {
   onUploadComplete: () => void
@@ -449,6 +450,10 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
         toast.success(
           result.message || `Successfully uploaded ${processedData.length} transactions`
         )
+        // Invalidate active month cache to refresh dashboard components
+        if (selectedHousehold?.id) {
+          invalidateActiveMonthCache(selectedHousehold.id)
+        }
         onUploadComplete()
         setStep('complete')
       } else {

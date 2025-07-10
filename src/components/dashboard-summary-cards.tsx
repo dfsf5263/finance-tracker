@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { TrendingDown, TrendingUp, Tag, AlertCircle, AlertTriangle, Check } from 'lucide-react'
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency, getCurrentYear, getCurrentMonth } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
 import { useHousehold } from '@/contexts/household-context'
+import { useActiveMonth } from '@/hooks/use-active-month'
 
 interface MonthlySpendingData {
   currentMonth: number
@@ -62,6 +63,7 @@ const getBudgetStatus = (budgetPerformance: BudgetPerformanceData) => {
 
 export function DashboardSummaryCards() {
   const { selectedHousehold } = useHousehold()
+  const { activeMonth, activeYear } = useActiveMonth(selectedHousehold?.id || null)
   const [monthlySpending, setMonthlySpending] = useState<MonthlySpendingData | null>(null)
   const [budgetPerformance, setBudgetPerformance] = useState<BudgetPerformanceData | null>(null)
   const [topCategory, setTopCategory] = useState<TopCategoryData | null>(null)
@@ -69,7 +71,7 @@ export function DashboardSummaryCards() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!selectedHousehold?.id) return
+    if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     const fetchDashboardData = async () => {
       setLoading(true)
@@ -89,14 +91,14 @@ export function DashboardSummaryCards() {
 
     fetchDashboardData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedHousehold?.id])
+  }, [selectedHousehold?.id, activeMonth, activeYear])
 
   const fetchMonthlySpending = async () => {
-    if (!selectedHousehold?.id) return
+    if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     try {
-      const currentYear = getCurrentYear()
-      const currentMonth = getCurrentMonth()
+      const currentYear = activeYear
+      const currentMonth = activeMonth
       const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1
       const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear
 
@@ -147,11 +149,11 @@ export function DashboardSummaryCards() {
   }
 
   const fetchBudgetPerformance = async () => {
-    if (!selectedHousehold?.id) return
+    if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     try {
-      const currentYear = getCurrentYear()
-      const currentMonth = getCurrentMonth()
+      const currentYear = activeYear
+      const currentMonth = activeMonth
       const startDate = new Date(currentYear, currentMonth - 1, 1).toISOString().split('T')[0]
       const endDate = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]
 
@@ -186,11 +188,11 @@ export function DashboardSummaryCards() {
   }
 
   const fetchTopCategory = async () => {
-    if (!selectedHousehold?.id) return
+    if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     try {
-      const currentYear = getCurrentYear()
-      const currentMonth = getCurrentMonth()
+      const currentYear = activeYear
+      const currentMonth = activeMonth
       const startDate = new Date(currentYear, currentMonth - 1, 1).toISOString().split('T')[0]
       const endDate = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]
 
@@ -232,11 +234,11 @@ export function DashboardSummaryCards() {
   }
 
   const fetchCashFlow = async () => {
-    if (!selectedHousehold?.id) return
+    if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     try {
-      const currentYear = getCurrentYear()
-      const currentMonth = getCurrentMonth()
+      const currentYear = activeYear
+      const currentMonth = activeMonth
       const startDate = new Date(currentYear, currentMonth - 1, 1).toISOString().split('T')[0]
       const endDate = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]
 

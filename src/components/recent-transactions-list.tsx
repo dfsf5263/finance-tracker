@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
 import { useHousehold } from '@/contexts/household-context'
+import { useActiveMonth } from '@/hooks/use-active-month'
 
 interface Transaction {
   id: string
@@ -34,28 +35,41 @@ interface RecentTransactionsData {
 
 export function RecentTransactionsList() {
   const { selectedHousehold } = useHousehold()
+  const { activeMonth, activeYear, monthName } = useActiveMonth(selectedHousehold?.id || null)
   const [data, setData] = useState<RecentTransactionsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!selectedHousehold?.id) return
+    if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     const fetchRecentTransactions = async () => {
       setLoading(true)
       setError(null)
 
       try {
-        // Get recent transactions (last 10)
+        // Calculate date range for active month
+        const startDate = new Date(activeYear, activeMonth - 1, 1).toISOString().split('T')[0]
+        const endDate = new Date(activeYear, activeMonth, 0).toISOString().split('T')[0]
+
+        // Get transactions for active month with higher limit to filter client-side
         const response = await fetch(
-          `/api/transactions?householdId=${selectedHousehold.id}&limit=10&page=1`
+          `/api/transactions?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&limit=100&page=1`
         )
 
         if (response.ok) {
           const result = await response.json()
+          const allTransactions = result.transactions || []
+          
+          // Filter to outflow transactions only and sort by amount descending
+          const outflowTransactions = allTransactions
+            .filter((transaction: Transaction) => transaction.type?.isOutflow === true)
+            .sort((a: Transaction, b: Transaction) => Math.abs(b.amount) - Math.abs(a.amount))
+            .slice(0, 10) // Take top 10
+          
           setData({
-            transactions: result.transactions || [],
-            totalCount: result.totalCount || 0,
+            transactions: outflowTransactions,
+            totalCount: result.pagination?.total || 0, // Total transactions for the month
           })
         } else {
           throw new Error('Failed to fetch transactions')
@@ -69,7 +83,7 @@ export function RecentTransactionsList() {
     }
 
     fetchRecentTransactions()
-  }, [selectedHousehold?.id])
+  }, [selectedHousehold?.id, activeMonth, activeYear])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -107,7 +121,7 @@ export function RecentTransactionsList() {
     return (
       <Card className="p-4">
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
+          <CardTitle>Top Transactions for {monthName || 'Current Month'}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -133,7 +147,7 @@ export function RecentTransactionsList() {
     return (
       <Card className="p-4">
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
+          <CardTitle>Top Transactions for {monthName || 'Current Month'}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
@@ -148,13 +162,13 @@ export function RecentTransactionsList() {
     return (
       <Card className="p-4">
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
+          <CardTitle>Top Transactions for {monthName || 'Current Month'}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <p className="text-sm text-muted-foreground">No recent transactions</p>
+            <p className="text-sm text-muted-foreground">No outflow transactions this month</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Transactions will appear here once you start adding them
+              Outflow transactions will appear here once you start spending
             </p>
           </div>
         </CardContent>
@@ -166,12 +180,12 @@ export function RecentTransactionsList() {
     <Card className="p-4">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between">
-          Recent Activity
+          Top Transactions
           <Badge variant="outline" className="ml-2">
-            {data.totalCount} total
+            {data.totalCount} total transactions
           </Badge>
         </CardTitle>
-        <p className="text-sm text-muted-foreground">Latest transactions across all accounts</p>
+        <p className="text-sm text-muted-foreground">Highest outflow transactions this month</p>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -229,10 +243,10 @@ export function RecentTransactionsList() {
           ))}
         </div>
 
-        {data.totalCount > 10 && (
+        {data.transactions.length === 10 && (
           <div className="mt-4 pt-4 border-t text-center">
             <p className="text-sm text-muted-foreground">
-              Showing 10 of {data.totalCount} transactions
+              Showing top 10 outflow transactions this month
             </p>
             <button className="text-sm text-primary hover:underline mt-1">
               View all transactions →

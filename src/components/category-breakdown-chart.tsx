@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency, getCurrentYear, getCurrentMonth } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
 import { useHousehold } from '@/contexts/household-context'
+import { useActiveMonth } from '@/hooks/use-active-month'
 
 interface CategoryData {
   name: string
@@ -66,6 +67,7 @@ const CustomLegend = ({
 
 export function CategoryBreakdownChart() {
   const { selectedHousehold } = useHousehold()
+  const { activeMonth, activeYear } = useActiveMonth(selectedHousehold?.id || null)
   const [data, setData] = useState<CategoryData[]>([])
   const [totalSpending, setTotalSpending] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -88,15 +90,15 @@ export function CategoryBreakdownChart() {
   ]
 
   useEffect(() => {
-    if (!selectedHousehold?.id) return
+    if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     const fetchCategoryData = async () => {
       setLoading(true)
       setError(null)
 
       try {
-        const currentYear = getCurrentYear()
-        const currentMonth = getCurrentMonth()
+        const currentYear = activeYear
+        const currentMonth = activeMonth
         const startDate = new Date(currentYear, currentMonth - 1, 1).toISOString().split('T')[0]
         const endDate = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]
 
@@ -172,7 +174,7 @@ export function CategoryBreakdownChart() {
 
     fetchCategoryData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedHousehold?.id])
+  }, [selectedHousehold?.id, activeMonth, activeYear])
 
   if (loading) {
     return (

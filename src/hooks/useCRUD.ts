@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
+import { invalidateActiveMonthCache } from './use-active-month'
 
 export function useCRUD<T extends { id: string }>(
   apiEndpoint: string,
@@ -48,6 +49,11 @@ export function useCRUD<T extends { id: string }>(
         setEditingItem(undefined)
         fetchItems()
         toast.success(`${entityName} ${isEditing ? 'updated' : 'created'} successfully`)
+
+        // Invalidate active month cache if this is a transaction
+        if (apiEndpoint === 'transactions' && householdId) {
+          invalidateActiveMonthCache(householdId)
+        }
       }
     } catch (error) {
       console.error(`Failed to ${editingItem ? 'update' : 'create'} ${entityName}:`, error)
@@ -66,6 +72,11 @@ export function useCRUD<T extends { id: string }>(
       if (response.ok) {
         fetchItems()
         toast.success(`${entityName} deleted successfully`)
+
+        // Invalidate active month cache if this is a transaction
+        if (apiEndpoint === 'transactions' && householdId) {
+          invalidateActiveMonthCache(householdId)
+        }
       } else {
         const errorData = await response.json()
         toast.error(errorData.error || `Failed to delete ${entityName}`)
