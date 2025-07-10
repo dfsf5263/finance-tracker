@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { logApiError } from '@/lib/error-logger'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,15 +16,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(user)
   } catch (error) {
-    console.error('Error fetching user:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'fetch user',
+      context: { id: (await params).id },
+    })
     return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 })
   }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let data
   try {
     const { id } = await params
-    const data = await request.json()
+    data = await request.json()
     const { name, annualBudget } = data
 
     if (!name) {
@@ -47,7 +54,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(user)
   } catch (error) {
-    console.error('Error updating user:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'update user',
+      context: {
+        id: (await params).id,
+        updateData: data,
+      },
+    })
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 })
   }
 }
@@ -64,7 +79,12 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'User deleted successfully' })
   } catch (error) {
-    console.error('Error deleting user:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'delete user',
+      context: { id: (await params).id },
+    })
 
     // Check if it's a foreign key constraint error
     if (

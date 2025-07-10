@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
+import { logApiError } from '@/lib/error-logger'
 
 interface CSVTransaction {
   account: string
@@ -51,8 +52,9 @@ function parseMMDDYYYY(dateString: string): Date | null {
 }
 
 export async function POST(request: NextRequest) {
+  let body
   try {
-    const body = await request.json()
+    body = await request.json()
     const { transactions, householdId } = body
 
     if (!Array.isArray(transactions)) {
@@ -193,7 +195,15 @@ export async function POST(request: NextRequest) {
       count: createdTransactions.count,
     })
   } catch (error) {
-    console.error('Error creating bulk transactions:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'create bulk transactions',
+      context: {
+        householdId: body.householdId,
+        transactionCount: Array.isArray(body.transactions) ? body.transactions.length : 0,
+      },
+    })
     return NextResponse.json(
       {
         error: 'Failed to create bulk transactions',

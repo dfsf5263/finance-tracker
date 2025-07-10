@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { logApiError } from '@/lib/error-logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,14 +18,22 @@ export async function GET(request: NextRequest) {
     })
     return NextResponse.json(users)
   } catch (error) {
-    console.error('Error fetching users:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'fetch users',
+      context: {
+        searchParams: Object.fromEntries(new URL(request.url).searchParams.entries()),
+      },
+    })
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
+  let data
   try {
-    const data = await request.json()
+    data = await request.json()
     const { name, annualBudget, householdId } = data
 
     if (!name) {
@@ -51,7 +60,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(user, { status: 201 })
   } catch (error) {
-    console.error('Error creating user:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'create user',
+      context: {
+        householdId: data?.householdId,
+        userName: data?.name,
+      },
+    })
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
   }
 }

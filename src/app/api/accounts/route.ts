@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { logApiError } from '@/lib/error-logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,14 +18,23 @@ export async function GET(request: NextRequest) {
     })
     return NextResponse.json(accounts)
   } catch (error) {
-    console.error('Error fetching accounts:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'fetch accounts',
+      context: {
+        searchParams: Object.fromEntries(new URL(request.url).searchParams.entries()),
+      },
+    })
     return NextResponse.json({ error: 'Failed to fetch accounts' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
+  let requestData
   try {
-    const { name, householdId } = await request.json()
+    requestData = await request.json()
+    const { name, householdId } = requestData
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -41,7 +51,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(account, { status: 201 })
   } catch (error) {
-    console.error('Error creating account:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'create account',
+      context: {
+        householdId: requestData?.householdId,
+        accountName: requestData?.name,
+      },
+    })
     return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
   }
 }

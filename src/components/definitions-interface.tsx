@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { TransactionUserForm } from './user-form'
 import { TransactionCategoryForm } from './category-form'
 import { TypeForm } from './type-form'
@@ -294,9 +295,9 @@ export function DefinitionsInterface() {
                 <div key={type.id} className="flex justify-between items-center p-2 border rounded">
                   <div className="flex items-center gap-2">
                     <span>{type.name}</span>
-                    <span className="text-sm text-muted-foreground">
-                      ({type.isOutflow ? 'Outflow' : 'Inflow'})
-                    </span>
+                    <Badge variant={type.isOutflow ? 'negative' : 'positive'}>
+                      {type.isOutflow ? 'Outflow' : 'Inflow'}
+                    </Badge>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => handleEditType(type)}>

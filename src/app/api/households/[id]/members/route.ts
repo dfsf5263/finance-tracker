@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { ensureUser } from '@/lib/ensure-user'
+import { logApiError } from '@/lib/error-logger'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let user
   try {
     const { id } = await params
 
     // Ensure user exists in database
-    const { user } = await ensureUser()
+    const result = await ensureUser()
+    user = result.user
 
     // Check if user has access to this household
     const userHousehold = await db.userHousehold.findUnique({
@@ -44,7 +47,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(members)
   } catch (error) {
-    console.error('Error fetching members:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'fetch household members',
+      context: {
+        householdId: (await params).id,
+        userId: user?.id,
+      },
+    })
     return NextResponse.json({ error: 'Failed to fetch members' }, { status: 500 })
   }
 }

@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { ensureUser } from '@/lib/ensure-user'
+import { logApiError } from '@/lib/error-logger'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  let user: { id: string } | undefined
   try {
     const { token } = await params
 
     // Ensure user exists in database
-    const { user } = await ensureUser()
+    const userResult = await ensureUser()
+    user = userResult.user
 
     // Find the invitation
     const invitation = await db.householdInvitation.findUnique({
@@ -66,11 +69,11 @@ export async function POST(
     const role = invitation.role
 
     // Create the user-household relationship and update invitation in a transaction
-    const result = await db.$transaction(async (tx) => {
+    const transactionResult = await db.$transaction(async (tx) => {
       // Create user-household relationship
       const userHousehold = await tx.userHousehold.create({
         data: {
-          userId: user.id,
+          userId: user!.id,
           householdId: invitation.householdId,
           role: role,
           invitedBy: invitation.inviterUserId,
@@ -82,7 +85,7 @@ export async function POST(
         where: { id: invitation.id },
         data: {
           status: 'ACCEPTED',
-          inviteeUserId: user.id,
+          inviteeUserId: user!.id,
         },
       })
 
@@ -93,12 +96,20 @@ export async function POST(
       {
         success: true,
         household: invitation.household,
-        role: result.role,
+        role: transactionResult.role,
       },
       { status: 200 }
     )
   } catch (error) {
-    console.error('Error accepting invitation:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'accept invitation',
+      context: {
+        tokenProvided: !!(await params).token,
+        userId: user?.id,
+      },
+    })
     return NextResponse.json({ error: 'Failed to accept invitation' }, { status: 500 })
   }
 }

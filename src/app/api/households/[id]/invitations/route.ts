@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { ensureUser } from '@/lib/ensure-user'
+import { logApiError } from '@/lib/error-logger'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let user
   try {
     const { id } = await params
 
     // Ensure user exists in database
-    const { user } = await ensureUser()
+    const result = await ensureUser()
+    user = result.user
 
     // Check if user has access to this household
     const userHousehold = await db.userHousehold.findUnique({
@@ -47,17 +50,28 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(invitations)
   } catch (error) {
-    console.error('Error fetching invitations:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'fetch household invitations',
+      context: {
+        householdId: (await params).id,
+        userId: user?.id,
+      },
+    })
     return NextResponse.json({ error: 'Failed to fetch invitations' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let user
+  let data
   try {
     const { id } = await params
 
     // Ensure user exists in database
-    const { user } = await ensureUser()
+    const result = await ensureUser()
+    user = result.user
 
     // Check if user is owner or member of this household
     const userHousehold = await db.userHousehold.findUnique({
@@ -73,7 +87,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    const data = await request.json()
+    data = await request.json()
     const { role, expiresInDays = 7 } = data
 
     if (!role || !['OWNER', 'MEMBER', 'VIEWER'].includes(role)) {
@@ -117,7 +131,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json(invitation, { status: 201 })
   } catch (error) {
-    console.error('Error creating invitation:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'create household invitation',
+      context: {
+        householdId: (await params).id,
+        inviterUserId: user?.id,
+        role: data?.role,
+        expiresInDays: data?.expiresInDays,
+      },
+    })
     return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 })
   }
 }

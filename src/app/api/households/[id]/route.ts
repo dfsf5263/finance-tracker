@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { logApiError } from '@/lib/error-logger'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -24,15 +25,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(household)
   } catch (error) {
-    console.error('Error fetching household:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'fetch household',
+      context: { id: (await params).id },
+    })
     return NextResponse.json({ error: 'Failed to fetch household' }, { status: 500 })
   }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let data
   try {
     const { id } = await params
-    const data = await request.json()
+    data = await request.json()
     const { name, annualBudget } = data
 
     if (!name) {
@@ -65,7 +72,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(household)
   } catch (error) {
-    console.error('Error updating household:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'update household',
+      context: {
+        id: (await params).id,
+        updateData: data,
+      },
+    })
     return NextResponse.json({ error: 'Failed to update household' }, { status: 500 })
   }
 }
@@ -99,7 +114,12 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Household deleted successfully' })
   } catch (error) {
-    console.error('Error deleting household:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'delete household',
+      context: { id: (await params).id },
+    })
     return NextResponse.json({ error: 'Failed to delete household' }, { status: 500 })
   }
 }

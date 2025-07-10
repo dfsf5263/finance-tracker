@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { Prisma } from '@prisma/client'
+import { logApiError } from '@/lib/error-logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -61,14 +62,22 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Error fetching transactions:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'fetch transactions',
+      context: {
+        searchParams: Object.fromEntries(new URL(request.url).searchParams.entries()),
+      },
+    })
     return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
+  let body
   try {
-    const body = await request.json()
+    body = await request.json()
     const {
       householdId,
       accountId,
@@ -105,7 +114,19 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(transaction, { status: 201 })
   } catch (error) {
-    console.error('Error creating transaction:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'create transaction',
+      context: {
+        householdId: body.householdId,
+        accountId: body.accountId,
+        userId: body.userId,
+        categoryId: body.categoryId,
+        typeId: body.typeId,
+        amount: body.amount,
+      },
+    })
     return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
   }
 }

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { logApiError } from '@/lib/error-logger'
 
 export async function POST(request: NextRequest) {
+  let requestData
   try {
-    const { types, householdId } = await request.json()
+    requestData = await request.json()
+    const { types, householdId } = requestData
 
     if (!householdId) {
       return NextResponse.json({ error: 'Household ID is required' }, { status: 400 })
@@ -74,7 +77,15 @@ export async function POST(request: NextRequest) {
       skipped: types.length - typesToCreate.length,
     })
   } catch (error) {
-    console.error('Error creating bulk types:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'create bulk types',
+      context: {
+        householdId: requestData?.householdId,
+        typeCount: Array.isArray(requestData?.types) ? requestData.types.length : 0,
+      },
+    })
     return NextResponse.json({ error: 'Failed to create types' }, { status: 500 })
   }
 }

@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
+import { logApiError } from '@/lib/error-logger'
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
+  let currentUser
+  let data
   try {
     const { id, userId } = await params
 
@@ -16,7 +19,7 @@ export async function PATCH(
     }
 
     // Find the current user in our database
-    const currentUser = await db.user.findUnique({
+    currentUser = await db.user.findUnique({
       where: { clerkUserId: currentUserId },
     })
 
@@ -44,7 +47,7 @@ export async function PATCH(
     }
 
     // Get the new role from request body
-    const data = await request.json()
+    data = await request.json()
     const { role } = data
 
     if (!role || !['OWNER', 'MEMBER', 'VIEWER'].includes(role)) {
@@ -93,7 +96,17 @@ export async function PATCH(
 
     return NextResponse.json(updatedMember)
   } catch (error) {
-    console.error('Error updating member role:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'update member role',
+      context: {
+        householdId: (await params).id,
+        targetUserId: (await params).userId,
+        currentUserId: currentUser?.id,
+        newRole: data?.role,
+      },
+    })
     return NextResponse.json({ error: 'Failed to update member role' }, { status: 500 })
   }
 }
@@ -102,6 +115,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
+  let currentUser
   try {
     const { id, userId } = await params
 
@@ -112,7 +126,7 @@ export async function DELETE(
     }
 
     // Find the current user in our database
-    const currentUser = await db.user.findUnique({
+    currentUser = await db.user.findUnique({
       where: { clerkUserId: currentUserId },
     })
 
@@ -186,7 +200,16 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error removing member:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'remove member',
+      context: {
+        householdId: (await params).id,
+        targetUserId: (await params).userId,
+        currentUserId: currentUser?.id,
+      },
+    })
     return NextResponse.json({ error: 'Failed to remove member' }, { status: 500 })
   }
 }

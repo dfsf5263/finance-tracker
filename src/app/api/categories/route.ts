@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { logApiError } from '@/lib/error-logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,14 +18,22 @@ export async function GET(request: NextRequest) {
     })
     return NextResponse.json(categories)
   } catch (error) {
-    console.error('Error fetching categories:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'fetch categories',
+      context: {
+        searchParams: Object.fromEntries(new URL(request.url).searchParams.entries()),
+      },
+    })
     return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
+  let data
   try {
-    const data = await request.json()
+    data = await request.json()
     const { name, annualBudget, householdId } = data
 
     if (!name) {
@@ -51,7 +60,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(category, { status: 201 })
   } catch (error) {
-    console.error('Error creating category:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'create category',
+      context: {
+        householdId: data?.householdId,
+        categoryName: data?.name,
+      },
+    })
     return NextResponse.json({ error: 'Failed to create category' }, { status: 500 })
   }
 }

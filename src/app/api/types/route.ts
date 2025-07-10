@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { logApiError } from '@/lib/error-logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,14 +18,23 @@ export async function GET(request: NextRequest) {
     })
     return NextResponse.json(types)
   } catch (error) {
-    console.error('Error fetching types:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'fetch types',
+      context: {
+        searchParams: Object.fromEntries(new URL(request.url).searchParams.entries()),
+      },
+    })
     return NextResponse.json({ error: 'Failed to fetch types' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
+  let requestData
   try {
-    const { name, isOutflow, householdId } = await request.json()
+    requestData = await request.json()
+    const { name, isOutflow, householdId } = requestData
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -45,7 +55,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(type, { status: 201 })
   } catch (error) {
-    console.error('Error creating type:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'create type',
+      context: {
+        householdId: requestData?.householdId,
+        typeName: requestData?.name,
+        isOutflow: requestData?.isOutflow,
+      },
+    })
     return NextResponse.json({ error: 'Failed to create type' }, { status: 500 })
   }
 }

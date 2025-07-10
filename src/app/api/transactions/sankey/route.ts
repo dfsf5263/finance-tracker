@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { logApiError } from '@/lib/error-logger'
 
 interface SankeyNode {
   name: string
@@ -141,7 +142,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ nodes, links })
   } catch (error) {
-    console.error('Error fetching sankey data:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'fetch sankey data',
+      context: {
+        searchParams: Object.fromEntries(new URL(request.url).searchParams.entries()),
+      },
+    })
     return NextResponse.json({ error: 'Failed to fetch sankey data' }, { status: 500 })
   }
 }

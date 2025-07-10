@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
+import { logApiError } from '@/lib/error-logger'
 
 export async function DELETE(
   request: NextRequest,
@@ -62,7 +63,12 @@ export async function DELETE(
 
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (error) {
-    console.error('Error deleting invitation:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'delete invitation',
+      context: { invitationId: (await params).id },
+    })
     return NextResponse.json({ error: 'Failed to delete invitation' }, { status: 500 })
   }
 }

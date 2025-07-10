@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { logApiError } from '@/lib/error-logger'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,15 +16,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(type)
   } catch (error) {
-    console.error('Error fetching transaction type:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'fetch transaction type',
+      context: { id: (await params).id },
+    })
     return NextResponse.json({ error: 'Failed to fetch transaction type' }, { status: 500 })
   }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let requestData
   try {
     const { id } = await params
-    const { name, isOutflow } = await request.json()
+    requestData = await request.json()
+    const { name, isOutflow } = requestData
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -42,7 +50,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(type)
   } catch (error) {
-    console.error('Error updating transaction type:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'update transaction type',
+      context: {
+        id: (await params).id,
+        updateData: requestData,
+      },
+    })
     return NextResponse.json({ error: 'Failed to update transaction type' }, { status: 500 })
   }
 }
@@ -59,7 +75,12 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Transaction type deleted successfully' })
   } catch (error) {
-    console.error('Error deleting transaction type:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'delete transaction type',
+      context: { id: (await params).id },
+    })
 
     // Check if it's a foreign key constraint error
     if (

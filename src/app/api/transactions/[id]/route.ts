@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
+import { logApiError } from '@/lib/error-logger'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -21,15 +22,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(transaction)
   } catch (error) {
-    console.error('Error fetching transaction:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'fetch transaction',
+      context: { id: (await params).id },
+    })
     return NextResponse.json({ error: 'Failed to fetch transaction' }, { status: 500 })
   }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let body
   try {
     const { id } = await params
-    const body = await request.json()
+    body = await request.json()
     const {
       accountId,
       userId,
@@ -65,7 +72,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(transaction)
   } catch (error) {
-    console.error('Error updating transaction:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'update transaction',
+      context: {
+        id: (await params).id,
+        updateData: body,
+      },
+    })
     return NextResponse.json({ error: 'Failed to update transaction' }, { status: 500 })
   }
 }
@@ -82,7 +97,12 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error deleting transaction:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'delete transaction',
+      context: { id: (await params).id },
+    })
     return NextResponse.json({ error: 'Failed to delete transaction' }, { status: 500 })
   }
 }

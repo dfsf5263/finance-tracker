@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { ensureUser } from '@/lib/ensure-user'
+import { logApiError } from '@/lib/error-logger'
 
 export async function GET() {
+  let user: { id: string } | undefined
   try {
     // Ensure user exists in database
-    const { user } = await ensureUser()
+    const userResult = await ensureUser()
+    user = userResult.user
 
     // Get user with households
     const userWithHouseholds = await db.user.findUnique({
@@ -47,18 +50,26 @@ export async function GET() {
 
     return NextResponse.json(households)
   } catch (error) {
-    console.error('Error fetching households:', error)
+    await logApiError({
+      request: new Request('http://localhost/api/households', { method: 'GET' }) as NextRequest,
+      error,
+      operation: 'fetch households',
+      context: { userId: user?.id },
+    })
     return NextResponse.json({ error: 'Failed to fetch households' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
+  let user: { id: string } | undefined
+  let data: { name?: string; annualBudget?: string | number } | undefined
   try {
     // Ensure user exists in database
-    const { user } = await ensureUser()
+    const userResult = await ensureUser()
+    user = userResult.user
 
-    const data = await request.json()
-    const { name, annualBudget } = data
+    data = await request.json()
+    const { name, annualBudget } = data || {}
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -71,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create household and user-household relationship in a transaction
-    const result = await db.$transaction(async (tx) => {
+    const householdResult = await db.$transaction(async (tx) => {
       // Create the household
       const household = await tx.household.create({
         data: householdData,
@@ -80,7 +91,7 @@ export async function POST(request: NextRequest) {
       // Create the user-household relationship with OWNER role
       await tx.userHousehold.create({
         data: {
-          userId: user.id,
+          userId: user!.id,
           householdId: household.id,
           role: 'OWNER',
         },
@@ -102,9 +113,17 @@ export async function POST(request: NextRequest) {
       })
     })
 
-    return NextResponse.json(result, { status: 201 })
+    return NextResponse.json(householdResult, { status: 201 })
   } catch (error) {
-    console.error('Error creating household:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'create household',
+      context: {
+        userId: user?.id,
+        householdData: data,
+      },
+    })
     return NextResponse.json({ error: 'Failed to create household' }, { status: 500 })
   }
 }

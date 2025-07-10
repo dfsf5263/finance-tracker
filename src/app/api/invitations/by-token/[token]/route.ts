@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { logApiError } from '@/lib/error-logger'
 
 export async function GET(
   request: NextRequest,
@@ -57,7 +58,12 @@ export async function GET(
       expiresAt: invitation.expiresAt,
     })
   } catch (error) {
-    console.error('Error fetching invitation:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'fetch invitation by token',
+      context: { tokenProvided: !!(await params).token },
+    })
     return NextResponse.json({ error: 'Failed to fetch invitation' }, { status: 500 })
   }
 }

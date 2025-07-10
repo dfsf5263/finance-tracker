@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentYear, getCurrentMonth } from '@/lib/utils'
+import { logApiError } from '@/lib/error-logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -51,7 +52,14 @@ export async function GET(request: NextRequest) {
       currentMonth: getCurrentMonth(),
     })
   } catch (error) {
-    console.error('Error fetching date ranges:', error)
+    await logApiError({
+      request,
+      error,
+      operation: 'fetch date ranges',
+      context: {
+        searchParams: Object.fromEntries(new URL(request.url).searchParams.entries()),
+      },
+    })
     return NextResponse.json({ error: 'Failed to fetch date ranges' }, { status: 500 })
   }
 }
