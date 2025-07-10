@@ -1,14 +1,14 @@
-import { PrismaClient } from '@prisma/client'
+const { PrismaClient } = require('@prisma/client')
 
 const prisma = new PrismaClient()
 
 // Helper function to generate random date within a range
-function getRandomDate(start: Date, end: Date): Date {
+function getRandomDate(start, end) {
   return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()))
 }
 
 // Helper function to generate random amount
-function getRandomAmount(min: number, max: number): number {
+function getRandomAmount(min, max) {
   return Math.round((Math.random() * (max - min) + min) * 100) / 100
 }
 
@@ -174,13 +174,7 @@ async function main() {
 }
 
 // Generate realistic test transactions
-async function generateTestTransactions(
-  households: any[],
-  accounts: any[],
-  users: any[],
-  categories: any[],
-  types: any[]
-): Promise<number> {
+async function generateTestTransactions(households, accounts, users, categories, types) {
   const transactions = []
   const startDate = new Date('2024-01-01')
   const endDate = new Date()

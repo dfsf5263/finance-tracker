@@ -10,6 +10,7 @@ import {
   List,
   PieChart,
   Tag,
+  Target,
   TrendingUp,
   Upload,
   Users,
@@ -59,6 +60,13 @@ const data = {
       name: 'Money Flow',
       url: '/dashboard/analytics/money-flow',
       icon: TrendingUp,
+    },
+  ],
+  budgeting: [
+    {
+      name: 'Audit',
+      url: '/dashboard/budgeting/audit',
+      icon: Target,
     },
   ],
   definitions: [
@@ -118,6 +126,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} />
         <NavGroup title="Transactions" items={data.transactions} />
         <NavGroup title="Analytics" items={data.analytics} />
+        <NavGroup title="Budgeting" items={data.budgeting} />
         <NavGroup title="Definitions" items={data.definitions} />
       </SidebarContent>
       <SidebarFooter>

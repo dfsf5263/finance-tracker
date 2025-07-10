@@ -75,7 +75,7 @@ model HouseholdInvitation {
 
 model Household {
   id           String                    @id @default(uuid()) @db.Uuid
-  name         String                    @unique
+  name         String
   annualBudget Decimal?                  @map("annual_budget") @db.Decimal(12, 2)
   createdAt    DateTime                  @default(now()) @map("created_at")
   updatedAt    DateTime                  @updatedAt @map("updated_at")
@@ -165,5 +165,6 @@ model Transaction {
   type            HouseholdType     @relation(fields: [typeId], references: [id])
   user            HouseholdUser?    @relation(fields: [userId], references: [id])
 
+  @@index([householdId])
   @@map("transaction")
 }
