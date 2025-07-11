@@ -31,8 +31,6 @@ export function ThemedClerkProvider({ children }: ThemedClerkProviderProps) {
     <ClerkProvider
       appearance={{
         baseTheme: isDark ? dark : undefined,
-        
-        
       }}
     >
       {children}

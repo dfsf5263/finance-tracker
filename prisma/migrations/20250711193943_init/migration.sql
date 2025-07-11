@@ -109,8 +109,8 @@ CREATE TABLE "transaction" (
     "household_id" UUID NOT NULL,
     "account_id" UUID NOT NULL,
     "user_id" UUID,
-    "transaction_date" TIMESTAMP(3) NOT NULL,
-    "post_date" TIMESTAMP(3) NOT NULL,
+    "transaction_date" DATE NOT NULL,
+    "post_date" DATE NOT NULL,
     "description" TEXT NOT NULL,
     "category_id" UUID NOT NULL,
     "type_id" UUID NOT NULL,
@@ -151,6 +151,9 @@ CREATE UNIQUE INDEX "household_type_name_household_id_key" ON "household_type"("
 
 -- CreateIndex
 CREATE INDEX "transaction_household_id_idx" ON "transaction"("household_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "transaction_household_id_transaction_date_description_amoun_key" ON "transaction"("household_id", "transaction_date", "description", "amount");
 
 -- AddForeignKey
 ALTER TABLE "user_household" ADD CONSTRAINT "user_household_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
