@@ -2,7 +2,7 @@
 # Multi-stage build for optimal production image
 
 # Stage 1: Dependencies
-FROM node:20-alpine AS deps
+FROM node:current-alpine AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
@@ -14,7 +14,7 @@ COPY prisma ./prisma/
 RUN npm ci --only=production && npm cache clean --force
 
 # Stage 2: Builder
-FROM node:20-alpine AS builder
+FROM node:current-alpine AS builder
 WORKDIR /app
 
 # Build arguments for public Clerk key only (safe to embed)
@@ -48,11 +48,11 @@ RUN npm run build
 
 
 # Stage 3: Production runner
-FROM node:20-alpine AS runner
+FROM node:current-alpine AS runner
 WORKDIR /app
 
 # Install necessary packages for production
-RUN apk add --no-cache dumb-init curl postgresql-client
+RUN apk add --no-cache dumb-init curl
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
@@ -68,13 +68,9 @@ COPY --from=builder /app/public ./public
 # Copy Prisma schema files
 COPY --from=builder /app/prisma ./prisma
 
-# Copy production node_modules for Prisma CLI and other tools
-COPY --from=deps /app/node_modules ./node_modules
-
-# Copy startup scripts
+# Copy startup script
 COPY docker-entrypoint.sh ./
-COPY scripts/wait-for-db.sh ./scripts/
-RUN chmod +x docker-entrypoint.sh scripts/wait-for-db.sh
+RUN chmod +x docker-entrypoint.sh
 
 # Set ownership
 RUN chown -R nextjs:nodejs /app
