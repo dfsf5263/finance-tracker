@@ -110,6 +110,19 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     total: number
     successful: number
     failed: number
+    failures?: Array<{
+      row: number
+      type: 'duplicate' | 'validation'
+      transaction: CSVTransaction
+      reason: string
+      existingTransaction?: {
+        createdAt: string
+        account: string
+        amount: string
+        description: string
+        transactionDate: string
+      }
+    }>
   }>({ total: 0, successful: 0, failed: 0 })
   const [isDragOver, setIsDragOver] = useState(false)
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -443,13 +456,24 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
 
       if (response.ok) {
         setUploadStats({
-          total: processedData.length,
-          successful: result.count || processedData.length,
-          failed: 0,
+          total: result.results?.total || processedData.length,
+          successful: result.results?.successful || 0,
+          failed: result.results?.failed || 0,
+          failures: result.results?.failures || [],
         })
-        toast.success(
-          result.message || `Successfully uploaded ${processedData.length} transactions`
-        )
+
+        const hasFailures = result.results?.failed > 0
+        if (hasFailures) {
+          toast.success(
+            `Upload completed with ${result.results.failed} failures. ${result.results.successful} transactions uploaded successfully.`
+          )
+        } else {
+          toast.success(
+            result.message ||
+              `Successfully uploaded ${result.results?.successful || processedData.length} transactions`
+          )
+        }
+
         // Invalidate active month cache to refresh dashboard components
         if (selectedHousehold?.id) {
           invalidateActiveMonthCache(selectedHousehold.id)
@@ -480,7 +504,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     setColumnMappings([])
     setProcessedData([])
     setValidationErrors([])
-    setUploadStats({ total: 0, successful: 0, failed: 0 })
+    setUploadStats({ total: 0, successful: 0, failed: 0, failures: [] })
     setIsDragOver(false)
   }
 
@@ -506,6 +530,43 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     const a = document.createElement('a')
     a.href = url
     a.download = 'validation-errors.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const downloadFailureReport = () => {
+    if (!uploadStats.failures || uploadStats.failures.length === 0) return
+
+    // Helper to properly escape CSV values
+    const escapeCSV = (value: string) => {
+      if (value.includes('"') || value.includes(',') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`
+      }
+      return `"${value}"`
+    }
+
+    const csvContent = [
+      'Row,Type,Account,Transaction Date,Description,Amount,Reason,Created Date',
+      ...uploadStats.failures.map((failure) => {
+        const t = failure.transaction
+        return [
+          failure.row,
+          escapeCSV(failure.type),
+          escapeCSV(t.account),
+          escapeCSV(t.transactionDate),
+          escapeCSV(t.description),
+          escapeCSV(t.amount),
+          escapeCSV(failure.reason),
+          escapeCSV(failure.existingTransaction?.createdAt || ''),
+        ].join(',')
+      }),
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `upload-failures-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -823,6 +884,23 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
                 <div className="text-sm text-muted-foreground">Failed</div>
               </div>
             </div>
+
+            {uploadStats.failed > 0 && (
+              <div className="space-y-3">
+                <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div className="text-sm font-medium text-yellow-800">
+                    {uploadStats.failed} transactions failed to upload
+                  </div>
+                  <div className="text-xs text-yellow-700 mt-1">
+                    Download the failure report to see details and fix issues in your CSV file
+                  </div>
+                </div>
+                <Button variant="outline" onClick={downloadFailureReport} className="w-full">
+                  <Download className="h-4 w-4 mr-2" />
+                  Get Failure Report
+                </Button>
+              </div>
+            )}
 
             <Button onClick={resetUpload} className="w-full">
               Upload Another File

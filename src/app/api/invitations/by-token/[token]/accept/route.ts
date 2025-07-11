@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { ensureUser } from '@/lib/ensure-user'
 import { logApiError } from '@/lib/error-logger'
+import { authRateLimit } from '@/lib/rate-limit'
 
 export async function POST(
   request: NextRequest,
@@ -9,6 +10,10 @@ export async function POST(
 ) {
   let user: { id: string } | undefined
   try {
+    // Apply strict rate limiting for auth operations
+    const rateLimitResult = await authRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     const { token } = await params
 
     // Ensure user exists in database

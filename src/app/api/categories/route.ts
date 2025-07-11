@@ -1,14 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
+import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { validateRequestBody, categoryCreateSchema } from '@/lib/validation'
+import { apiRateLimit } from '@/lib/rate-limit'
+import { z } from 'zod'
 
 export async function GET(request: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     const { searchParams } = new URL(request.url)
     const householdId = searchParams.get('householdId')
 
     if (!householdId) {
       return NextResponse.json({ error: 'Household ID is required' }, { status: 400 })
+    }
+
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, householdId)
+    if (result instanceof NextResponse) {
+      return result
     }
 
     const categories = await db.householdCategory.findMany({
@@ -33,22 +47,47 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let data
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
+    // Parse and validate request body
     data = await request.json()
-    const { name, annualBudget, householdId } = data
 
-    if (!name) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    // Create extended schema for category that includes householdId and annualBudget
+    const extendedSchema = categoryCreateSchema.extend({
+      householdId: z.string().uuid('Invalid household ID format'),
+      annualBudget: z.union([z.string(), z.number()]).optional(),
+    })
+
+    const validation = validateRequestBody(extendedSchema, data)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
-    if (!householdId) {
-      return NextResponse.json({ error: 'Household ID is required' }, { status: 400 })
+    const { name, description, icon, color, householdId, annualBudget } = validation.data
+
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, householdId)
+    if (result instanceof NextResponse) {
+      return result
     }
 
-    const categoryData: { name: string; householdId: string; annualBudget?: string | number } = {
+    const categoryData: {
+      name: string
+      householdId: string
+      description?: string
+      icon?: string
+      color?: string
+      annualBudget?: string | number
+    } = {
       name,
       householdId,
     }
 
+    if (description) categoryData.description = description
+    if (icon) categoryData.icon = icon
+    if (color) categoryData.color = color
     if (annualBudget !== undefined && annualBudget !== null && annualBudget !== '') {
       categoryData.annualBudget = annualBudget
     }

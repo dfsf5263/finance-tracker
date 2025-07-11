@@ -165,6 +165,7 @@ model Transaction {
   type            HouseholdType     @relation(fields: [typeId], references: [id])
   user            HouseholdUser?    @relation(fields: [userId], references: [id])
 
+  @@unique([householdId, transactionDate, description, amount])
   @@index([householdId])
   @@map("transaction")
 }

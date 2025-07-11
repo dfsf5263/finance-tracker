@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
+import { requireAccountAccess } from '@/lib/auth-middleware'
+import { validateRequestBody, accountUpdateSchema } from '@/lib/validation'
+import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
-    const account = await db.householdAccount.findUnique({
-      where: { id },
-      include: { household: true },
-    })
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
 
-    if (!account) {
-      return NextResponse.json({ error: 'Account not found' }, { status: 404 })
+    const { id } = await params
+
+    // Verify user has access to this account
+    const result = await requireAccountAccess(request, id)
+    if (result instanceof NextResponse) {
+      return result
     }
 
+    const { account } = result
     return NextResponse.json(account)
   } catch (error) {
     await logApiError({
@@ -29,17 +35,34 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let requestData
   try {
-    const { id } = await params
-    requestData = await request.json()
-    const { name } = requestData
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
 
-    if (!name) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    const { id } = await params
+
+    // Verify user has access to this account
+    const result = await requireAccountAccess(request, id)
+    if (result instanceof NextResponse) {
+      return result
     }
+
+    // Parse and validate request body
+    requestData = await request.json()
+    const validation = validateRequestBody(accountUpdateSchema, requestData)
+
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+
+    const { name } = validation.data
+    const updateData: { name?: string } = {}
+
+    if (name) updateData.name = name
 
     const account = await db.householdAccount.update({
       where: { id },
-      data: { name },
+      data: updateData,
       include: { household: true },
     })
 
@@ -63,7 +86,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     const { id } = await params
+
+    // Verify user has access to this account
+    const result = await requireAccountAccess(request, id)
+    if (result instanceof NextResponse) {
+      return result
+    }
+
     await db.householdAccount.delete({
       where: { id },
     })

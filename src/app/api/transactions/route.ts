@@ -3,9 +3,16 @@ import { db } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
+import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { validateRequestBody, transactionCreateSchema } from '@/lib/validation'
+import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
   try {
+    // Apply api rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
@@ -19,6 +26,12 @@ export async function GET(request: NextRequest) {
 
     if (!householdId) {
       return NextResponse.json({ error: 'householdId is required' }, { status: 400 })
+    }
+
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, householdId)
+    if (result instanceof NextResponse) {
+      return result
     }
 
     const skip = (page - 1) * limit
@@ -77,7 +90,18 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let body
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
+    // Parse and validate request body
     body = await request.json()
+    const validation = validateRequestBody(transactionCreateSchema, body)
+
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+
     const {
       householdId,
       accountId,
@@ -89,7 +113,13 @@ export async function POST(request: NextRequest) {
       typeId,
       amount,
       memo,
-    } = body
+    } = validation.data
+
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, householdId)
+    if (result instanceof NextResponse) {
+      return result
+    }
 
     const transaction = await db.transaction.create({
       data: {
@@ -114,6 +144,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(transaction, { status: 201 })
   } catch (error) {
+    // Check for unique constraint violation
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json(
+        {
+          error: 'Duplicate transaction detected',
+          message:
+            'A transaction with the same household, date, description, and amount already exists',
+        },
+        { status: 409 }
+      )
+    }
+
     await logApiError({
       request,
       error,

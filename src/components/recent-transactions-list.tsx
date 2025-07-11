@@ -60,13 +60,13 @@ export function RecentTransactionsList() {
         if (response.ok) {
           const result = await response.json()
           const allTransactions = result.transactions || []
-          
+
           // Filter to outflow transactions only and sort by amount descending
           const outflowTransactions = allTransactions
             .filter((transaction: Transaction) => transaction.type?.isOutflow === true)
             .sort((a: Transaction, b: Transaction) => Math.abs(b.amount) - Math.abs(a.amount))
             .slice(0, 10) // Take top 10
-          
+
           setData({
             transactions: outflowTransactions,
             totalCount: result.pagination?.total || 0, // Total transactions for the month

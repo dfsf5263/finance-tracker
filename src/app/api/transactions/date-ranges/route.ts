@@ -2,14 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentYear, getCurrentMonth } from '@/lib/utils'
 import { logApiError } from '@/lib/error-logger'
+import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     const { searchParams } = new URL(request.url)
     const householdId = searchParams.get('householdId')
 
     if (!householdId) {
       return NextResponse.json({ error: 'householdId is required' }, { status: 400 })
+    }
+
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, householdId)
+    if (result instanceof NextResponse) {
+      return result
     }
 
     // Get the earliest and latest transaction dates for the household

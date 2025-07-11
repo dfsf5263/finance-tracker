@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
+import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     const { id } = await params
     const type = await db.householdType.findUnique({
       where: { id },
@@ -12,6 +18,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     if (!type) {
       return NextResponse.json({ error: 'Transaction type not found' }, { status: 404 })
+    }
+
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, type.householdId)
+    if (result instanceof NextResponse) {
+      return result
     }
 
     return NextResponse.json(type)
@@ -29,12 +41,32 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let requestData
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     const { id } = await params
     requestData = await request.json()
     const { name, isOutflow } = requestData
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    }
+
+    // First fetch the type to get the householdId for authorization
+    const existingType = await db.householdType.findUnique({
+      where: { id },
+      select: { householdId: true },
+    })
+
+    if (!existingType) {
+      return NextResponse.json({ error: 'Transaction type not found' }, { status: 404 })
+    }
+
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, existingType.householdId)
+    if (result instanceof NextResponse) {
+      return result
     }
 
     const updateData: { name: string; isOutflow?: boolean } = { name }
@@ -68,7 +100,28 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     const { id } = await params
+
+    // First fetch the type to get the householdId for authorization
+    const existingType = await db.householdType.findUnique({
+      where: { id },
+      select: { householdId: true },
+    })
+
+    if (!existingType) {
+      return NextResponse.json({ error: 'Transaction type not found' }, { status: 404 })
+    }
+
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, existingType.householdId)
+    if (result instanceof NextResponse) {
+      return result
+    }
+
     await db.householdType.delete({
       where: { id },
     })

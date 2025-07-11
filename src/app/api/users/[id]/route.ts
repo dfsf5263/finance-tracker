@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
+import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     const { id } = await params
     const user = await db.householdUser.findUnique({
       where: { id },
@@ -12,6 +18,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, user.householdId)
+    if (result instanceof NextResponse) {
+      return result
     }
 
     return NextResponse.json(user)
@@ -29,12 +41,32 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let data
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     const { id } = await params
     data = await request.json()
     const { name, annualBudget } = data
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    }
+
+    // First fetch the user to get the householdId for authorization
+    const existingUser = await db.householdUser.findUnique({
+      where: { id },
+      select: { householdId: true },
+    })
+
+    if (!existingUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, existingUser.householdId)
+    if (result instanceof NextResponse) {
+      return result
     }
 
     const updateData: { name: string; annualBudget?: string | number | null } = { name }
@@ -72,7 +104,28 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     const { id } = await params
+
+    // First fetch the user to get the householdId for authorization
+    const existingUser = await db.householdUser.findUnique({
+      where: { id },
+      select: { householdId: true },
+    })
+
+    if (!existingUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, existingUser.householdId)
+    if (result instanceof NextResponse) {
+      return result
+    }
+
     await db.householdUser.delete({
       where: { id },
     })

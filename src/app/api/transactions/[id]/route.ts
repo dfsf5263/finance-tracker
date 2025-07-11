@@ -1,25 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
+import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
+import { requireTransactionAccess } from '@/lib/auth-middleware'
+import { validateRequestBody, transactionUpdateSchema } from '@/lib/validation'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const transaction = await db.transaction.findUnique({
-      where: { id },
-      include: {
-        account: true,
-        user: true,
-        category: true,
-        type: true,
-      },
-    })
 
-    if (!transaction) {
-      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
+    // Verify user has access to this transaction
+    const result = await requireTransactionAccess(request, id)
+    if (result instanceof NextResponse) {
+      return result
     }
 
+    const { transaction } = result
     return NextResponse.json(transaction)
   } catch (error) {
     await logApiError({
@@ -36,7 +33,23 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   let body
   try {
     const { id } = await params
+
+    // Verify user has access to this transaction
+    const result = await requireTransactionAccess(request, id)
+    if (result instanceof NextResponse) {
+      return result
+    }
+
+    // Access verified - user has permission to update this transaction
+
+    // Parse and validate request body
     body = await request.json()
+    const validation = validateRequestBody(transactionUpdateSchema, body)
+
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+
     const {
       accountId,
       userId,
@@ -47,9 +60,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       typeId,
       amount,
       memo,
-    } = body
+    } = validation.data
 
-    const transaction = await db.transaction.update({
+    const updatedTransaction = await db.transaction.update({
       where: { id },
       data: {
         accountId,
@@ -70,8 +83,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       },
     })
 
-    return NextResponse.json(transaction)
+    return NextResponse.json(updatedTransaction)
   } catch (error) {
+    // Check for unique constraint violation
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json(
+        {
+          error: 'Duplicate transaction detected',
+          message:
+            'A transaction with the same household, date, description, and amount already exists',
+        },
+        { status: 409 }
+      )
+    }
+
     await logApiError({
       request,
       error,
@@ -91,6 +116,13 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
+
+    // Verify user has access to this transaction
+    const result = await requireTransactionAccess(request, id)
+    if (result instanceof NextResponse) {
+      return result
+    }
+
     await db.transaction.delete({
       where: { id },
     })

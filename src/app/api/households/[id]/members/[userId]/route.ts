@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
+import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function PATCH(
   request: NextRequest,
@@ -10,6 +11,10 @@ export async function PATCH(
   let currentUser
   let data
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     const { id, userId } = await params
 
     // Get the authenticated user
@@ -117,6 +122,10 @@ export async function DELETE(
 ) {
   let currentUser
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     const { id, userId } = await params
 
     // Get the authenticated user

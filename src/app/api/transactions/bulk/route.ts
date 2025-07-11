@@ -2,18 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { logApiError } from '@/lib/error-logger'
-
-interface CSVTransaction {
-  account: string
-  user: string
-  transactionDate: string
-  postDate: string
-  description: string
-  category: string
-  type: string
-  amount: string
-  memo?: string
-}
+import { bulkUploadRateLimit, createHouseholdRateLimit } from '@/lib/rate-limit'
+import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { validateRequestBody } from '@/lib/validation'
+import { bulkUploadRequestSchema, type BulkTransaction } from '@/lib/validation/bulk-upload'
+import { parseMMDDYYYY } from '@/lib/validation/sanitizers'
 
 interface ValidationError {
   row: number
@@ -22,188 +15,206 @@ interface ValidationError {
   message: string
 }
 
-function parseMMDDYYYY(dateString: string): Date | null {
-  if (!dateString) return null
-
-  // Check if the date matches MM/DD/YYYY format
-  const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/
-  const match = dateString.match(dateRegex)
-
-  if (!match) return null
-
-  const month = parseInt(match[1], 10)
-  const day = parseInt(match[2], 10)
-  const year = parseInt(match[3], 10)
-
-  // Validate month and day ranges
-  if (month < 1 || month > 12 || day < 1 || day > 31) {
-    return null
-  }
-
-  // Create date and check if it's valid
-  const date = new Date(year, month - 1, day)
-
-  // Check if the date is valid (handles cases like Feb 30)
-  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
-    return null
-  }
-
-  return date
-}
-
 export async function POST(request: NextRequest) {
-  let body
+  let body: unknown
+
   try {
+    // Apply general bulk upload rate limiting
+    const rateLimitResult = await bulkUploadRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
+    // Parse and validate body
     body = await request.json()
-    const { transactions, householdId } = body
+    const validation = validateRequestBody(bulkUploadRequestSchema, body)
 
-    if (!Array.isArray(transactions)) {
-      return NextResponse.json({ error: 'Transactions must be an array' }, { status: 400 })
-    }
-
-    if (!householdId) {
-      return NextResponse.json({ error: 'Household ID is required' }, { status: 400 })
-    }
-
-    // Collect all unique names from the CSV
-    const accountNames = [
-      ...new Set(transactions.map((t: CSVTransaction) => t.account).filter(Boolean)),
-    ]
-    const userNames = [
-      ...new Set(
-        transactions
-          .map((t: CSVTransaction) => t.user)
-          .filter(Boolean)
-          .filter((name: string) => name.trim() !== '')
-      ),
-    ]
-    const categoryNames = [
-      ...new Set(transactions.map((t: CSVTransaction) => t.category).filter(Boolean)),
-    ]
-    const typeNames = [...new Set(transactions.map((t: CSVTransaction) => t.type).filter(Boolean))]
-
-    // Fetch all entities from database for the specific household
-    const [accounts, users, categories, types] = await Promise.all([
-      db.householdAccount.findMany({ where: { name: { in: accountNames }, householdId } }),
-      db.householdUser.findMany({ where: { name: { in: userNames }, householdId } }),
-      db.householdCategory.findMany({ where: { name: { in: categoryNames }, householdId } }),
-      db.householdType.findMany({ where: { name: { in: typeNames }, householdId } }),
-    ])
-
-    // Create lookup maps
-    const accountMap = new Map(accounts.map((s) => [s.name, s.id]))
-    const userMap = new Map(users.map((u) => [u.name, u.id]))
-    const categoryMap = new Map(categories.map((c) => [c.name, c.id]))
-    const typeMap = new Map(types.map((t) => [t.name, t.id]))
-
-    // Validate all transactions and collect errors
-    const validationErrors: ValidationError[] = []
-    const validTransactions = []
-
-    for (let i = 0; i < transactions.length; i++) {
-      const transaction = transactions[i] as CSVTransaction
-      const rowNumber = i + 2 // Adding 2 because row 1 is header and arrays are 0-indexed
-
-      // Entity existence is now validated client-side
-      // Keep minimal server-side validation as backup security check
-      const missingEntities = []
-      if (!accountMap.has(transaction.account)) missingEntities.push('account')
-      if (transaction.user?.trim() && !userMap.has(transaction.user)) missingEntities.push('user')
-      if (!categoryMap.has(transaction.category)) missingEntities.push('category')
-      if (!typeMap.has(transaction.type)) missingEntities.push('type')
-
-      if (missingEntities.length > 0) {
-        validationErrors.push({
-          row: rowNumber,
-          field: 'entities',
-          value: '',
-          message:
-            'One or more entities do not exist. Ensure you have defined all entities in the definitions page prior to uploading your transactions.',
-        })
-      }
-
-      // Validate date formats
-      const transactionDate = parseMMDDYYYY(transaction.transactionDate)
-      if (!transactionDate) {
-        validationErrors.push({
-          row: rowNumber,
-          field: 'transactionDate',
-          value: transaction.transactionDate,
-          message: `Invalid date format. Expected MM/DD/YYYY but got "${transaction.transactionDate}"`,
-        })
-      }
-
-      const postDate = transaction.postDate ? parseMMDDYYYY(transaction.postDate) : transactionDate
-      if (transaction.postDate && !postDate) {
-        validationErrors.push({
-          row: rowNumber,
-          field: 'postDate',
-          value: transaction.postDate,
-          message: `Invalid date format. Expected MM/DD/YYYY but got "${transaction.postDate}"`,
-        })
-      }
-
-      // Validate amount is a valid number
-      const amount = parseFloat(transaction.amount)
-      if (isNaN(amount)) {
-        validationErrors.push({
-          row: rowNumber,
-          field: 'amount',
-          value: transaction.amount,
-          message: `Invalid amount. Expected a number but got "${transaction.amount}"`,
-        })
-      }
-
-      // If no validation errors for this row, add to valid transactions
-      const hasRowErrors = validationErrors.some((e) => e.row === rowNumber)
-      if (!hasRowErrors && transactionDate) {
-        validTransactions.push({
-          householdId,
-          accountId: accountMap.get(transaction.account)!,
-          userId: transaction.user?.trim() ? userMap.get(transaction.user)! : null,
-          transactionDate: transactionDate,
-          postDate: postDate || transactionDate,
-          description: transaction.description,
-          categoryId: categoryMap.get(transaction.category)!,
-          typeId: typeMap.get(transaction.type)!,
-          amount: new Decimal(amount),
-          memo: transaction.memo || '',
-        })
-      }
-    }
-
-    // If there are validation errors, return them
-    if (validationErrors.length > 0) {
+    if (!validation.success) {
       return NextResponse.json(
         {
           error: 'Validation failed',
-          validationErrors,
-          message: `Found ${validationErrors.length} validation error(s) in the CSV file`,
+          details: validation.error,
+          validationErrors: parseValidationErrors(validation.error),
         },
         { status: 400 }
       )
     }
 
-    // Create all valid transactions
-    const createdTransactions = await db.transaction.createMany({
-      data: validTransactions,
-      skipDuplicates: true,
-    })
+    const { transactions, householdId } = validation.data
+
+    // Apply household-specific rate limiting
+    const householdLimit = createHouseholdRateLimit(householdId)
+    const householdResult = await householdLimit(request)
+    if (householdResult) return householdResult
+
+    // Verify user has access to household
+    const authResult = await requireHouseholdAccess(request, householdId)
+    if (authResult instanceof NextResponse) return authResult
+
+    // Check for duplicate transactions
+    const duplicates = await checkDuplicateTransactions(transactions, householdId)
+
+    // Separate valid from duplicate transactions
+    const duplicateRows = new Set(duplicates.map((d) => d.row))
+    const validTransactions = transactions.filter(
+      (_, index) => !duplicateRows.has(index + 2) // +2 for header row and 0-index
+    )
+
+    const failures: Array<{
+      row: number
+      type: 'duplicate' | 'validation'
+      transaction: BulkTransaction
+      reason: string
+      existingTransaction?: {
+        createdAt: string
+        account: string
+        amount: string
+        description: string
+        transactionDate: string
+      }
+    }> = []
+
+    // Add duplicates to failures
+    failures.push(
+      ...duplicates.map((d) => ({
+        row: d.row,
+        type: 'duplicate' as const,
+        transaction: d.transaction,
+        reason: 'Duplicate transaction exists',
+        existingTransaction: d.existingTransaction,
+      }))
+    )
+
+    let successfulCount = 0
+
+    // Process valid transactions if any exist
+    if (validTransactions.length > 0) {
+      try {
+        const result = await db.$transaction(async (tx) => {
+          // Validate all entities exist
+          const entityValidation = await validateEntities(tx, validTransactions, householdId)
+
+          if (!entityValidation.valid) {
+            // Add entity validation failures
+            const entityFailures = getEntityValidationFailures(validTransactions, entityValidation)
+            failures.push(...entityFailures)
+
+            // Filter out transactions with entity failures
+            const finalValidTransactions = filterOutEntityFailures(
+              validTransactions,
+              entityValidation
+            )
+
+            if (finalValidTransactions.length === 0) {
+              return { count: 0 }
+            }
+
+            // Prepare final valid transactions
+            const preparedTransactions = finalValidTransactions.map((t: BulkTransaction) => ({
+              householdId,
+              accountId: entityValidation.accountMap.get(t.account)!,
+              userId: t.user ? entityValidation.userMap.get(t.user) : null,
+              transactionDate: parseMMDDYYYY(t.transactionDate),
+              postDate: t.postDate ? parseMMDDYYYY(t.postDate) : parseMMDDYYYY(t.transactionDate),
+              description: t.description,
+              categoryId: entityValidation.categoryMap.get(t.category)!,
+              typeId: entityValidation.typeMap.get(t.type)!,
+              amount: new Decimal(parseFloat(t.amount)),
+              memo: t.memo || '',
+            }))
+
+            return await tx.transaction.createMany({
+              data: preparedTransactions,
+              skipDuplicates: true,
+            })
+          }
+
+          // All transactions are valid, prepare them
+          const preparedTransactions = validTransactions.map((t: BulkTransaction) => ({
+            householdId,
+            accountId: entityValidation.accountMap.get(t.account)!,
+            userId: t.user ? entityValidation.userMap.get(t.user) : null,
+            transactionDate: parseMMDDYYYY(t.transactionDate),
+            postDate: t.postDate ? parseMMDDYYYY(t.postDate) : parseMMDDYYYY(t.transactionDate),
+            description: t.description,
+            categoryId: entityValidation.categoryMap.get(t.category)!,
+            typeId: entityValidation.typeMap.get(t.type)!,
+            amount: new Decimal(parseFloat(t.amount)),
+            memo: t.memo || '',
+          }))
+
+          return await tx.transaction.createMany({
+            data: preparedTransactions,
+            skipDuplicates: true,
+          })
+        })
+
+        successfulCount = result.count
+      } catch (error) {
+        // If the entire transaction fails, we still want to report partial success
+        console.error('Transaction processing failed:', error)
+        // Add generic failure for remaining transactions
+        validTransactions.forEach((t) => {
+          const originalIndex = transactions.findIndex((orig) => orig === t)
+          failures.push({
+            row: originalIndex + 2,
+            type: 'validation',
+            transaction: t,
+            reason: error instanceof Error ? error.message : 'Processing failed',
+          })
+        })
+      }
+    }
 
     return NextResponse.json({
-      message: `Successfully created ${createdTransactions.count} transactions`,
-      count: createdTransactions.count,
+      success: true,
+      message:
+        failures.length > 0
+          ? `Upload completed with ${failures.length} failures`
+          : 'Upload completed successfully',
+      results: {
+        total: transactions.length,
+        successful: successfulCount,
+        failed: failures.length,
+        failures: failures,
+      },
     })
   } catch (error) {
     await logApiError({
       request,
       error,
-      operation: 'create bulk transactions',
+      operation: 'bulk transaction upload',
       context: {
-        householdId: body.householdId,
-        transactionCount: Array.isArray(body.transactions) ? body.transactions.length : 0,
+        householdId:
+          body && typeof body === 'object' && 'householdId' in body ? body.householdId : undefined,
+        transactionCount:
+          body &&
+          typeof body === 'object' &&
+          'transactions' in body &&
+          Array.isArray(body.transactions)
+            ? body.transactions.length
+            : 0,
+        validationPassed: false,
       },
     })
+
+    // Check if it's an entity validation error
+    if (error instanceof Error && error.message.includes('Missing entities')) {
+      return NextResponse.json(
+        {
+          error: 'Entity validation failed',
+          message: error.message,
+          validationErrors: [
+            {
+              row: 0,
+              field: 'entities',
+              value: '',
+              message: error.message,
+            },
+          ],
+        },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
       {
         error: 'Failed to create bulk transactions',
@@ -212,4 +223,245 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Helper function to parse Zod validation errors into our format
+function parseValidationErrors(errorString: string): ValidationError[] {
+  const errors: ValidationError[] = []
+  const parts = errorString.split(', ')
+
+  parts.forEach((part) => {
+    const match = part.match(/transactions\.(\d+)\.(\w+): (.+)/)
+    if (match) {
+      const [, rowIndex, field, message] = match
+      errors.push({
+        row: parseInt(rowIndex) + 2, // +2 for header row and 0-index
+        field,
+        value: '',
+        message,
+      })
+    }
+  })
+
+  return errors
+}
+
+// Helper function to check for duplicate transactions
+async function checkDuplicateTransactions(
+  transactions: BulkTransaction[],
+  householdId: string
+): Promise<
+  Array<{
+    row: number
+    transaction: BulkTransaction
+    existingTransaction: {
+      createdAt: string
+      account: string
+      amount: string
+      description: string
+      transactionDate: string
+    }
+  }>
+> {
+  const duplicates = []
+
+  for (let i = 0; i < transactions.length; i++) {
+    const t = transactions[i]
+    const date = parseMMDDYYYY(t.transactionDate)
+
+    const existing = await db.transaction.findFirst({
+      where: {
+        householdId,
+        transactionDate: date,
+        amount: new Decimal(parseFloat(t.amount)),
+        description: t.description,
+      },
+      select: {
+        createdAt: true,
+        amount: true,
+        description: true,
+        transactionDate: true,
+        account: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    })
+
+    if (existing) {
+      duplicates.push({
+        row: i + 2, // +2 for header row and 0-index
+        transaction: t,
+        existingTransaction: {
+          createdAt: existing.createdAt.toISOString(),
+          account: existing.account.name,
+          amount: existing.amount.toString(),
+          description: existing.description,
+          transactionDate: existing.transactionDate.toISOString().split('T')[0],
+        },
+      })
+    }
+  }
+
+  return duplicates
+}
+
+// Helper function to validate entities exist
+async function validateEntities(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tx: any,
+  transactions: BulkTransaction[],
+  householdId: string
+): Promise<{
+  valid: boolean
+  error?: string
+  accountMap: Map<string, string>
+  userMap: Map<string, string>
+  categoryMap: Map<string, string>
+  typeMap: Map<string, string>
+}> {
+  const accountNames = [...new Set(transactions.map((t) => t.account))]
+  const userNames = [...new Set(transactions.map((t) => t.user).filter(Boolean) as string[])]
+  const categoryNames = [...new Set(transactions.map((t) => t.category))]
+  const typeNames = [...new Set(transactions.map((t) => t.type))]
+
+  const [accounts, users, categories, types] = await Promise.all([
+    tx.householdAccount.findMany({
+      where: { name: { in: accountNames }, householdId },
+      select: { id: true, name: true },
+    }),
+    tx.householdUser.findMany({
+      where: { name: { in: userNames }, householdId },
+      select: { id: true, name: true },
+    }),
+    tx.householdCategory.findMany({
+      where: { name: { in: categoryNames }, householdId },
+      select: { id: true, name: true },
+    }),
+    tx.householdType.findMany({
+      where: { name: { in: typeNames }, householdId },
+      select: { id: true, name: true },
+    }),
+  ])
+
+  const accountMap = new Map(accounts.map((a: { name: string; id: string }) => [a.name, a.id]))
+  const userMap = new Map(users.map((u: { name: string; id: string }) => [u.name, u.id]))
+  const categoryMap = new Map(categories.map((c: { name: string; id: string }) => [c.name, c.id]))
+  const typeMap = new Map(types.map((t: { name: string; id: string }) => [t.name, t.id]))
+
+  // Check for missing entities
+  const missingAccounts = accountNames.filter((n) => !accountMap.has(n))
+  const missingUsers = userNames.filter((n) => n && !userMap.has(n))
+  const missingCategories = categoryNames.filter((n) => !categoryMap.has(n))
+  const missingTypes = typeNames.filter((n) => !typeMap.has(n))
+
+  if (
+    missingAccounts.length ||
+    missingUsers.length ||
+    missingCategories.length ||
+    missingTypes.length
+  ) {
+    const errors = []
+    if (missingAccounts.length) errors.push(`Accounts: ${missingAccounts.join(', ')}`)
+    if (missingUsers.length) errors.push(`Users: ${missingUsers.join(', ')}`)
+    if (missingCategories.length) errors.push(`Categories: ${missingCategories.join(', ')}`)
+    if (missingTypes.length) errors.push(`Types: ${missingTypes.join(', ')}`)
+
+    return {
+      valid: false,
+      error: `Missing entities - ${errors.join('; ')}. Please define these entities on the definitions page before uploading.`,
+      accountMap: accountMap as Map<string, string>,
+      userMap: userMap as Map<string, string>,
+      categoryMap: categoryMap as Map<string, string>,
+      typeMap: typeMap as Map<string, string>,
+    }
+  }
+
+  return {
+    valid: true,
+    accountMap: accountMap as Map<string, string>,
+    userMap: userMap as Map<string, string>,
+    categoryMap: categoryMap as Map<string, string>,
+    typeMap: typeMap as Map<string, string>,
+  }
+}
+
+// Helper function to get entity validation failures
+function getEntityValidationFailures(
+  transactions: BulkTransaction[],
+  entityValidation: {
+    valid: boolean
+    error?: string
+    accountMap: Map<string, string>
+    userMap: Map<string, string>
+    categoryMap: Map<string, string>
+    typeMap: Map<string, string>
+  }
+): Array<{
+  row: number
+  type: 'validation'
+  transaction: BulkTransaction
+  reason: string
+}> {
+  const failures: Array<{
+    row: number
+    type: 'validation'
+    transaction: BulkTransaction
+    reason: string
+  }> = []
+
+  transactions.forEach((transaction, index) => {
+    const issues: string[] = []
+
+    // Check for missing entities
+    if (!entityValidation.accountMap.has(transaction.account)) {
+      issues.push(`Account "${transaction.account}" not found`)
+    }
+
+    if (transaction.user && !entityValidation.userMap.has(transaction.user)) {
+      issues.push(`User "${transaction.user}" not found`)
+    }
+
+    if (!entityValidation.categoryMap.has(transaction.category)) {
+      issues.push(`Category "${transaction.category}" not found`)
+    }
+
+    if (!entityValidation.typeMap.has(transaction.type)) {
+      issues.push(`Type "${transaction.type}" not found`)
+    }
+
+    if (issues.length > 0) {
+      failures.push({
+        row: index + 2, // +2 for header row and 0-index
+        type: 'validation',
+        transaction,
+        reason: issues.join(', '),
+      })
+    }
+  })
+
+  return failures
+}
+
+// Helper function to filter out transactions with entity failures
+function filterOutEntityFailures(
+  transactions: BulkTransaction[],
+  entityValidation: {
+    valid: boolean
+    error?: string
+    accountMap: Map<string, string>
+    userMap: Map<string, string>
+    categoryMap: Map<string, string>
+    typeMap: Map<string, string>
+  }
+): BulkTransaction[] {
+  return transactions.filter((transaction) => {
+    const hasValidAccount = entityValidation.accountMap.has(transaction.account)
+    const hasValidUser = !transaction.user || entityValidation.userMap.has(transaction.user)
+    const hasValidCategory = entityValidation.categoryMap.has(transaction.category)
+    const hasValidType = entityValidation.typeMap.has(transaction.type)
+
+    return hasValidAccount && hasValidUser && hasValidCategory && hasValidType
+  })
 }

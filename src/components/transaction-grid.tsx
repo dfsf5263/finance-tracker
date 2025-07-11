@@ -36,6 +36,7 @@ import {
   DollarSign,
 } from 'lucide-react'
 import { formatCurrency, formatDate, parseLocalDate } from '@/lib/utils'
+import { toast } from 'sonner'
 import {
   Table,
   TableBody,
@@ -325,17 +326,45 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
       })
 
       if (response.ok) {
+        // Success case
         setShowTransactionForm(false)
         setEditingTransaction(null)
         fetchTransactions()
         onRefresh?.()
+
         // Invalidate active month cache to refresh dashboard components
         if (selectedHousehold?.id) {
           invalidateActiveMonthCache(selectedHousehold.id)
         }
+
+        // Show success toast
+        toast.success(
+          editingTransaction
+            ? 'Transaction updated successfully'
+            : 'Transaction created successfully'
+        )
+      } else {
+        // Error case - parse error response
+        let errorMessage = 'Failed to save transaction'
+
+        try {
+          const errorData = await response.json()
+          if (errorData.message) {
+            errorMessage = errorData.message
+          } else if (errorData.error) {
+            errorMessage = errorData.error
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, use default message
+          console.error('Error parsing API response:', parseError)
+        }
+
+        // Show error toast
+        toast.error(errorMessage)
       }
     } catch (error) {
       console.error('Error saving transaction:', error)
+      toast.error('Network error occurred. Please try again.')
     }
   }
 
@@ -730,7 +759,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
               Are you sure you want to delete this transaction? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          
+
           {transactionToDelete && (
             <div className="my-4 p-4 border rounded-lg bg-muted/50">
               <div className="space-y-2 text-sm">
@@ -740,9 +769,11 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount:</span>
-                  <span className={`font-medium ${
-                    transactionToDelete.amount >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
+                  <span
+                    className={`font-medium ${
+                      transactionToDelete.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}
+                  >
                     {formatCurrency(transactionToDelete.amount)}
                   </span>
                 </div>
@@ -754,25 +785,23 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Category:</span>
-                  <span className="font-medium">{transactionToDelete.category?.name || 'Unknown'}</span>
+                  <span className="font-medium">
+                    {transactionToDelete.category?.name || 'Unknown'}
+                  </span>
                 </div>
               </div>
             </div>
           )}
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
               disabled={isDeleting}
             >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleConfirmDelete}
-              disabled={isDeleting}
-            >
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
               {isDeleting ? 'Deleting...' : 'Delete Transaction'}
             </Button>
           </DialogFooter>

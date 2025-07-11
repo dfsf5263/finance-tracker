@@ -1,5 +1,5 @@
 import { auth } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { getMonthName, getCurrentMonth, getCurrentYear } from '@/lib/utils'
 import { logApiError } from '@/lib/error-logger'
@@ -13,7 +13,7 @@ const prisma = globalForPrisma.prisma ?? new PrismaClient()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // Await the params as required by Next.js 15
   const { id: householdId } = await params
 
@@ -49,26 +49,54 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Household not found or access denied' }, { status: 404 })
     }
 
-    // Step 3: Get months with transaction activity
-
+    // Step 3: Get months with transaction activity using parameterized query
     let transactionMonths: Array<{ year: number; month: number; unique_days: bigint }> = []
 
     try {
-      transactionMonths = await prisma.$queryRaw<
-        Array<{ year: number; month: number; unique_days: bigint }>
-      >`
-        SELECT 
-          EXTRACT(YEAR FROM "transaction_date")::int as year,
-          EXTRACT(MONTH FROM "transaction_date")::int as month,
-          COUNT(DISTINCT DATE("transaction_date")) as unique_days
-        FROM "transaction"
-        WHERE "household_id" = ${householdId}::uuid
-        GROUP BY year, month
-        HAVING COUNT(DISTINCT DATE("transaction_date")) >= 5
-        ORDER BY year DESC, month DESC
-        LIMIT 1
-      `
+      transactionMonths = await prisma.transaction
+        .groupBy({
+          by: ['transactionDate'],
+          where: {
+            householdId: householdId,
+          },
+          _count: {
+            transactionDate: true,
+          },
+        })
+        .then((results) => {
+          // Group by year and month, counting unique days
+          const monthGroups = new Map<string, Set<string>>()
 
+          results.forEach((result) => {
+            const date = new Date(result.transactionDate)
+            const year = date.getFullYear()
+            const month = date.getMonth() + 1
+            const day = date.getDate()
+            const key = `${year}-${month}`
+
+            if (!monthGroups.has(key)) {
+              monthGroups.set(key, new Set())
+            }
+            monthGroups.get(key)!.add(day.toString())
+          })
+
+          // Convert to required format and filter for months with ≥5 unique days
+          return Array.from(monthGroups.entries())
+            .filter(([, days]) => days.size >= 5)
+            .map(([key, days]) => {
+              const [year, month] = key.split('-').map(Number)
+              return {
+                year,
+                month,
+                unique_days: BigInt(days.size),
+              }
+            })
+            .sort((a, b) => {
+              if (a.year !== b.year) return b.year - a.year
+              return b.month - a.month
+            })
+            .slice(0, 1)
+        })
     } catch (queryError) {
       await logApiError({
         request,

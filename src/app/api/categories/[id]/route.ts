@@ -1,19 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
+import { requireCategoryAccess } from '@/lib/auth-middleware'
+import { validateRequestBody, categoryUpdateSchema } from '@/lib/validation'
+import { apiRateLimit } from '@/lib/rate-limit'
+import { z } from 'zod'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
-    const category = await db.householdCategory.findUnique({
-      where: { id },
-      include: { household: true },
-    })
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
 
-    if (!category) {
-      return NextResponse.json({ error: 'Category not found' }, { status: 404 })
+    const { id } = await params
+
+    // Verify user has access to this category
+    const result = await requireCategoryAccess(request, id)
+    if (result instanceof NextResponse) {
+      return result
     }
 
+    const { category } = result
     return NextResponse.json(category)
   } catch (error) {
     await logApiError({
@@ -29,15 +36,44 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let data
   try {
-    const { id } = await params
-    data = await request.json()
-    const { name, annualBudget } = data
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
 
-    if (!name) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    const { id } = await params
+
+    // Verify user has access to this category
+    const result = await requireCategoryAccess(request, id)
+    if (result instanceof NextResponse) {
+      return result
     }
 
-    const updateData: { name: string; annualBudget?: string | number | null } = { name }
+    // Parse and validate request body
+    data = await request.json()
+
+    // Create extended schema for category update that includes annualBudget
+    const extendedSchema = categoryUpdateSchema.extend({
+      annualBudget: z.union([z.string(), z.number(), z.null()]).optional(),
+    })
+
+    const validation = validateRequestBody(extendedSchema, data)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+
+    const { name, description, icon, color, annualBudget } = validation.data
+    const updateData: {
+      name?: string
+      description?: string
+      icon?: string
+      color?: string
+      annualBudget?: string | number | null
+    } = {}
+
+    if (name) updateData.name = name
+    if (description) updateData.description = description
+    if (icon) updateData.icon = icon
+    if (color) updateData.color = color
 
     // Handle annualBudget: allow null to clear, otherwise set value
     if (annualBudget === null || annualBudget === '') {
@@ -72,7 +108,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     const { id } = await params
+
+    // Verify user has access to this category
+    const result = await requireCategoryAccess(request, id)
+    if (result instanceof NextResponse) {
+      return result
+    }
+
     await db.householdCategory.delete({
       where: { id },
     })

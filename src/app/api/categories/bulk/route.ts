@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
+import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   let requestData
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     requestData = await request.json()
     const { categories, householdId } = requestData
 
@@ -16,13 +22,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Categories array is required' }, { status: 400 })
     }
 
-    // Validate household exists
-    const household = await db.household.findUnique({
-      where: { id: householdId },
-    })
-
-    if (!household) {
-      return NextResponse.json({ error: 'Household not found' }, { status: 404 })
+    // Verify user has access to this household
+    const authResult = await requireHouseholdAccess(request, householdId)
+    if (authResult instanceof NextResponse) {
+      return authResult
     }
 
     // Get existing categories for this household to avoid duplicates
@@ -55,7 +58,7 @@ export async function POST(request: NextRequest) {
     }))
 
     // Bulk create categories
-    const result = await db.householdCategory.createMany({
+    const createResult = await db.householdCategory.createMany({
       data: categoriesWithHousehold,
       skipDuplicates: true,
     })
@@ -71,7 +74,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({
-      message: `Successfully created ${result.count} categories`,
+      message: `Successfully created ${createResult.count} categories`,
       created: createdCategories,
       skipped: categories.length - categoriesToCreate.length,
     })

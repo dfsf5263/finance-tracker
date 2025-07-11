@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
+import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { validateRequestBody, householdUpdateSchema } from '@/lib/validation'
+import { z } from 'zod'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const household = await db.household.findUnique({
+
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, id)
+    if (result instanceof NextResponse) {
+      return result
+    }
+
+    // Get additional count data
+    const householdWithCounts = await db.household.findUnique({
       where: { id },
       include: {
         _count: {
@@ -19,11 +30,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       },
     })
 
-    if (!household) {
-      return NextResponse.json({ error: 'Household not found' }, { status: 404 })
-    }
-
-    return NextResponse.json(household)
+    return NextResponse.json(householdWithCounts)
   } catch (error) {
     await logApiError({
       request,
@@ -39,14 +46,32 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   let data
   try {
     const { id } = await params
-    data = await request.json()
-    const { name, annualBudget } = data
 
-    if (!name) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, id)
+    if (result instanceof NextResponse) {
+      return result
     }
 
-    const updateData: { name: string; annualBudget?: string | number | null } = { name }
+    // Parse and validate request body
+    data = await request.json()
+
+    // Create extended schema for household update that includes annualBudget
+    const extendedSchema = householdUpdateSchema.extend({
+      annualBudget: z.union([z.string(), z.number(), z.null()]).optional(),
+    })
+
+    const validation = validateRequestBody(extendedSchema, data)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+
+    const { name, annualBudget } = validation.data
+    const updateData: { name?: string; annualBudget?: string | number | null } = {}
+
+    if (name) {
+      updateData.name = name
+    }
 
     // Handle annualBudget: allow null to clear, otherwise set value
     if (annualBudget === null || annualBudget === '') {
@@ -91,6 +116,12 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
+
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, id)
+    if (result instanceof NextResponse) {
+      return result
+    }
 
     // Check if household has any transactions
     const transactionCount = await db.transaction.count({
