@@ -7,6 +7,26 @@ export function sanitizeText(text: string): string {
     .trim()
 }
 
+// Convert MM/DD/YYYY to ISO format (YYYY-MM-DD)
+export function convertMMDDYYYYToISO(mmddyyyy: string): string {
+  try {
+    const date = parseMMDDYYYY(mmddyyyy)
+    return date.toISOString().split('T')[0]
+  } catch {
+    return ''
+  }
+}
+
+// Validate ISO date format (YYYY-MM-DD)
+export function validateISODate(isoString: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoString)) return false
+
+  const date = new Date(isoString)
+  const [year, month, day] = isoString.split('-').map(Number)
+
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+}
+
 // Parse MM/DD/YYYY date string to Date object
 export function parseMMDDYYYY(dateStr: string): Date {
   const parts = dateStr.split('/')
@@ -42,8 +62,20 @@ export function notFutureDate(dateStr: string): boolean {
   return date <= today
 }
 
+export function notFutureDateISO(isoString: string): boolean {
+  const date = new Date(isoString)
+  const today = new Date()
+  today.setHours(23, 59, 59, 999) // End of today
+  return date <= today
+}
+
 export function reasonableDate(dateStr: string): boolean {
   const date = parseMMDDYYYY(dateStr)
+  return date >= new Date(1900, 0, 1)
+}
+
+export function reasonableDateISO(isoString: string): boolean {
+  const date = new Date(isoString)
   return date >= new Date(1900, 0, 1)
 }
 

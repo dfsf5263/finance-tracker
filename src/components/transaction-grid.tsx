@@ -35,8 +35,9 @@ import {
   Upload,
   DollarSign,
 } from 'lucide-react'
-import { formatCurrency, formatDate, parseLocalDate } from '@/lib/utils'
+import { formatCurrency, formatDateFromISO } from '@/lib/utils'
 import { toast } from 'sonner'
+import { apiFetch } from '@/lib/http-utils'
 import {
   Table,
   TableBody,
@@ -128,50 +129,55 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   const fetchTransactions = async () => {
     if (!selectedHousehold) return
     setLoading(true)
-    try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: pageSize.toString(),
-        householdId: selectedHousehold.id,
-      })
 
-      if (filters.category && filters.category !== 'all')
-        params.append('category', filters.category)
-      if (filters.type && filters.type !== 'all') params.append('type', filters.type)
-      if (filters.account && filters.account !== 'all') params.append('account', filters.account)
-      if (filters.user && filters.user !== 'all') params.append('user', filters.user)
-      if (filters.startDate) params.append('startDate', filters.startDate)
-      if (filters.endDate) params.append('endDate', filters.endDate)
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: pageSize.toString(),
+      householdId: selectedHousehold.id,
+    })
 
-      const response = await fetch(`/api/transactions?${params}`)
-      if (response.ok) {
-        const data = await response.json()
-        let filteredTransactions = data.transactions
+    if (filters.category && filters.category !== 'all') params.append('category', filters.category)
+    if (filters.type && filters.type !== 'all') params.append('type', filters.type)
+    if (filters.account && filters.account !== 'all') params.append('account', filters.account)
+    if (filters.user && filters.user !== 'all') params.append('user', filters.user)
+    if (filters.startDate) params.append('startDate', filters.startDate)
+    if (filters.endDate) params.append('endDate', filters.endDate)
 
-        if (filters.search) {
-          filteredTransactions = filteredTransactions.filter(
-            (t: Transaction) =>
-              t.description.toLowerCase().includes(filters.search.toLowerCase()) ||
-              (t.account?.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
-              (t.user?.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
-              (t.category?.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
-              (t.type?.name || '').toLowerCase().includes(filters.search.toLowerCase())
-          )
-        }
+    const { data, error } = await apiFetch<{
+      transactions: Transaction[]
+      pagination: { pages: number }
+    }>(`/api/transactions?${params}`, {
+      showErrorToast: false, // Handle errors manually
+      showRateLimitToast: true, // Show rate limit toasts
+    })
 
-        setTransactions(filteredTransactions)
-        setTotalPages(data.pagination.pages)
-      } else {
-        const errorData = await response.json()
-        console.error('API Error:', errorData)
-        setTransactions([])
-        setTotalPages(1)
+    if (data) {
+      let filteredTransactions = data.transactions
+
+      if (filters.search) {
+        filteredTransactions = filteredTransactions.filter(
+          (t: Transaction) =>
+            t.description.toLowerCase().includes(filters.search.toLowerCase()) ||
+            (t.account?.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+            (t.user?.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+            (t.category?.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+            (t.type?.name || '').toLowerCase().includes(filters.search.toLowerCase())
+        )
       }
-    } catch (error) {
+
+      setTransactions(filteredTransactions)
+      setTotalPages(data.pagination.pages)
+    } else if (error) {
       console.error('Error fetching transactions:', error)
-    } finally {
-      setLoading(false)
+      setTransactions([])
+      setTotalPages(1)
+      // Only show toast if it's not a rate limit error (already handled by apiFetch)
+      if (!error.includes('Rate limit exceeded')) {
+        toast.error('Failed to fetch transactions')
+      }
     }
+
+    setLoading(false)
   }
 
   const fetchCategories = useCallback(async () => {
@@ -310,61 +316,44 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   const handleTransactionSubmit = async (
     transactionData: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'> & { amount: number }
   ) => {
-    try {
-      const url = editingTransaction
-        ? `/api/transactions/${editingTransaction.id}`
-        : '/api/transactions'
+    const url = editingTransaction
+      ? `/api/transactions/${editingTransaction.id}`
+      : '/api/transactions'
 
-      const method = editingTransaction ? 'PUT' : 'POST'
+    const method = editingTransaction ? 'PUT' : 'POST'
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(transactionData),
-      })
+    const { data, error } = await apiFetch<Transaction>(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(transactionData),
+      showErrorToast: false, // Handle success/error toasts manually
+      showRateLimitToast: true, // Show rate limit toasts
+    })
 
-      if (response.ok) {
-        // Success case
-        setShowTransactionForm(false)
-        setEditingTransaction(null)
-        fetchTransactions()
-        onRefresh?.()
+    if (data) {
+      // Success case
+      setShowTransactionForm(false)
+      setEditingTransaction(null)
+      fetchTransactions()
+      onRefresh?.()
 
-        // Invalidate active month cache to refresh dashboard components
-        if (selectedHousehold?.id) {
-          invalidateActiveMonthCache(selectedHousehold.id)
-        }
-
-        // Show success toast
-        toast.success(
-          editingTransaction
-            ? 'Transaction updated successfully'
-            : 'Transaction created successfully'
-        )
-      } else {
-        // Error case - parse error response
-        let errorMessage = 'Failed to save transaction'
-
-        try {
-          const errorData = await response.json()
-          if (errorData.message) {
-            errorMessage = errorData.message
-          } else if (errorData.error) {
-            errorMessage = errorData.error
-          }
-        } catch (parseError) {
-          // If JSON parsing fails, use default message
-          console.error('Error parsing API response:', parseError)
-        }
-
-        // Show error toast
-        toast.error(errorMessage)
+      // Invalidate active month cache to refresh dashboard components
+      if (selectedHousehold?.id) {
+        invalidateActiveMonthCache(selectedHousehold.id)
       }
-    } catch (error) {
+
+      // Show success toast
+      toast.success(
+        editingTransaction ? 'Transaction updated successfully' : 'Transaction created successfully'
+      )
+    } else if (error) {
       console.error('Error saving transaction:', error)
-      toast.error('Network error occurred. Please try again.')
+      // Only show toast if it's not a rate limit error (already handled by apiFetch)
+      if (!error.includes('Rate limit exceeded')) {
+        toast.error(error || 'Failed to save transaction')
+      }
     }
   }
 
@@ -652,7 +641,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                     {transaction.user?.name || 'Household'}
                   </TableCell>
                   <TableCell className="p-3 text-sm text-foreground">
-                    {formatDate(parseLocalDate(transaction.transactionDate))}
+                    {formatDateFromISO(transaction.transactionDate)}
                   </TableCell>
                   <TableCell className="p-3 text-sm text-foreground max-w-xs truncate">
                     {transaction.description}
@@ -780,7 +769,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Date:</span>
                   <span className="font-medium">
-                    {formatDate(parseLocalDate(transactionToDelete.transactionDate))}
+                    {formatDateFromISO(transactionToDelete.transactionDate)}
                   </span>
                 </div>
                 <div className="flex justify-between">

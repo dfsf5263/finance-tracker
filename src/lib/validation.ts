@@ -1,4 +1,5 @@
 import { z, ZodError } from 'zod'
+import { isValidISODate } from './utils'
 
 // Transaction validation schemas
 export const transactionUpdateSchema = z.object({
@@ -6,16 +7,8 @@ export const transactionUpdateSchema = z.object({
   userId: z.string().uuid('Invalid user ID format').nullable(),
   transactionDate: z
     .string()
-    .refine(
-      (val) => /^\d{4}-\d{2}-\d{2}$/.test(val) || /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val),
-      'Invalid transaction date format'
-    ),
-  postDate: z
-    .string()
-    .refine(
-      (val) => /^\d{4}-\d{2}-\d{2}$/.test(val) || /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val),
-      'Invalid post date format'
-    ),
+    .refine(isValidISODate, 'Invalid transaction date format - expected YYYY-MM-DD'),
+  postDate: z.string().refine(isValidISODate, 'Invalid post date format - expected YYYY-MM-DD'),
   description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
   categoryId: z.string().uuid('Invalid category ID format'),
   typeId: z.string().uuid('Invalid type ID format'),

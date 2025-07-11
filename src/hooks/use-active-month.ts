@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getCurrentMonth, getCurrentYear, getMonthName } from '@/lib/utils'
+import { apiFetch } from '@/lib/http-utils'
 
 interface ActiveMonthData {
   year: number
@@ -42,31 +43,28 @@ export function useActiveMonth(householdId: string | null): UseActiveMonthReturn
       return
     }
 
-    try {
-      setLoading(true)
-      setError(null)
+    setLoading(true)
+    setError(null)
 
-      console.log('Fetching active month for household:', householdId)
-      const response = await fetch(`/api/households/${householdId}/active-month`)
+    console.log('Fetching active month for household:', householdId)
 
-      console.log('API response status:', response.status, response.statusText)
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('API error response:', errorText)
-        throw new Error(`API returned ${response.status}: ${errorText}`)
+    const { data: result, error } = await apiFetch<ActiveMonthData>(
+      `/api/households/${householdId}/active-month`,
+      {
+        showErrorToast: false, // Don't show toast for this background operation
+        showRateLimitToast: true, // Show rate limit toasts
       }
+    )
 
-      const result: ActiveMonthData = await response.json()
+    if (result) {
       console.log('Active month API result:', result)
 
       // Cache the result
       activeMonthCache.set(householdId, result)
-
       setData(result)
-    } catch (err) {
-      console.error('Error fetching active month:', err)
-      setError(err instanceof Error ? err : new Error('Unknown error'))
+    } else if (error) {
+      console.error('Error fetching active month:', error)
+      setError(new Error(error))
 
       // Fallback to current month if API fails
       const fallbackData: ActiveMonthData = {
@@ -82,9 +80,9 @@ export function useActiveMonth(householdId: string | null): UseActiveMonthReturn
 
       // Cache the fallback for this session
       activeMonthCache.set(householdId, fallbackData)
-    } finally {
-      setLoading(false)
     }
+
+    setLoading(false)
   }
 
   // Function to invalidate cache and refetch

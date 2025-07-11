@@ -65,8 +65,15 @@ export async function GET(request: NextRequest) {
       db.transaction.count({ where }),
     ])
 
+    // Transform dates to date-only format for frontend
+    const transformedTransactions = transactions.map((transaction) => ({
+      ...transaction,
+      transactionDate: transaction.transactionDate.toISOString().split('T')[0],
+      postDate: transaction.postDate.toISOString().split('T')[0],
+    }))
+
     return NextResponse.json({
-      transactions,
+      transactions: transformedTransactions,
       pagination: {
         page,
         limit,
@@ -126,8 +133,8 @@ export async function POST(request: NextRequest) {
         householdId,
         accountId,
         userId,
-        transactionDate: new Date(transactionDate),
-        postDate: new Date(postDate),
+        transactionDate: new Date(transactionDate).toISOString(),
+        postDate: new Date(postDate).toISOString(),
         description,
         categoryId,
         typeId,
@@ -142,7 +149,14 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json(transaction, { status: 201 })
+    // Transform dates to date-only format for frontend
+    const transformedTransaction = {
+      ...transaction,
+      transactionDate: transaction.transactionDate.toISOString().split('T')[0],
+      postDate: transaction.postDate.toISOString().split('T')[0],
+    }
+
+    return NextResponse.json(transformedTransaction, { status: 201 })
   } catch (error) {
     // Check for unique constraint violation
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {

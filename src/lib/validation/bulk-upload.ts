@@ -1,12 +1,5 @@
 import { z } from 'zod'
-import {
-  sanitizeText,
-  validateMMDDYYYY,
-  notFutureDate,
-  reasonableDate,
-  isValidAmount,
-  reasonableAmount,
-} from './sanitizers'
+import { sanitizeText, isValidAmount, reasonableAmount } from './sanitizers'
 
 // Enhanced transaction schema for bulk uploads
 export const bulkTransactionSchema = z.object({
@@ -26,15 +19,43 @@ export const bulkTransactionSchema = z.object({
 
   transactionDate: z
     .string()
-    .regex(/^\d{1,2}\/\d{1,2}\/\d{4}$/, 'Date must be in MM/DD/YYYY format')
-    .refine(validateMMDDYYYY, 'Invalid date')
-    .refine(notFutureDate, 'Transaction date cannot be in the future')
-    .refine(reasonableDate, 'Transaction date must be after 1900'),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+    .refine((dateString) => {
+      try {
+        const date = new Date(dateString)
+        return !isNaN(date.getTime()) && date.toISOString().startsWith(dateString)
+      } catch {
+        return false
+      }
+    }, 'Invalid date')
+    .refine((dateString) => {
+      const date = new Date(dateString)
+      return date <= new Date()
+    }, 'Transaction date cannot be in the future')
+    .refine((dateString) => {
+      const date = new Date(dateString)
+      return date.getFullYear() > 1900
+    }, 'Transaction date must be after 1900')
+    .transform((dateString) => {
+      // Convert date-only string to ISO DateTime for Prisma
+      return new Date(dateString + 'T00:00:00.000Z').toISOString()
+    }),
 
   postDate: z
     .string()
-    .regex(/^\d{1,2}\/\d{1,2}\/\d{4}$/, 'Date must be in MM/DD/YYYY format')
-    .refine(validateMMDDYYYY, 'Invalid date')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+    .refine((dateString) => {
+      try {
+        const date = new Date(dateString)
+        return !isNaN(date.getTime()) && date.toISOString().startsWith(dateString)
+      } catch {
+        return false
+      }
+    }, 'Invalid date')
+    .transform((dateString) => {
+      // Convert date-only string to ISO DateTime for Prisma
+      return new Date(dateString + 'T00:00:00.000Z').toISOString()
+    })
     .optional(),
 
   description: z

@@ -18,10 +18,12 @@ import Papa from 'papaparse'
 import { toast } from 'sonner'
 import {
   formatCurrency,
-  formatDate,
+  formatDateFromISO,
   parseMonthDayYearDate,
   isValidMonthDayYearDate,
+  toISODateString,
 } from '@/lib/utils'
+import { apiFetch } from '@/lib/http-utils'
 import { useHousehold } from '@/contexts/household-context'
 import { invalidateActiveMonthCache } from '@/hooks/use-active-month'
 
@@ -95,6 +97,19 @@ const headerMapping: Record<string, keyof CSVTransaction> = {
   type: 'type',
   amount: 'amount',
   memo: 'memo',
+}
+
+// Helper function to convert MM/DD/YYYY to ISO format (YYYY-MM-DD)
+function convertCSVDateToISO(csvDate: string): string {
+  if (!csvDate || !isValidMonthDayYearDate(csvDate)) {
+    return ''
+  }
+  try {
+    const date = parseMonthDayYearDate(csvDate)
+    return toISODateString(date)
+  } catch {
+    return ''
+  }
 }
 
 export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
@@ -319,7 +334,14 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
       // Map columns based on user selections
       columnMappings.forEach((mapping) => {
         if (mapping.mappedField !== 'skip') {
-          transaction[mapping.mappedField] = String(row[mapping.csvHeader] || '')
+          const value = String(row[mapping.csvHeader] || '')
+
+          // Convert date fields from MM/DD/YYYY to ISO format
+          if (mapping.mappedField === 'transactionDate' || mapping.mappedField === 'postDate') {
+            transaction[mapping.mappedField] = convertCSVDateToISO(value)
+          } else {
+            transaction[mapping.mappedField] = value
+          }
         }
       })
 
@@ -343,13 +365,16 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
           message: 'Transaction date is required',
         })
       } else {
-        // Validate date format
-        if (!isValidMonthDayYearDate(transaction.transactionDate)) {
+        // Validate date format (now in ISO format)
+        if (
+          !transaction.transactionDate ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(transaction.transactionDate)
+        ) {
           rowErrors.push({
             row: index + 1,
             field: 'transactionDate',
             value: transaction.transactionDate,
-            message: 'Invalid date format',
+            message: 'Invalid date format - expected MM/DD/YYYY',
           })
         }
       }
@@ -440,61 +465,82 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
   const uploadTransactions = async () => {
     setUploading(true)
 
-    try {
-      const response = await fetch('/api/transactions/bulk', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          transactions: processedData,
-          householdId: selectedHousehold?.id,
-        }),
+    const { data, error } = await apiFetch<{
+      success: boolean
+      message?: string
+      results?: {
+        total: number
+        successful: number
+        failed: number
+        failures: Array<{
+          row: number
+          type: 'duplicate' | 'validation'
+          transaction: CSVTransaction
+          reason: string
+          existingTransaction?: {
+            createdAt: string
+            account: string
+            amount: string
+            description: string
+            transactionDate: string
+          }
+        }>
+      }
+      validationErrors?: ValidationError[]
+    }>('/api/transactions/bulk', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        transactions: processedData,
+        householdId: selectedHousehold?.id,
+      }),
+      showErrorToast: false, // Handle success/error toasts manually
+      showRateLimitToast: true, // Show rate limit toasts
+    })
+
+    if (data) {
+      setUploadStats({
+        total: data.results?.total || processedData.length,
+        successful: data.results?.successful || 0,
+        failed: data.results?.failed || 0,
+        failures: data.results?.failures || [],
       })
 
-      const result = await response.json()
-
-      if (response.ok) {
-        setUploadStats({
-          total: result.results?.total || processedData.length,
-          successful: result.results?.successful || 0,
-          failed: result.results?.failed || 0,
-          failures: result.results?.failures || [],
-        })
-
-        const hasFailures = result.results?.failed > 0
-        if (hasFailures) {
-          toast.success(
-            `Upload completed with ${result.results.failed} failures. ${result.results.successful} transactions uploaded successfully.`
-          )
-        } else {
-          toast.success(
-            result.message ||
-              `Successfully uploaded ${result.results?.successful || processedData.length} transactions`
-          )
-        }
-
-        // Invalidate active month cache to refresh dashboard components
-        if (selectedHousehold?.id) {
-          invalidateActiveMonthCache(selectedHousehold.id)
-        }
-        onUploadComplete()
-        setStep('complete')
+      const hasFailures = (data.results?.failed || 0) > 0
+      if (hasFailures) {
+        toast.success(
+          `Upload completed with ${data.results?.failed || 0} failures. ${data.results?.successful || 0} transactions uploaded successfully.`
+        )
       } else {
-        if (result.validationErrors) {
-          setValidationErrors(result.validationErrors)
-          toast.error(result.message || 'Validation errors found')
+        toast.success(
+          data.message ||
+            `Successfully uploaded ${data.results?.successful || processedData.length} transactions`
+        )
+      }
+
+      // Invalidate active month cache to refresh dashboard components
+      if (selectedHousehold?.id) {
+        invalidateActiveMonthCache(selectedHousehold.id)
+      }
+      onUploadComplete()
+      setStep('complete')
+    } else if (error) {
+      console.error('Upload error:', error)
+      // Only show toast if it's not a rate limit error (already handled by apiFetch)
+      if (!error.includes('Rate limit exceeded')) {
+        // Check if this is a validation error with specific format
+        if (error.includes('Validation failed') || error.includes('validation')) {
+          toast.error('Validation errors found')
           setStep('preview')
         } else {
-          toast.error(result.error || 'Failed to upload transactions')
+          toast.error('Failed to upload transactions')
         }
       }
-    } catch (error) {
-      console.error('Upload error:', error)
-      toast.error('Failed to upload transactions')
-    } finally {
-      setUploading(false)
     }
+
+    setUploading(false)
   }
 
   const resetUpload = () => {
@@ -821,7 +867,10 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
                     <div className="font-medium">{transaction.description}</div>
                     <div className="text-muted-foreground">
                       {transaction.account} • {transaction.user} •{' '}
-                      {formatDate(parseMonthDayYearDate(transaction.transactionDate))} •{' '}
+                      {transaction.transactionDate
+                        ? formatDateFromISO(transaction.transactionDate)
+                        : 'Invalid Date'}{' '}
+                      •{' '}
                       <span
                         className={`${
                           (parseFloat(transaction.amount.replace(/[,$]/g, '')) || 0) >= 0

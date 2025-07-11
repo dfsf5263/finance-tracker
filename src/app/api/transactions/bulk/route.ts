@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
+import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
-import { bulkUploadRateLimit, createHouseholdRateLimit } from '@/lib/rate-limit'
+import { bulkUploadRateLimit } from '@/lib/rate-limit'
 import { requireHouseholdAccess } from '@/lib/auth-middleware'
 import { validateRequestBody } from '@/lib/validation'
 import { bulkUploadRequestSchema, type BulkTransaction } from '@/lib/validation/bulk-upload'
-import { parseMMDDYYYY } from '@/lib/validation/sanitizers'
+// parseMMDDYYYY is no longer needed - dates are now in ISO format from validation
 
 interface ValidationError {
   row: number
@@ -40,20 +41,23 @@ export async function POST(request: NextRequest) {
 
     const { transactions, householdId } = validation.data
 
-    // Apply household-specific rate limiting
-    const householdLimit = createHouseholdRateLimit(householdId)
-    const householdResult = await householdLimit(request)
-    if (householdResult) return householdResult
-
     // Verify user has access to household
     const authResult = await requireHouseholdAccess(request, householdId)
     if (authResult instanceof NextResponse) return authResult
 
-    // Check for duplicate transactions
-    const duplicates = await checkDuplicateTransactions(transactions, householdId)
+    // Check for intra-file duplicates first
+    const intraFileDuplicates = checkIntraFileDuplicates(transactions)
+
+    // Check for duplicates against database
+    const dbDuplicates = await checkDuplicateTransactions(transactions, householdId)
+
+    // Combine all duplicate row numbers
+    const duplicateRows = new Set([
+      ...intraFileDuplicates.map((d) => d.row),
+      ...dbDuplicates.map((d) => d.row),
+    ])
 
     // Separate valid from duplicate transactions
-    const duplicateRows = new Set(duplicates.map((d) => d.row))
     const validTransactions = transactions.filter(
       (_, index) => !duplicateRows.has(index + 2) // +2 for header row and 0-index
     )
@@ -72,16 +76,35 @@ export async function POST(request: NextRequest) {
       }
     }> = []
 
-    // Add duplicates to failures
-    failures.push(
-      ...duplicates.map((d) => ({
-        row: d.row,
-        type: 'duplicate' as const,
-        transaction: d.transaction,
-        reason: 'Duplicate transaction exists',
-        existingTransaction: d.existingTransaction,
-      }))
-    )
+    // Create a map to track which rows have already been added as failures
+    const failureRows = new Set<number>()
+
+    // Add intra-file duplicates to failures first
+    intraFileDuplicates.forEach((d) => {
+      if (!failureRows.has(d.row)) {
+        failures.push({
+          row: d.row,
+          type: 'duplicate' as const,
+          transaction: d.transaction,
+          reason: `Duplicate transaction within file (also appears in rows: ${d.duplicateRows.filter((r) => r !== d.row).join(', ')})`,
+        })
+        failureRows.add(d.row)
+      }
+    })
+
+    // Add database duplicates to failures, but only if not already added as intra-file duplicate
+    dbDuplicates.forEach((d) => {
+      if (!failureRows.has(d.row)) {
+        failures.push({
+          row: d.row,
+          type: 'duplicate' as const,
+          transaction: d.transaction,
+          reason: 'Duplicate transaction exists in database',
+          existingTransaction: d.existingTransaction,
+        })
+        failureRows.add(d.row)
+      }
+    })
 
     let successfulCount = 0
 
@@ -112,8 +135,8 @@ export async function POST(request: NextRequest) {
               householdId,
               accountId: entityValidation.accountMap.get(t.account)!,
               userId: t.user ? entityValidation.userMap.get(t.user) : null,
-              transactionDate: parseMMDDYYYY(t.transactionDate),
-              postDate: t.postDate ? parseMMDDYYYY(t.postDate) : parseMMDDYYYY(t.transactionDate),
+              transactionDate: t.transactionDate, // t.transactionDate is now in ISO DateTime format
+              postDate: t.postDate || t.transactionDate,
               description: t.description,
               categoryId: entityValidation.categoryMap.get(t.category)!,
               typeId: entityValidation.typeMap.get(t.type)!,
@@ -123,7 +146,6 @@ export async function POST(request: NextRequest) {
 
             return await tx.transaction.createMany({
               data: preparedTransactions,
-              skipDuplicates: true,
             })
           }
 
@@ -132,8 +154,8 @@ export async function POST(request: NextRequest) {
             householdId,
             accountId: entityValidation.accountMap.get(t.account)!,
             userId: t.user ? entityValidation.userMap.get(t.user) : null,
-            transactionDate: parseMMDDYYYY(t.transactionDate),
-            postDate: t.postDate ? parseMMDDYYYY(t.postDate) : parseMMDDYYYY(t.transactionDate),
+            transactionDate: t.transactionDate, // t.transactionDate is now in ISO DateTime format
+            postDate: t.postDate || t.transactionDate,
             description: t.description,
             categoryId: entityValidation.categoryMap.get(t.category)!,
             typeId: entityValidation.typeMap.get(t.type)!,
@@ -143,26 +165,60 @@ export async function POST(request: NextRequest) {
 
           return await tx.transaction.createMany({
             data: preparedTransactions,
-            skipDuplicates: true,
           })
         })
 
         successfulCount = result.count
-      } catch (error) {
-        // If the entire transaction fails, we still want to report partial success
-        console.error('Transaction processing failed:', error)
-        // Add generic failure for remaining transactions
-        validTransactions.forEach((t) => {
-          const originalIndex = transactions.findIndex((orig) => orig === t)
-          failures.push({
-            row: originalIndex + 2,
-            type: 'validation',
-            transaction: t,
-            reason: error instanceof Error ? error.message : 'Processing failed',
+      } catch (error: unknown) {
+        // Check if it's a unique constraint violation (P2002)
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          // This means some transactions were duplicates that we missed
+          // The error doesn't tell us which ones, so we need to handle this differently
+          console.warn('Unique constraint violation during bulk insert:', error.message)
+
+          // Since we can't identify which specific transactions failed in a bulk operation,
+          // we'll mark all as potentially having constraint violations
+          // This shouldn't happen if our duplicate detection is working properly
+          validTransactions.forEach((t) => {
+            const originalIndex = transactions.findIndex((orig) => orig === t)
+            failures.push({
+              row: originalIndex + 2,
+              type: 'duplicate',
+              transaction: t,
+              reason: 'Unique constraint violation - transaction may be duplicate',
+            })
           })
-        })
+          successfulCount = 0
+        } else {
+          // Other database errors
+          console.error('Transaction processing failed:', error)
+          validTransactions.forEach((t) => {
+            const originalIndex = transactions.findIndex((orig) => orig === t)
+            failures.push({
+              row: originalIndex + 2,
+              type: 'validation',
+              transaction: t,
+              reason: error instanceof Error ? error.message : 'Processing failed',
+            })
+          })
+          successfulCount = 0
+        }
       }
     }
+
+    // Transform dates in failure objects to date-only format for frontend
+    const transformedFailures = failures.map((failure) => ({
+      ...failure,
+      transaction: {
+        ...failure.transaction,
+        transactionDate: failure.transaction.transactionDate.includes('T')
+          ? failure.transaction.transactionDate.split('T')[0]
+          : failure.transaction.transactionDate,
+        postDate: failure.transaction.postDate?.includes('T')
+          ? failure.transaction.postDate.split('T')[0]
+          : failure.transaction.postDate,
+      },
+    }))
 
     return NextResponse.json({
       success: true,
@@ -174,7 +230,7 @@ export async function POST(request: NextRequest) {
         total: transactions.length,
         successful: successfulCount,
         failed: failures.length,
-        failures: failures,
+        failures: transformedFailures,
       },
     })
   } catch (error) {
@@ -246,7 +302,38 @@ function parseValidationErrors(errorString: string): ValidationError[] {
   return errors
 }
 
-// Helper function to check for duplicate transactions
+// Helper function to check for intra-file duplicates
+function checkIntraFileDuplicates(transactions: BulkTransaction[]): Array<{
+  row: number
+  transaction: BulkTransaction
+  duplicateRows: number[]
+}> {
+  const duplicates = []
+  const seen = new Map<string, number[]>()
+
+  for (let i = 0; i < transactions.length; i++) {
+    const t = transactions[i]
+    // Create unique key based on the same criteria as database unique constraint
+    const key = `${t.transactionDate}|${t.description}|${t.amount}`
+
+    if (seen.has(key)) {
+      // Found duplicate
+      const existingRows = seen.get(key)!
+      duplicates.push({
+        row: i + 2, // +2 for header row and 0-index
+        transaction: t,
+        duplicateRows: [...existingRows, i + 2],
+      })
+      existingRows.push(i + 2)
+    } else {
+      seen.set(key, [i + 2])
+    }
+  }
+
+  return duplicates
+}
+
+// Helper function to check for duplicate transactions against database
 async function checkDuplicateTransactions(
   transactions: BulkTransaction[],
   householdId: string
@@ -267,7 +354,7 @@ async function checkDuplicateTransactions(
 
   for (let i = 0; i < transactions.length; i++) {
     const t = transactions[i]
-    const date = parseMMDDYYYY(t.transactionDate)
+    const date = new Date(t.transactionDate) // t.transactionDate is now in ISO DateTime format
 
     const existing = await db.transaction.findFirst({
       where: {

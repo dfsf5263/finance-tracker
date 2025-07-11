@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { CustomDatePicker } from '@/components/ui/date-picker'
-import { formatDateForInput, parseLocalDate } from '@/lib/utils'
+import { toISODateString } from '@/lib/utils'
 import { useHousehold } from '@/contexts/household-context'
 
 interface Account {
@@ -86,9 +86,11 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     accountId: transaction?.accountId || '',
     userId: transaction?.userId || '__none__',
     transactionDate: transaction?.transactionDate
-      ? formatDateForInput(parseLocalDate(transaction.transactionDate))
-      : formatDateForInput(new Date()),
-    postDate: transaction?.postDate ? formatDateForInput(parseLocalDate(transaction.postDate)) : '',
+      ? transaction.transactionDate.split('T')[0] // Convert to ISO date string (YYYY-MM-DD)
+      : toISODateString(new Date()),
+    postDate: transaction?.postDate
+      ? transaction.postDate.split('T')[0] // Convert to ISO date string (YYYY-MM-DD)
+      : '',
     description: transaction?.description || '',
     categoryId: transaction?.categoryId || '',
     typeId: transaction?.typeId || '',
@@ -104,10 +106,10 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
         accountId: transaction.accountId || '',
         userId: transaction.userId || '__none__',
         transactionDate: transaction.transactionDate
-          ? formatDateForInput(parseLocalDate(transaction.transactionDate))
-          : formatDateForInput(new Date()),
+          ? transaction.transactionDate.split('T')[0] // Convert to ISO date string (YYYY-MM-DD)
+          : toISODateString(new Date()),
         postDate: transaction.postDate
-          ? formatDateForInput(parseLocalDate(transaction.postDate))
+          ? transaction.postDate.split('T')[0] // Convert to ISO date string (YYYY-MM-DD)
           : '',
         description: transaction.description || '',
         categoryId: transaction.categoryId || '',
@@ -121,7 +123,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
       setFormData({
         accountId: '',
         userId: '__none__',
-        transactionDate: formatDateForInput(new Date()),
+        transactionDate: toISODateString(new Date()),
         postDate: '',
         description: '',
         categoryId: '',

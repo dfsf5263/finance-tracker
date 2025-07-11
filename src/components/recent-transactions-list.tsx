@@ -86,7 +86,16 @@ export function RecentTransactionsList() {
   }, [selectedHousehold?.id, activeMonth, activeYear])
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+    // Handle date-only strings (YYYY-MM-DD) properly
+    let date: Date
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      // Parse date-only string without timezone conversion
+      const [year, month, day] = dateString.split('-').map(Number)
+      date = new Date(year, month - 1, day)
+    } else {
+      date = new Date(dateString)
+    }
+
     const now = new Date()
     const diffTime = Math.abs(now.getTime() - date.getTime())
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))

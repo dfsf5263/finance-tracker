@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { formatDateForInput, parseInputDate } from '@/lib/utils'
+import { toISODateString, parseISODate } from '@/lib/utils'
 
 interface CustomDatePickerProps {
   value?: string
@@ -29,13 +29,13 @@ export function CustomDatePicker({
 }: CustomDatePickerProps) {
   const [open, setOpen] = React.useState(false)
 
-  // Convert string date to Date object for the calendar
-  const selectedDate = value ? parseInputDate(value) : undefined
+  // Convert ISO date string to Date object for the calendar
+  const selectedDate = value ? parseISODate(value) : undefined
 
   const handleSelect = (date: Date | undefined) => {
     if (date) {
-      // Format as YYYY-MM-DD for HTML date input compatibility
-      const formatted = formatDateForInput(date)
+      // Format as ISO date string (YYYY-MM-DD)
+      const formatted = toISODateString(date)
       onChange(formatted)
       setOpen(false)
     }
@@ -54,7 +54,7 @@ export function CustomDatePicker({
           disabled={disabled}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {value ? format(parseInputDate(value), 'PPP') : <span>{placeholder}</span>}
+          {value ? format(parseISODate(value), 'PPP') : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
@@ -62,6 +62,7 @@ export function CustomDatePicker({
           mode="single"
           selected={selectedDate}
           onSelect={handleSelect}
+          defaultMonth={selectedDate || new Date()}
           initialFocus
           disabled={(date) => date > maxDate}
         />

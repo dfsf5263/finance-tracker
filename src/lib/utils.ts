@@ -25,30 +25,42 @@ export function formatCurrency(amount: number): string {
 }
 
 // Date utility functions using date-fns
-export function parseLocalDate(dateString: string): Date {
-  // Handle both ISO strings and date-only strings
-  const dateOnly = dateString.split('T')[0]
-  return parseISO(dateOnly)
+// NEW: Standardized ISO date functions
+export function parseISODate(isoString: string): Date {
+  // Parse ISO date string (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
+  return parseISO(isoString)
 }
 
-export function formatDate(date: Date): string {
-  return format(date, 'MMM d, yyyy')
-}
-
-export function formatDateForInput(date: Date): string {
-  // Format for HTML date inputs (YYYY-MM-DD)
+export function toISODateString(date: Date): string {
+  // Convert Date to ISO date string (YYYY-MM-DD)
   return format(date, 'yyyy-MM-dd')
 }
 
-export function parseInputDate(dateString: string): Date {
-  // Parse HTML date input values (YYYY-MM-DD)
-  return parseISO(dateString)
+export function formatDateFromISO(isoString: string): string {
+  // Format ISO date string for display (MMM d, yyyy)
+  // Handle date-only strings without timezone conversion
+  if (/^\d{4}-\d{2}-\d{2}$/.test(isoString)) {
+    // Date-only format (YYYY-MM-DD) - parse directly without timezone
+    return format(parse(isoString, 'yyyy-MM-dd', new Date()), 'MMM d, yyyy')
+  }
+  // Full ISO timestamp - use parseISO for timezone handling
+  return format(parseISO(isoString), 'MMM d, yyyy')
 }
 
-export function isValidDate(dateString: string): boolean {
+export function formatDateOnly(dateString: string): string {
+  // Format date-only string (YYYY-MM-DD) for display without timezone issues
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return format(parse(dateString, 'yyyy-MM-dd', new Date()), 'MMM d, yyyy')
+  }
+  // Fallback to regular ISO parsing for backwards compatibility
+  return format(parseISO(dateString), 'MMM d, yyyy')
+}
+
+export function isValidISODate(isoString: string): boolean {
+  // Validate ISO date string format
   try {
-    const date = parseISO(dateString)
-    return isValid(date)
+    const date = parseISO(isoString)
+    return isValid(date) && /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?/.test(isoString)
   } catch {
     return false
   }
@@ -62,6 +74,7 @@ export function isValidMonthDayYearDate(dateString: string): boolean {
     return false
   }
 }
+
 
 export function parseMonthDayYearDate(dateString: string): Date {
   return parse(dateString, 'MM/dd/yyyy', new Date())
@@ -81,8 +94,8 @@ export function getDateRange(
     const yearStart = startOfYear(new Date(year, 0, 1))
     const yearEnd = endOfYear(new Date(year, 0, 1))
     return {
-      startDate: formatDateForInput(yearStart),
-      endDate: formatDateForInput(yearEnd),
+      startDate: toISODateString(yearStart),
+      endDate: toISODateString(yearEnd),
     }
   }
 
@@ -90,8 +103,8 @@ export function getDateRange(
     const monthStart = startOfMonth(new Date(year, month - 1, 1))
     const monthEnd = endOfMonth(new Date(year, month - 1, 1))
     return {
-      startDate: formatDateForInput(monthStart),
-      endDate: formatDateForInput(monthEnd),
+      startDate: toISODateString(monthStart),
+      endDate: toISODateString(monthEnd),
     }
   }
 
@@ -100,8 +113,8 @@ export function getDateRange(
     const quarterStart = startOfMonth(new Date(year, quarterStartMonth, 1))
     const quarterEnd = endOfMonth(new Date(year, quarterStartMonth + 2, 1))
     return {
-      startDate: formatDateForInput(quarterStart),
-      endDate: formatDateForInput(quarterEnd),
+      startDate: toISODateString(quarterStart),
+      endDate: toISODateString(quarterEnd),
     }
   }
 

@@ -17,7 +17,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const { transaction } = result
-    return NextResponse.json(transaction)
+    // Transform dates to date-only format for frontend
+    const transformedTransaction = {
+      ...(transaction as object),
+      transactionDate: (transaction as { transactionDate: Date }).transactionDate
+        .toISOString()
+        .split('T')[0],
+      postDate: (transaction as { postDate: Date }).postDate.toISOString().split('T')[0],
+    }
+
+    return NextResponse.json(transformedTransaction)
   } catch (error) {
     await logApiError({
       request,
@@ -67,8 +76,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       data: {
         accountId,
         userId,
-        transactionDate: new Date(transactionDate),
-        postDate: new Date(postDate),
+        transactionDate: new Date(transactionDate).toISOString(),
+        postDate: new Date(postDate).toISOString(),
         description,
         categoryId,
         typeId,
@@ -83,7 +92,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       },
     })
 
-    return NextResponse.json(updatedTransaction)
+    // Transform dates to date-only format for frontend
+    const transformedTransaction = {
+      ...updatedTransaction,
+      transactionDate: updatedTransaction.transactionDate.toISOString().split('T')[0],
+      postDate: updatedTransaction.postDate.toISOString().split('T')[0],
+    }
+
+    return NextResponse.json(transformedTransaction)
   } catch (error) {
     // Check for unique constraint violation
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
