@@ -75,7 +75,6 @@ export function isValidMonthDayYearDate(dateString: string): boolean {
   }
 }
 
-
 export function parseMonthDayYearDate(dateString: string): Date {
   return parse(dateString, 'MM/dd/yyyy', new Date())
 }

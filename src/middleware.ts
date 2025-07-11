@@ -50,11 +50,11 @@ export default clerkMiddleware(async (auth, req) => {
   // Content Security Policy
   const cspHeader = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.com https://*.clerk.com https://challenges.cloudflare.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.com https://*.clerk.com https://*.clerk.accounts.dev https://challenges.cloudflare.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' https://fonts.gstatic.com",
-    "connect-src 'self' https://clerk.com https://*.clerk.com https://api.clerk.com wss://*.clerk.com",
+    "connect-src 'self' https://clerk.com https://*.clerk.com https://*.clerk.accounts.dev https://api.clerk.com wss://*.clerk.com wss://*.clerk.accounts.dev",
     "frame-src 'self' https://challenges.cloudflare.com",
     "worker-src 'self' blob:",
     "object-src 'none'",

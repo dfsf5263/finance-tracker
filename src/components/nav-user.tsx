@@ -20,14 +20,53 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export function NavUser() {
-  const { user } = useUser()
+  const { user, isLoaded } = useUser()
   const { signOut } = useClerk()
   const router = useRouter()
   const { isMobile } = useSidebar()
 
-  if (!user) return null
+  // Show loading skeleton while Clerk is initializing
+  if (!isLoaded) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg" className="cursor-default">
+            <Skeleton className="h-8 w-8 rounded-lg" />
+            <div className="grid flex-1 text-left text-sm leading-tight gap-1">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    )
+  }
+
+  // If Clerk is loaded but no user, show a basic fallback
+  if (!user) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            size="lg"
+            onClick={() => router.push('/sign-in')}
+            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+          >
+            <Avatar className="h-8 w-8 rounded-lg">
+              <AvatarFallback className="rounded-lg">?</AvatarFallback>
+            </Avatar>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-semibold">Not signed in</span>
+              <span className="truncate text-xs text-muted-foreground">Click to sign in</span>
+            </div>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    )
+  }
 
   const handleSignOut = async () => {
     await signOut()

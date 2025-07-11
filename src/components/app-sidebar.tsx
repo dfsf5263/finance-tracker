@@ -20,6 +20,7 @@ import {
 import { NavMain } from '@/components/nav-main'
 import { NavGroup } from '@/components/nav-group'
 import { NavUser } from '@/components/nav-user'
+import { NavUserErrorBoundary } from '@/components/nav-user-error-boundary'
 import { HouseholdSelector } from '@/components/household-selector'
 import {
   Sidebar,
@@ -136,7 +137,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavGroup title="Definitions" items={data.definitions} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser />
+        <NavUserErrorBoundary>
+          <NavUser />
+        </NavUserErrorBoundary>
       </SidebarFooter>
     </Sidebar>
   )
