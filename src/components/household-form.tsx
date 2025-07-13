@@ -22,19 +22,19 @@ interface HouseholdFormProps {
 export function HouseholdForm({ household, open, onClose, onSubmit }: HouseholdFormProps) {
   const [formData, setFormData] = useState<Omit<Household, 'id'>>({
     name: '',
-    annualBudget: undefined,
+    annualBudget: null,
   })
 
   useEffect(() => {
     if (household) {
       setFormData({
         name: household.name || '',
-        annualBudget: household.annualBudget || undefined,
+        annualBudget: household.annualBudget || null,
       })
     } else {
       setFormData({
         name: '',
-        annualBudget: undefined,
+        annualBudget: null,
       })
     }
   }, [household, open])
@@ -44,7 +44,7 @@ export function HouseholdForm({ household, open, onClose, onSubmit }: HouseholdF
     onSubmit(formData)
   }
 
-  const handleInputChange = (field: keyof typeof formData, value: string | number | undefined) => {
+  const handleInputChange = (field: keyof typeof formData, value: string | number | null) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -63,7 +63,7 @@ export function HouseholdForm({ household, open, onClose, onSubmit }: HouseholdF
 
   const handleBudgetChange = (value: string) => {
     if (value === '') {
-      handleInputChange('annualBudget', undefined)
+      handleInputChange('annualBudget', null)
       return
     }
 

@@ -28,7 +28,7 @@ export function TransactionCategoryForm({
 }: TransactionCategoryFormProps) {
   const [formData, setFormData] = useState<Omit<TransactionCategory, 'id'>>({
     name: category?.name || '',
-    annualBudget: category?.annualBudget || '',
+    annualBudget: category?.annualBudget || null,
   })
 
   // Update form data when category prop changes
@@ -36,13 +36,13 @@ export function TransactionCategoryForm({
     if (category) {
       setFormData({
         name: category.name || '',
-        annualBudget: category.annualBudget || '',
+        annualBudget: category.annualBudget || null,
       })
     } else {
       // Reset form for new category
       setFormData({
         name: '',
-        annualBudget: '',
+        annualBudget: null,
       })
     }
   }, [category])
@@ -51,12 +51,12 @@ export function TransactionCategoryForm({
     e.preventDefault()
     const submitData = {
       name: formData.name,
-      ...(formData.annualBudget && { annualBudget: formData.annualBudget }),
+      annualBudget: formData.annualBudget || null,
     }
     onSubmit(submitData)
   }
 
-  const handleInputChange = (field: keyof typeof formData, value: string | number) => {
+  const handleInputChange = (field: keyof typeof formData, value: string | number | null) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -89,7 +89,7 @@ export function TransactionCategoryForm({
                 min="0"
                 placeholder="0.00"
                 value={formData.annualBudget || ''}
-                onChange={(e) => handleInputChange('annualBudget', e.target.value)}
+                onChange={(e) => handleInputChange('annualBudget', e.target.value || null)}
               />
             </div>
           </div>
