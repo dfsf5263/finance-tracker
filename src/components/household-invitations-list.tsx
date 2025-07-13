@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useUser } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,9 +14,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Copy, Trash2, Calendar, User } from 'lucide-react'
+import { Copy, Trash2, Calendar, User, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { CreateInvitationModal } from '@/components/create-invitation-modal'
 
 interface Invitation {
   id: string
@@ -44,9 +46,12 @@ interface HouseholdInvitationsListProps {
 }
 
 export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsListProps) {
+  const { user } = useUser()
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
 
   const fetchInvitations = useCallback(async () => {
     try {
@@ -64,9 +69,30 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
     }
   }, [householdId])
 
+  const fetchCurrentUserRole = useCallback(async () => {
+    if (!user?.primaryEmailAddress?.emailAddress) return
+
+    try {
+      const response = await fetch(`/api/households/${householdId}/members`)
+      if (response.ok) {
+        const members = await response.json()
+        const currentMember = members.find(
+          (member: { user: { email: string }; role: string }) =>
+            member.user.email === user.primaryEmailAddress?.emailAddress
+        )
+        if (currentMember) {
+          setCurrentUserRole(currentMember.role)
+        }
+      }
+    } catch {
+      // Silently fail - user role check is not critical
+    }
+  }, [householdId, user?.primaryEmailAddress?.emailAddress])
+
   useEffect(() => {
     fetchInvitations()
-  }, [fetchInvitations])
+    fetchCurrentUserRole()
+  }, [fetchInvitations, fetchCurrentUserRole])
 
   const deleteInvitation = async (invitationId: string) => {
     setDeleting(invitationId)
@@ -141,6 +167,8 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
     return new Date(expiresAt) < new Date()
   }
 
+  const canManageMembers = currentUserRole === 'OWNER'
+
   if (loading) {
     return <div className="text-center py-4">Loading invitations...</div>
   }
@@ -154,11 +182,22 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
 
   return (
     <div className="space-y-6">
+      {/* Header with Invite Button */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">Invitations</h3>
+        {canManageMembers && (
+          <Button onClick={() => setShowInviteModal(true)} size="sm">
+            <UserPlus className="h-4 w-4 mr-2" />
+            Invite Member
+          </Button>
+        )}
+      </div>
+
       {/* Active Invitations */}
       <div>
-        <h3 className="text-lg font-medium mb-4">
+        <h4 className="text-md font-medium mb-4">
           Active Invitations ({activeInvitations.length})
-        </h3>
+        </h4>
         {activeInvitations.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">
             No active invitations. Create an invitation to share this household.
@@ -237,9 +276,9 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
       {/* Inactive Invitations */}
       {inactiveInvitations.length > 0 && (
         <div>
-          <h3 className="text-lg font-medium mb-4">
+          <h4 className="text-md font-medium mb-4">
             Inactive Invitations ({inactiveInvitations.length})
-          </h3>
+          </h4>
           <div className="space-y-3">
             {inactiveInvitations.map((invitation) => (
               <Card key={invitation.id} className="opacity-75">
@@ -291,6 +330,13 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
           </div>
         </div>
       )}
+
+      <CreateInvitationModal
+        householdId={householdId}
+        open={showInviteModal}
+        onOpenChange={setShowInviteModal}
+        onInvitationCreated={fetchInvitations}
+      />
     </div>
   )
 }

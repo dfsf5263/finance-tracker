@@ -31,6 +31,7 @@ export function CreateInvitationModal({
 }: CreateInvitationModalProps) {
   const [role, setRole] = useState<'OWNER' | 'MEMBER' | 'VIEWER'>('MEMBER')
   const [expiresInDays, setExpiresInDays] = useState(7)
+  const [inviteeEmail, setInviteeEmail] = useState('')
   const [creating, setCreating] = useState(false)
   const [invitationLink, setInvitationLink] = useState<string | null>(null)
 
@@ -40,7 +41,7 @@ export function CreateInvitationModal({
       const response = await fetch(`/api/households/${householdId}/invitations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role, expiresInDays }),
+        body: JSON.stringify({ role, expiresInDays, inviteeEmail: inviteeEmail || undefined }),
       })
 
       if (response.ok) {
@@ -71,6 +72,7 @@ export function CreateInvitationModal({
     setInvitationLink(null)
     setRole('MEMBER')
     setExpiresInDays(7)
+    setInviteeEmail('')
     onOpenChange(false)
   }
 
@@ -162,6 +164,21 @@ export function CreateInvitationModal({
                   <SelectItem value="30">1 Month</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email (optional)</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="invitee@example.com"
+                value={inviteeEmail}
+                onChange={(e) => setInviteeEmail(e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
+                If provided, an invitation email will be sent. The invitation link will still be
+                displayed.
+              </p>
             </div>
 
             <div className="flex justify-end space-x-2">

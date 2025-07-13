@@ -7,6 +7,7 @@ import {
   CreditCard,
   DollarSign,
   Home,
+  LayoutDashboard,
   List,
   PieChart,
   Tag,
@@ -38,7 +39,7 @@ const data = {
     {
       title: 'Dashboard',
       url: '/dashboard',
-      icon: Home,
+      icon: LayoutDashboard,
     },
   ],
   transactions: [

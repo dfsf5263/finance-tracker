@@ -316,14 +316,15 @@ export function HouseholdBudget() {
   return (
     <div className="space-y-6">
       {/* Information Accordion */}
-      <Accordion type="single" collapsible >
+      <Accordion type="single" collapsible>
         <AccordionItem value="purpose">
           <AccordionTrigger>Purpose</AccordionTrigger>
-          <AccordionContent className='pb-2'>
+          <AccordionContent className="pb-2">
             <div className="pt-0 pb-4 px-4">
               <p className="text-sm text-muted-foreground">
-                Track household spending against both category budgets and overall household budget to monitor financial health and
-                identify areas of overspending or savings opportunities.
+                Track household spending against both category budgets and overall household budget
+                to monitor financial health and identify areas of overspending or savings
+                opportunities.
               </p>
             </div>
           </AccordionContent>
@@ -331,11 +332,12 @@ export function HouseholdBudget() {
 
         <AccordionItem value="setup">
           <AccordionTrigger>Required Setup</AccordionTrigger>
-          <AccordionContent className='pb-2'>
+          <AccordionContent className="pb-2">
             <div className="pt-0 pb-4 px-4">
               <div className="text-sm text-muted-foreground space-y-2">
                 <p>
-                  To use this page effectively, you need to set up both category budgets and household budget:
+                  To use this page effectively, you need to set up both category budgets and
+                  household budget:
                 </p>
                 <ul className="list-disc list-outside ml-4 space-y-1">
                   <li>
@@ -362,13 +364,22 @@ export function HouseholdBudget() {
 
         <AccordionItem value="how-it-works">
           <AccordionTrigger>How It Works</AccordionTrigger>
-          <AccordionContent className='pb-2'>
+          <AccordionContent className="pb-2">
             <div className="pt-0 pb-4 px-4">
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                <li><strong>Category Summary:</strong> Compare actual spending vs. budgeted amounts for each category</li>
-                <li><strong>Household Summary:</strong> Track overall spending against total household budget with spending trends over time</li>
+                <li>
+                  <strong>Category Summary:</strong> Compare actual spending vs. budgeted amounts
+                  for each category
+                </li>
+                <li>
+                  <strong>Household Summary:</strong> Track overall spending against total household
+                  budget with spending trends over time
+                </li>
                 <li>View data by month, quarter, or year</li>
-                <li>Visual indicators show over/under budget categories and overall household performance</li>
+                <li>
+                  Visual indicators show over/under budget categories and overall household
+                  performance
+                </li>
                 <li>Track spending patterns and trends over time</li>
               </ul>
             </div>
@@ -377,7 +388,7 @@ export function HouseholdBudget() {
 
         <AccordionItem value="strategy">
           <AccordionTrigger>Budget Setting Strategy</AccordionTrigger>
-          <AccordionContent className='pb-2'>
+          <AccordionContent className="pb-2">
             <div className="pt-0 pb-4 px-4">
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                 <li>Review historical spending data to establish realistic baselines</li>

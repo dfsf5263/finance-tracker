@@ -5,6 +5,7 @@ import { logApiError } from '@/lib/error-logger'
 import { apiRateLimit } from '@/lib/rate-limit'
 import { requireHouseholdAccess } from '@/lib/auth-middleware'
 import { canInviteMembers } from '@/lib/role-utils'
+import { sendInvitationEmail } from '@/lib/email'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let user
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     data = await request.json()
-    const { role, expiresInDays = 7 } = data
+    const { role, expiresInDays = 7, inviteeEmail } = data
 
     if (!role || !['OWNER', 'MEMBER', 'VIEWER'].includes(role)) {
       return NextResponse.json({ error: 'Valid role is required' }, { status: 400 })
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       data: {
         householdId: id,
         inviterUserId: user.id,
-        inviteeEmail: '', // Not used for link-based invitations
+        inviteeEmail: inviteeEmail || '',
         role: role as 'OWNER' | 'MEMBER' | 'VIEWER',
         status: 'PENDING',
         expiresAt,
@@ -138,6 +139,29 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     })
 
+    // Send invitation email if email is provided
+    if (inviteeEmail) {
+      const inviterName =
+        invitation.inviter.firstName && invitation.inviter.lastName
+          ? `${invitation.inviter.firstName} ${invitation.inviter.lastName}`
+          : invitation.inviter.email
+
+      const invitationLink = `${process.env.NEXT_PUBLIC_APP_URL || ''}/invitations/${invitation.token}`
+
+      // Send email asynchronously - don't block the response
+      sendInvitationEmail({
+        to: inviteeEmail,
+        inviterName,
+        householdName: invitation.household.name,
+        role: invitation.role,
+        invitationLink,
+        expiresAt: invitation.expiresAt,
+      }).catch((error) => {
+        // Log error but don't fail the invitation creation
+        console.error('Failed to send invitation email:', error)
+      })
+    }
+
     return NextResponse.json(invitation, { status: 201 })
   } catch (error) {
     await logApiError({
@@ -149,6 +173,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         inviterUserId: user?.id,
         role: data?.role,
         expiresInDays: data?.expiresInDays,
+        inviteeEmail: data?.inviteeEmail,
       },
     })
     return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 })

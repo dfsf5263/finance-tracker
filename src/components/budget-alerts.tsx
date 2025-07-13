@@ -2,7 +2,15 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, AlertCircle, CheckCircle, TrendingUp, Settings, Target, Home } from 'lucide-react'
+import {
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle,
+  TrendingUp,
+  Settings,
+  Target,
+  Home,
+} from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -72,7 +80,7 @@ export function BudgetAlerts() {
 
         if (householdResponse.ok) {
           const householdData = await householdResponse.json()
-          
+
           // Track if household budget is set up
           setHasHouseholdBudget(!householdData.noBudget && !!householdData.periodBudget)
 
@@ -117,7 +125,7 @@ export function BudgetAlerts() {
 
         if (categoryResponse.ok) {
           const categoryData = await categoryResponse.json()
-          
+
           // Track if there are any category budgets set up
           if (Array.isArray(categoryData)) {
             setHasCategoryBudgets(categoryData.length > 0)
@@ -176,7 +184,7 @@ export function BudgetAlerts() {
           const usersWithBudgets = users.filter(
             (user: { annualBudget: string | null }) => user.annualBudget
           )
-          
+
           // Track if there are any user budgets set up
           setHasUserBudgets(usersWithBudgets.length > 0)
 
@@ -398,23 +406,33 @@ export function BudgetAlerts() {
             <Target className="h-12 w-12 text-blue-500 mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Get Started with Budget Tracking</h3>
             <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto pb-2">
-              Set up budgets to get personalized alerts when spending approaches limits, track financial goals, and maintain better control over your household finances.
+              Set up budgets to get personalized alerts when spending approaches limits, track
+              financial goals, and maintain better control over your household finances.
             </p>
             <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 justify-center max-w-2xl mx-auto">
               <Button asChild variant="default">
-                <Link href="/dashboard/definitions/households" className="inline-flex items-center gap-2">
+                <Link
+                  href="/dashboard/definitions/households"
+                  className="inline-flex items-center gap-2"
+                >
                   <Home className="h-4 w-4" />
                   Set Up Household Budget
                 </Link>
               </Button>
               <Button asChild variant="default">
-                <Link href="/dashboard/definitions/users" className="inline-flex items-center gap-2">
+                <Link
+                  href="/dashboard/definitions/users"
+                  className="inline-flex items-center gap-2"
+                >
                   <Settings className="h-4 w-4" />
                   Set Up User Budgets
                 </Link>
               </Button>
               <Button asChild variant="default">
-                <Link href="/dashboard/definitions/categories" className="inline-flex items-center gap-2">
+                <Link
+                  href="/dashboard/definitions/categories"
+                  className="inline-flex items-center gap-2"
+                >
                   <Target className="h-4 w-4" />
                   Set Up Category Budgets
                 </Link>

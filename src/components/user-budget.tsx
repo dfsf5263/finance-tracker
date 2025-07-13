@@ -300,11 +300,11 @@ export function UserBudget() {
     <Accordion type="single" collapsible>
       <AccordionItem value="purpose">
         <AccordionTrigger>Purpose</AccordionTrigger>
-        <AccordionContent className='pb-2'>
+        <AccordionContent className="pb-2">
           <div className="pt-0 pb-4 px-4">
             <p className="text-sm text-muted-foreground">
-              Track individual user spending against personal budgets to monitor spending
-              patterns, compare between household members, and manage personal financial goals.
+              Track individual user spending against personal budgets to monitor spending patterns,
+              compare between household members, and manage personal financial goals.
             </p>
           </div>
         </AccordionContent>
@@ -312,7 +312,7 @@ export function UserBudget() {
 
       <AccordionItem value="setup">
         <AccordionTrigger>Required Setup</AccordionTrigger>
-        <AccordionContent className='pb-2'>
+        <AccordionContent className="pb-2">
           <div className="pt-0 pb-4 px-4">
             <div className="text-sm text-muted-foreground space-y-2">
               <p>
@@ -333,7 +333,7 @@ export function UserBudget() {
 
       <AccordionItem value="how-it-works">
         <AccordionTrigger>How It Works</AccordionTrigger>
-        <AccordionContent className='pb-2'>
+        <AccordionContent className="pb-2">
           <div className="pt-0 pb-4 px-4">
             <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
               <li>Compare actual spending vs. budgeted amounts for each user</li>
@@ -343,7 +343,10 @@ export function UserBudget() {
                 <ul className="list-disc list-inside mt-1 ml-4 space-y-1">
                   <li>Only includes inflow transactions attributed to the filtered user</li>
                   <li>Standard income like paychecks should be attributed to the household</li>
-                  <li>User income should be &quot;side hustle&quot; income (e.g., sold items, freelance work)</li>
+                  <li>
+                    User income should be &quot;side hustle&quot; income (e.g., sold items,
+                    freelance work)
+                  </li>
                 </ul>
               </li>
               <li>View data by month, quarter, or year</li>
@@ -355,7 +358,7 @@ export function UserBudget() {
 
       <AccordionItem value="strategy">
         <AccordionTrigger>Budget Setting Strategy</AccordionTrigger>
-        <AccordionContent className='pb-2'>
+        <AccordionContent className="pb-2">
           <div className="pt-0 pb-4 px-4">
             <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
               <li>Set realistic personal spending limits based on household income</li>
@@ -376,7 +379,7 @@ export function UserBudget() {
       <div className="space-y-6">
         {/* Information Accordion */}
         {InfoAccordion}
-        
+
         <Card className="p-4">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -446,7 +449,7 @@ export function UserBudget() {
       <div className="space-y-6">
         {/* Information Accordion */}
         {InfoAccordion}
-        
+
         <Card className="p-4">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
