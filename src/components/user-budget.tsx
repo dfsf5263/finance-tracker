@@ -32,7 +32,6 @@ import {
   Check,
   AlertTriangle,
   HelpCircle,
-  Info,
   ExternalLink,
 } from 'lucide-react'
 import {
@@ -344,7 +343,7 @@ export function UserBudget() {
                 <ul className="list-disc list-inside mt-1 ml-4 space-y-1">
                   <li>Only includes inflow transactions attributed to the filtered user</li>
                   <li>Standard income like paychecks should be attributed to the household</li>
-                  <li>User income should be "side hustle" income (e.g., sold items, freelance work)</li>
+                  <li>User income should be &quot;side hustle&quot; income (e.g., sold items, freelance work)</li>
                 </ul>
               </li>
               <li>View data by month, quarter, or year</li>

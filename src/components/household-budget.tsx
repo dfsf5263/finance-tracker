@@ -40,7 +40,6 @@ import {
   Target,
   AlertCircle,
   Settings,
-  Info,
   ExternalLink,
 } from 'lucide-react'
 import {

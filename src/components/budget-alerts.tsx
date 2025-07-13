@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, AlertCircle, CheckCircle, TrendingUp, Settings, Target, ExternalLink, Home } from 'lucide-react'
+import { AlertTriangle, AlertCircle, CheckCircle, TrendingUp, Settings, Target, Home } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -286,7 +286,7 @@ export function BudgetAlerts() {
               <div className="flex items-center justify-between text-sm mt-2">
                 <span>
                   {formatCurrency(alert.budgetUsed)} of {formatCurrency(alert.totalBudget)} (
-                  {alert.percentageUsed.toFixed(1)}%)
+                  {alert.percentageUsed?.toFixed(1)}%)
                 </span>
               </div>
             )}
