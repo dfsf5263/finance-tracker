@@ -14,6 +14,8 @@ export function getPageTitle(pathname: string): string {
     '/dashboard/definitions/users': 'Definitions - Users',
     '/dashboard/definitions/types': 'Definitions - Transaction Types',
     '/dashboard/definitions/accounts': 'Definitions - Accounts',
+    '/dashboard/utility': 'Utility',
+    '/dashboard/utility/dedupe': 'Utility - DeDupe',
     '/dashboard/settings': 'Settings',
   }
 

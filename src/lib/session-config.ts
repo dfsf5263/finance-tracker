@@ -10,13 +10,13 @@ export const SESSION_CONFIG = {
    * Time in minutes before inactivity timeout to show warning
    * Example: If timeout is 30 min, warning shows at 25 min
    */
-  INACTIVITY_WARNING_MINUTES: 1,
+  INACTIVITY_WARNING_MINUTES: 5,
 
   /**
    * Expected inactivity timeout in minutes (configured in Clerk)
    * Used for client-side calculations only
    */
-  INACTIVITY_TIMEOUT_MINUTES: 2,
+  INACTIVITY_TIMEOUT_MINUTES: 30,
 
   /**
    * Buffer time in seconds to account for network delays and clock differences
@@ -37,14 +37,9 @@ export const SESSION_CONFIG = {
 
   /**
    * How often to check session status (in seconds)
-   * Starts at this value and uses exponential backoff when inactive
+   * Fixed interval for simple and reliable monitoring
    */
-  CHECK_INTERVAL_SECONDS: 30,
-
-  /**
-   * Maximum check interval in seconds (for exponential backoff)
-   */
-  MAX_CHECK_INTERVAL_SECONDS: 300,
+  FIXED_CHECK_INTERVAL_SECONDS: 30,
 
   /**
    * Delay before starting activity tracking (in seconds)
@@ -98,8 +93,11 @@ export function formatTimeRemaining(ms: number): string {
 export function shouldShowWarning(lastActivityTime: number): boolean {
   const now = Date.now()
   const timeSinceActivity = now - lastActivityTime
-  const warningThreshold =
-    minutesToMs(SESSION_CONFIG.INACTIVITY_WARNING_MINUTES) - SESSION_CONFIG.BUFFER_SECONDS * 1000
+  // Show warning when: (timeout - warning) minutes have passed
+  // For 2 min timeout, 1 min warning: show after 1 minute of inactivity
+  const warningThreshold = minutesToMs(
+    SESSION_CONFIG.INACTIVITY_TIMEOUT_MINUTES - SESSION_CONFIG.INACTIVITY_WARNING_MINUTES
+  )
   const timeoutThreshold = minutesToMs(SESSION_CONFIG.INACTIVITY_TIMEOUT_MINUTES)
 
   return timeSinceActivity >= warningThreshold && timeSinceActivity < timeoutThreshold
@@ -111,8 +109,8 @@ export function shouldShowWarning(lastActivityTime: number): boolean {
 export function isSessionExpired(lastActivityTime: number): boolean {
   const now = Date.now()
   const timeSinceActivity = now - lastActivityTime
-  const timeoutThreshold =
-    minutesToMs(SESSION_CONFIG.INACTIVITY_TIMEOUT_MINUTES) - SESSION_CONFIG.BUFFER_SECONDS * 1000
+  // Session expires after the full timeout period
+  const timeoutThreshold = minutesToMs(SESSION_CONFIG.INACTIVITY_TIMEOUT_MINUTES)
 
   return timeSinceActivity >= timeoutThreshold
 }
@@ -126,23 +124,4 @@ export function getTimeUntilTimeout(lastActivityTime: number): number {
   const timeoutThreshold = minutesToMs(SESSION_CONFIG.INACTIVITY_TIMEOUT_MINUTES)
 
   return Math.max(0, timeoutThreshold - timeSinceActivity)
-}
-
-/**
- * Calculate next check interval with exponential backoff
- */
-export function getNextCheckInterval(timeSinceActivity: number): number {
-  const baseInterval = SESSION_CONFIG.CHECK_INTERVAL_SECONDS
-  const maxInterval = SESSION_CONFIG.MAX_CHECK_INTERVAL_SECONDS
-
-  // If user is active (activity within last 5 minutes), use base interval
-  if (timeSinceActivity < 5 * 60 * 1000) {
-    return baseInterval * 1000
-  }
-
-  // Exponential backoff based on inactivity time
-  const minutesInactive = Math.floor(timeSinceActivity / 60000)
-  const backoffMultiplier = Math.min(Math.pow(1.5, minutesInactive / 5), maxInterval / baseInterval)
-
-  return Math.min(baseInterval * backoffMultiplier * 1000, maxInterval * 1000)
 }

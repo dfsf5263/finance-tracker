@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth, useSession } from '@clerk/nextjs'
+import { useAuth } from '@clerk/nextjs'
 import {
   Dialog,
   DialogContent,
@@ -18,13 +18,13 @@ import {
   isSessionExpired,
   getTimeUntilTimeout,
   formatTimeRemaining,
-  getNextCheckInterval,
 } from '@/lib/session-config'
 
 export function SessionMonitor() {
   const router = useRouter()
   const { isLoaded, isSignedIn, signOut } = useAuth()
-  const { session } = useSession()
+  // We don't need Clerk's session data for client-side timeout
+  // const { session } = useSession()
   const [showWarning, setShowWarning] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState<number>(0)
   const [lastActivity, setLastActivity] = useState<number>(Date.now())
@@ -107,26 +107,15 @@ export function SessionMonitor() {
 
   // Check session status
   const checkSession = useCallback(() => {
-    // First verify we still have a valid Clerk session
-    if (!session || !session.expireAt) {
-      log('No valid clerk session found')
-      return
-    }
-
-    // Check if Clerk session has expired
-    const clerkSessionExpired = new Date(session.expireAt).getTime() < Date.now()
-    if (clerkSessionExpired) {
-      log('Clerk session expired')
-      handleSessionExpired()
-      return
-    }
-
     // Get last activity from localStorage (for cross-tab sync)
     let lastActivityTime = lastActivity
     try {
       const storedActivity = localStorage.getItem(SESSION_CONFIG.LAST_ACTIVITY_KEY)
       if (storedActivity) {
-        lastActivityTime = parseInt(storedActivity)
+        const storedTime = parseInt(storedActivity)
+        if (!isNaN(storedTime)) {
+          lastActivityTime = storedTime
+        }
       }
     } catch (error) {
       console.error('[SessionMonitor] Failed to read activity from localStorage:', error)
@@ -136,7 +125,11 @@ export function SessionMonitor() {
     log('Checking session', {
       lastActivity: new Date(lastActivityTime).toISOString(),
       timeSinceActivity: Math.floor(timeSinceActivity / 1000) + 's',
-      clerkExpiry: new Date(session.expireAt).toISOString(),
+      warningThreshold:
+        SESSION_CONFIG.INACTIVITY_TIMEOUT_MINUTES -
+        SESSION_CONFIG.INACTIVITY_WARNING_MINUTES +
+        ' min',
+      timeoutThreshold: SESSION_CONFIG.INACTIVITY_TIMEOUT_MINUTES + ' min',
     })
 
     if (isSessionExpired(lastActivityTime)) {
@@ -147,15 +140,7 @@ export function SessionMonitor() {
       setShowWarning(true)
       setTimeRemaining(getTimeUntilTimeout(lastActivityTime))
     }
-
-    // Update check interval based on activity (exponential backoff)
-    if (checkIntervalRef.current) {
-      clearInterval(checkIntervalRef.current)
-      const nextInterval = getNextCheckInterval(timeSinceActivity)
-      checkIntervalRef.current = setInterval(checkSession, nextInterval)
-      log('Updated check interval', { interval: nextInterval / 1000 + 's' })
-    }
-  }, [lastActivity, showWarning, handleSessionExpired, session, isLoggingOut, log])
+  }, [lastActivity, showWarning, handleSessionExpired, isLoggingOut, log])
 
   // Handle warning dialog actions
   const handleStayLoggedIn = useCallback(() => {
@@ -176,13 +161,14 @@ export function SessionMonitor() {
 
   // Set up activity tracking
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || !session) return
+    if (!isLoaded || !isSignedIn) return
 
-    log('Initializing session monitor')
+    let mounted = true
+    log('Setting up session monitor')
 
     // Add activity event listeners immediately (no delay)
     const activityHandler = () => {
-      if (isInitialized) {
+      if (mounted && isInitialized) {
         updateActivity()
       }
     }
@@ -195,7 +181,7 @@ export function SessionMonitor() {
     try {
       broadcastChannelRef.current = new BroadcastChannel('session_monitor')
       broadcastChannelRef.current.onmessage = (event) => {
-        if (event.data.type === 'activity' && event.data.time) {
+        if (mounted && event.data.type === 'activity' && event.data.time) {
           log('Activity received from another tab', {
             time: new Date(event.data.time).toISOString(),
           })
@@ -211,20 +197,30 @@ export function SessionMonitor() {
 
     // Initialize activity tracking after a short delay to avoid initial false positives
     const initTimer = setTimeout(() => {
-      setIsInitialized(true)
-      updateActivity() // Record initial activity
+      if (mounted) {
+        setIsInitialized(true)
+        updateActivity() // Record initial activity
 
-      // Set up session check interval
-      checkIntervalRef.current = setInterval(
-        checkSession,
-        SESSION_CONFIG.CHECK_INTERVAL_SECONDS * 1000
-      )
+        // Set up session check interval
+        checkIntervalRef.current = setInterval(
+          checkSession,
+          SESSION_CONFIG.FIXED_CHECK_INTERVAL_SECONDS * 1000
+        )
 
-      log('Session monitor initialized')
-    }, 2000) // 2 second delay instead of 5
+        log('Session monitor initialized', {
+          checkInterval: SESSION_CONFIG.FIXED_CHECK_INTERVAL_SECONDS + 's',
+          warningAfter:
+            SESSION_CONFIG.INACTIVITY_TIMEOUT_MINUTES -
+            SESSION_CONFIG.INACTIVITY_WARNING_MINUTES +
+            ' min',
+          timeoutAfter: SESSION_CONFIG.INACTIVITY_TIMEOUT_MINUTES + ' min',
+        })
+      }
+    }, 1000) // 1 second delay
 
     // Cleanup function
     return () => {
+      mounted = false
       clearTimeout(initTimer)
 
       SESSION_CONFIG.ACTIVITY_EVENTS.forEach((event) => {
@@ -243,7 +239,8 @@ export function SessionMonitor() {
 
       log('Session monitor cleaned up')
     }
-  }, [isLoaded, isSignedIn, session, isInitialized, updateActivity, checkSession, showWarning, log])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, isSignedIn]) // Minimal dependencies to prevent re-initialization
 
   // Countdown timer for warning modal
   useEffect(() => {
@@ -307,8 +304,8 @@ export function SessionMonitor() {
     [isLoggingOut]
   )
 
-  // Don't render anything if not authenticated or no session
-  if (!isLoaded || !isSignedIn || !session) return null
+  // Don't render anything if not authenticated
+  if (!isLoaded || !isSignedIn) return null
 
   return (
     <Dialog open={showWarning} onOpenChange={handleOpenChange}>

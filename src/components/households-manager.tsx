@@ -18,8 +18,13 @@ import { HouseholdForm } from './household-form'
 import { useCRUD } from '@/hooks/useCRUD'
 import { useHousehold } from '@/contexts/household-context'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef } from 'react'
-import { canDeleteHousehold, canManageData, canInviteMembers } from '@/lib/role-utils'
+import { useEffect, useRef, useState } from 'react'
+import {
+  canDeleteHousehold,
+  canManageHouseholdSettings,
+  canInviteMembers,
+  getRoleLabel,
+} from '@/lib/role-utils'
 import { apiFetch } from '@/lib/http-utils'
 import { toast } from 'sonner'
 
@@ -48,11 +53,14 @@ export function HouseholdsManager() {
     formOpen,
     editingItem: editingHousehold,
     setFormOpen,
-    handleCreate: originalHandleCreate,
-    handleEdit,
+    // handleCreate: Not used - we implement custom logic to bypass permission checks
+    // handleEdit: Not used - we need custom logic for households
     closeForm,
     fetchItems,
   } = useCRUD<Household>('households', 'Household')
+
+  // Local state for editing
+  const [localEditingHousehold, setLocalEditingHousehold] = useState<Household | undefined>()
 
   // Track previous household count to detect creation scenarios
   const previousCountRef = useRef<number>(contextHouseholds.length)
@@ -71,11 +79,60 @@ export function HouseholdsManager() {
     previousCountRef.current = currentCount
   }, [contextHouseholds.length, contextLoading, fetchItems])
 
-  // Override handleCreate to refresh household context after operations
-  const handleCreate = async (householdData: Omit<Household, 'id'>) => {
-    await originalHandleCreate(householdData)
-    // Refresh the household context to update sidebar and header
-    await refreshHouseholds()
+  // Custom handleEdit that bypasses useCRUD's permission check
+  const handleEdit = (household: Household) => {
+    setLocalEditingHousehold(household)
+    setFormOpen(true)
+  }
+
+  // Handle both create and update operations
+  const handleCreateOrUpdate = async (householdData: Omit<Household, 'id'>) => {
+    if (localEditingHousehold) {
+      // Update existing household
+      const { error } = await apiFetch(`/api/households/${localEditingHousehold.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(householdData),
+        showErrorToast: false,
+        showRateLimitToast: true,
+      })
+
+      if (!error) {
+        fetchItems()
+        toast.success('Household updated successfully')
+        // Refresh the household context to update sidebar and header
+        await refreshHouseholds()
+        closeForm()
+        setLocalEditingHousehold(undefined)
+      } else {
+        console.error('Failed to update household:', error)
+        if (!error.includes('Rate limit exceeded')) {
+          toast.error('Failed to update household')
+        }
+      }
+    } else {
+      // Create new household - direct API call to bypass useCRUD permission check
+      const { error } = await apiFetch('/api/households', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(householdData),
+        showErrorToast: false,
+        showRateLimitToast: true,
+      })
+
+      if (!error) {
+        fetchItems()
+        toast.success('Household created successfully')
+        // Refresh the household context to update sidebar and header
+        await refreshHouseholds()
+        closeForm()
+      } else {
+        console.error('Failed to create household:', error)
+        if (!error.includes('Rate limit exceeded')) {
+          toast.error('Failed to create household')
+        }
+      }
+    }
   }
 
   // Custom delete handler that bypasses useCRUD's permission check
@@ -135,7 +192,12 @@ export function HouseholdsManager() {
                 <CardContent className="p-4 overflow-hidden">
                   <div className="space-y-3">
                     <div>
-                      <h3 className="font-semibold text-lg truncate">{household.name}</h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className="text-xs flex-shrink-0">
+                          {getRoleLabel(getUserRole(household.id))}
+                        </Badge>
+                        <h3 className="font-semibold text-lg truncate">{household.name}</h3>
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         Budget: {formatCurrency(household.annualBudget)}
                       </p>
@@ -167,7 +229,7 @@ export function HouseholdsManager() {
                     )}
 
                     <div className="flex justify-end gap-1 pt-1">
-                      {canManageData(getUserRole(household.id)) && (
+                      {canManageHouseholdSettings(getUserRole(household.id)) && (
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(household)}>
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -219,10 +281,13 @@ export function HouseholdsManager() {
       </Card>
 
       <HouseholdForm
-        household={editingHousehold}
+        household={localEditingHousehold || editingHousehold}
         open={formOpen}
-        onClose={closeForm}
-        onSubmit={handleCreate}
+        onClose={() => {
+          closeForm()
+          setLocalEditingHousehold(undefined)
+        }}
+        onSubmit={handleCreateOrUpdate}
       />
     </div>
   )

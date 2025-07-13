@@ -15,6 +15,7 @@ import {
   Upload,
   Users,
   Wallet,
+  Trash2,
 } from 'lucide-react'
 
 import { NavMain } from '@/components/nav-main'
@@ -103,6 +104,13 @@ const data = {
       icon: DollarSign,
     },
   ],
+  utility: [
+    {
+      name: 'DeDupe',
+      url: '/dashboard/utility/dedupe',
+      icon: Trash2,
+    },
+  ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -135,6 +143,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavGroup title="Analytics" items={data.analytics} />
         <NavGroup title="Budgeting" items={data.budgeting} />
         <NavGroup title="Definitions" items={data.definitions} />
+        <NavGroup title="Utility" items={data.utility} />
       </SidebarContent>
       <SidebarFooter>
         <NavUserErrorBoundary>
