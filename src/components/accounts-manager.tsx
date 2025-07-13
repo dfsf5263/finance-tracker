@@ -14,7 +14,8 @@ interface TransactionAccount {
 }
 
 export function AccountsManager() {
-  const { selectedHousehold } = useHousehold()
+  const { selectedHousehold, getUserRole } = useHousehold()
+  const userRole = getUserRole()
   const {
     items: accounts,
     formOpen,
@@ -24,7 +25,8 @@ export function AccountsManager() {
     handleEdit,
     handleDelete,
     closeForm,
-  } = useCRUD<TransactionAccount>('accounts', 'Account', selectedHousehold?.id)
+    canEdit,
+  } = useCRUD<TransactionAccount>('accounts', 'Account', selectedHousehold?.id, userRole)
 
   if (!selectedHousehold) {
     return (
@@ -46,10 +48,12 @@ export function AccountsManager() {
         <CardHeader className="p-6">
           <CardTitle className="flex justify-between items-center">
             Accounts
-            <Button onClick={() => setFormOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Account
-            </Button>
+            {canEdit && (
+              <Button onClick={() => setFormOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Account
+              </Button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
@@ -78,14 +82,16 @@ export function AccountsManager() {
                 className="flex justify-between items-center p-2 border rounded"
               >
                 <span>{account.name}</span>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(account)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(account.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                {canEdit && (
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(account)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(account.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             ))}
 
@@ -100,10 +106,16 @@ export function AccountsManager() {
                   <p className="text-sm text-muted-foreground mb-4">
                     Examples: Chase Credit Card, Wells Fargo Checking, PayPal, Venmo
                   </p>
-                  <Button onClick={() => setFormOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Your First Account
-                  </Button>
+                  {canEdit ? (
+                    <Button onClick={() => setFormOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Your First Account
+                    </Button>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      You have view-only access to this household
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             )}

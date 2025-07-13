@@ -26,6 +26,7 @@ import {
 import { apiFetch } from '@/lib/http-utils'
 import { useHousehold } from '@/contexts/household-context'
 import { invalidateActiveMonthCache } from '@/hooks/use-active-month'
+import { canManageData } from '@/lib/role-utils'
 
 interface CSVUploadPageProps {
   onUploadComplete: () => void
@@ -113,7 +114,9 @@ function convertCSVDateToISO(csvDate: string): string {
 }
 
 export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
-  const { selectedHousehold } = useHousehold()
+  const { selectedHousehold, getUserRole } = useHousehold()
+  const userRole = getUserRole()
+  const canEdit = canManageData(userRole)
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'complete'>('upload')
@@ -625,6 +628,27 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
             <p className="text-center text-muted-foreground">
               Please select a household to upload transactions.
             </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!canEdit) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground" />
+              <h3 className="text-lg font-semibold">View Only Access</h3>
+              <p className="text-muted-foreground">
+                You have view-only access to this household and cannot upload transactions.
+              </p>
+              <Link href="/dashboard/transactions">
+                <Button variant="outline">View Transactions</Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -6,6 +6,7 @@ interface Household {
   id: string
   name: string
   annualBudget?: number | null
+  userRole?: string
   _count?: {
     accounts: number
     users: number
@@ -24,6 +25,7 @@ interface HouseholdContextType {
   refreshHouseholds: () => Promise<void>
   triggerHouseholdCreation: () => void
   completeHouseholdCreation: () => void
+  getUserRole: (householdId?: string) => string | undefined
 }
 
 const HouseholdContext = createContext<HouseholdContextType | undefined>(undefined)
@@ -149,6 +151,14 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     await refreshHouseholds()
   }
 
+  const getUserRole = (householdId?: string): string | undefined => {
+    const targetHouseholdId = householdId || selectedHousehold?.id
+    if (!targetHouseholdId) return undefined
+
+    const household = households.find((h) => h.id === targetHouseholdId)
+    return household?.userRole
+  }
+
   useEffect(() => {
     fetchHouseholds()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -174,6 +184,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     refreshHouseholds,
     triggerHouseholdCreation,
     completeHouseholdCreation,
+    getUserRole,
   }
 
   return <HouseholdContext.Provider value={value}>{children}</HouseholdContext.Provider>

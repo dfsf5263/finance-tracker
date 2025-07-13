@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
-import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { requireHouseholdAccess, requireTypeWriteAccess } from '@/lib/auth-middleware'
 import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -53,18 +53,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
-    // First fetch the type to get the householdId for authorization
-    const existingType = await db.householdType.findUnique({
-      where: { id },
-      select: { householdId: true },
-    })
-
-    if (!existingType) {
-      return NextResponse.json({ error: 'Transaction type not found' }, { status: 404 })
-    }
-
-    // Verify user has access to this household
-    const result = await requireHouseholdAccess(request, existingType.householdId)
+    // Verify user has write access to this type
+    const result = await requireTypeWriteAccess(request, id)
     if (result instanceof NextResponse) {
       return result
     }
@@ -106,18 +96,8 @@ export async function DELETE(
 
     const { id } = await params
 
-    // First fetch the type to get the householdId for authorization
-    const existingType = await db.householdType.findUnique({
-      where: { id },
-      select: { householdId: true },
-    })
-
-    if (!existingType) {
-      return NextResponse.json({ error: 'Transaction type not found' }, { status: 404 })
-    }
-
-    // Verify user has access to this household
-    const result = await requireHouseholdAccess(request, existingType.householdId)
+    // Verify user has write access to this type
+    const result = await requireTypeWriteAccess(request, id)
     if (result instanceof NextResponse) {
       return result
     }

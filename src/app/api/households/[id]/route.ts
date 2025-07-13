@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { canManageHouseholdSettings, canDeleteHousehold } from '@/lib/role-utils'
 import { validateRequestBody, householdUpdateSchema } from '@/lib/validation'
 import { z } from 'zod'
 
@@ -51,6 +52,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const result = await requireHouseholdAccess(request, id)
     if (result instanceof NextResponse) {
       return result
+    }
+
+    // Check if user has permission to update household settings
+    if (!canManageHouseholdSettings(result.userRole)) {
+      return NextResponse.json(
+        { error: 'Only the household owner can update household settings' },
+        { status: 403 }
+      )
     }
 
     // Parse and validate request body
@@ -121,6 +130,14 @@ export async function DELETE(
     const result = await requireHouseholdAccess(request, id)
     if (result instanceof NextResponse) {
       return result
+    }
+
+    // Check if user has permission to delete household
+    if (!canDeleteHousehold(result.userRole)) {
+      return NextResponse.json(
+        { error: 'Only the household owner can delete a household' },
+        { status: 403 }
+      )
     }
 
     // Check if household has any transactions

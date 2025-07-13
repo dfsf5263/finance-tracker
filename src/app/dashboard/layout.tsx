@@ -6,7 +6,7 @@ import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
 import { HouseholdProvider, useHousehold } from '@/contexts/household-context'
 import { HouseholdCreationModal } from '@/components/household-creation-modal'
-// import { SessionMonitor } from '@/components/session-monitor'
+import { SessionMonitor } from '@/components/session-monitor'
 import { getPageTitle } from '@/lib/route-titles'
 
 function DashboardContent({ children, title }: { children: React.ReactNode; title: string }) {
@@ -15,7 +15,7 @@ function DashboardContent({ children, title }: { children: React.ReactNode; titl
 
   return (
     <>
-      {/* <SessionMonitor /> */}
+      <SessionMonitor />
       <SidebarProvider
         style={
           {

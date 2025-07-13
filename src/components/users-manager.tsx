@@ -15,7 +15,8 @@ interface TransactionUser {
 }
 
 export function UsersManager() {
-  const { selectedHousehold } = useHousehold()
+  const { selectedHousehold, getUserRole } = useHousehold()
+  const userRole = getUserRole(selectedHousehold?.id)
   const {
     items: users,
     formOpen,
@@ -25,7 +26,8 @@ export function UsersManager() {
     handleEdit,
     handleDelete,
     closeForm,
-  } = useCRUD<TransactionUser>('users', 'User', selectedHousehold?.id)
+    canEdit,
+  } = useCRUD<TransactionUser>('users', 'User', selectedHousehold?.id, userRole)
 
   if (!selectedHousehold) {
     return (
@@ -47,10 +49,12 @@ export function UsersManager() {
         <CardHeader className="p-6">
           <CardTitle className="flex justify-between items-center">
             Users
-            <Button onClick={() => setFormOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add User
-            </Button>
+            {canEdit && (
+              <Button onClick={() => setFormOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
@@ -90,12 +94,16 @@ export function UsersManager() {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(user.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {canEdit && (
+                    <>
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(user.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -106,16 +114,22 @@ export function UsersManager() {
                   <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No users yet</h3>
                   <p className="text-muted-foreground mb-2">
-                    Add the people who spend or earn money in your household.
+                    {canEdit
+                      ? 'Add the people who spend or earn money in your household.'
+                      : 'No users have been added to this household yet.'}
                   </p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    This could be family members, authorized credit card users, or joint account
-                    holders.
-                  </p>
-                  <Button onClick={() => setFormOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Your First User
-                  </Button>
+                  {canEdit && (
+                    <>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        This could be family members, authorized credit card users, or joint account
+                        holders.
+                      </p>
+                      <Button onClick={() => setFormOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Your First User
+                      </Button>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             )}

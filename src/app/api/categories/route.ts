@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
-import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { requireHouseholdAccess, requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody, categoryCreateSchema } from '@/lib/validation'
 import { apiRateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
@@ -67,8 +67,8 @@ export async function POST(request: NextRequest) {
 
     const { name, description, icon, color, householdId, annualBudget } = validation.data
 
-    // Verify user has access to this household
-    const result = await requireHouseholdAccess(request, householdId)
+    // Verify user has write access to this household
+    const result = await requireHouseholdWriteAccess(request, householdId)
     if (result instanceof NextResponse) {
       return result
     }

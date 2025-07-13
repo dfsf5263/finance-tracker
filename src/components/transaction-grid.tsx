@@ -99,8 +99,12 @@ interface TransactionGridProps {
   onRefresh?: () => void
 }
 
+import { canManageData } from '@/lib/role-utils'
+
 export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridProps) {
-  const { selectedHousehold } = useHousehold()
+  const { selectedHousehold, getUserRole } = useHousehold()
+  const userRole = getUserRole()
+  const canEdit = canManageData(userRole)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -387,42 +391,44 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   return (
     <div className="space-y-6">
       {/* Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Link href="/dashboard/transactions/upload">
-          <Card className="cursor-pointer hover:shadow-md transition-shadow duration-200">
+      {canEdit && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link href="/dashboard/transactions/upload">
+            <Card className="cursor-pointer hover:shadow-md transition-shadow duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                    <Upload className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Upload CSV</CardTitle>
+                    <CardDescription>Import transactions from CSV file</CardDescription>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          <Card
+            className="cursor-pointer hover:shadow-md transition-shadow duration-200"
+            onClick={() => {
+              setEditingTransaction(null)
+              setShowTransactionForm(true)
+            }}
+          >
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                  <Upload className="h-5 w-5" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 text-green-600">
+                  <Plus className="h-5 w-5" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Upload CSV</CardTitle>
-                  <CardDescription>Import transactions from CSV file</CardDescription>
+                  <CardTitle className="text-lg">Add Transaction</CardTitle>
+                  <CardDescription>Create a new transaction manually</CardDescription>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </Link>
-        <Card
-          className="cursor-pointer hover:shadow-md transition-shadow duration-200"
-          onClick={() => {
-            setEditingTransaction(null)
-            setShowTransactionForm(true)
-          }}
-        >
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 text-green-600">
-                <Plus className="h-5 w-5" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Add Transaction</CardTitle>
-                <CardDescription>Create a new transaction manually</CardDescription>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        </div>
+      )}
 
       <div className="bg-muted rounded-xl">
         {/* Filter Header - Mobile Toggle */}
@@ -662,22 +668,26 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                     {formatCurrency(transaction.amount)}
                   </TableCell>
                   <TableCell className="p-3 text-center">
-                    <div className="flex justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditTransaction(transaction)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteClick(transaction)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {canEdit ? (
+                      <div className="flex justify-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditTransaction(transaction)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(transaction)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">View only</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

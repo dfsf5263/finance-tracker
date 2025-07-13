@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@clerk/nextjs'
+import { useAuth, useSession } from '@clerk/nextjs'
 import {
   Dialog,
   DialogContent,
@@ -18,58 +18,144 @@ import {
   isSessionExpired,
   getTimeUntilTimeout,
   formatTimeRemaining,
+  getNextCheckInterval,
 } from '@/lib/session-config'
 
 export function SessionMonitor() {
   const router = useRouter()
   const { isLoaded, isSignedIn, signOut } = useAuth()
+  const { session } = useSession()
   const [showWarning, setShowWarning] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState<number>(0)
   const [lastActivity, setLastActivity] = useState<number>(Date.now())
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const broadcastChannelRef = useRef<BroadcastChannel | null>(null)
+
+  // Debug mode from environment
+  const debugMode =
+    process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_DEBUG_SESSION === 'true'
+
+  const log = useCallback(
+    (message: string, data?: unknown) => {
+      if (debugMode) {
+        console.log(`[SessionMonitor] ${message}`, data || '')
+      }
+    },
+    [debugMode]
+  )
 
   // Update last activity time
   const updateActivity = useCallback(() => {
     const now = Date.now()
     setLastActivity(now)
+    log('Activity detected', { time: new Date(now).toISOString() })
+
     // Store in localStorage for cross-tab synchronization
-    localStorage.setItem(SESSION_CONFIG.LAST_ACTIVITY_KEY, now.toString())
+    try {
+      localStorage.setItem(SESSION_CONFIG.LAST_ACTIVITY_KEY, now.toString())
+
+      // Broadcast activity to other tabs
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({ type: 'activity', time: now })
+      }
+    } catch (error) {
+      console.error('[SessionMonitor] Failed to update activity in localStorage:', error)
+    }
+
     // Hide warning if user becomes active
     if (showWarning) {
       setShowWarning(false)
+      log('Warning hidden due to activity')
     }
-  }, [showWarning])
+  }, [showWarning, log])
 
   // Handle session expiry
   const handleSessionExpired = useCallback(async () => {
+    log('Session expired, initiating logout')
+
+    // Prevent multiple logout attempts
+    if (isLoggingOut) {
+      log('Already logging out, skipping')
+      return
+    }
+
+    setIsLoggingOut(true)
+
     // Clear intervals
     if (checkIntervalRef.current) {
       clearInterval(checkIntervalRef.current)
+      checkIntervalRef.current = null
     }
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current)
+      countdownIntervalRef.current = null
     }
 
-    // Sign out and redirect
-    await signOut()
-    router.push('/sign-in?message=session_expired')
-  }, [signOut, router])
+    try {
+      // Sign out and redirect
+      await signOut()
+      router.push('/sign-in?message=session_expired')
+    } catch (error) {
+      console.error('[SessionMonitor] Error during session expiry logout:', error)
+      // Force redirect even if signOut fails
+      router.push('/sign-in?message=session_expired')
+    }
+  }, [signOut, router, isLoggingOut, log])
 
   // Check session status
   const checkSession = useCallback(() => {
+    // First verify we still have a valid Clerk session
+    if (!session || !session.expireAt) {
+      log('No valid clerk session found')
+      return
+    }
+
+    // Check if Clerk session has expired
+    const clerkSessionExpired = new Date(session.expireAt).getTime() < Date.now()
+    if (clerkSessionExpired) {
+      log('Clerk session expired')
+      handleSessionExpired()
+      return
+    }
+
     // Get last activity from localStorage (for cross-tab sync)
-    const storedActivity = localStorage.getItem(SESSION_CONFIG.LAST_ACTIVITY_KEY)
-    const lastActivityTime = storedActivity ? parseInt(storedActivity) : lastActivity
+    let lastActivityTime = lastActivity
+    try {
+      const storedActivity = localStorage.getItem(SESSION_CONFIG.LAST_ACTIVITY_KEY)
+      if (storedActivity) {
+        lastActivityTime = parseInt(storedActivity)
+      }
+    } catch (error) {
+      console.error('[SessionMonitor] Failed to read activity from localStorage:', error)
+    }
+
+    const timeSinceActivity = Date.now() - lastActivityTime
+    log('Checking session', {
+      lastActivity: new Date(lastActivityTime).toISOString(),
+      timeSinceActivity: Math.floor(timeSinceActivity / 1000) + 's',
+      clerkExpiry: new Date(session.expireAt).toISOString(),
+    })
 
     if (isSessionExpired(lastActivityTime)) {
+      log('Session expired due to inactivity')
       handleSessionExpired()
-    } else if (shouldShowWarning(lastActivityTime) && !showWarning) {
+    } else if (shouldShowWarning(lastActivityTime) && !showWarning && !isLoggingOut) {
+      log('Showing inactivity warning')
       setShowWarning(true)
       setTimeRemaining(getTimeUntilTimeout(lastActivityTime))
     }
-  }, [lastActivity, showWarning, handleSessionExpired])
+
+    // Update check interval based on activity (exponential backoff)
+    if (checkIntervalRef.current) {
+      clearInterval(checkIntervalRef.current)
+      const nextInterval = getNextCheckInterval(timeSinceActivity)
+      checkIntervalRef.current = setInterval(checkSession, nextInterval)
+      log('Updated check interval', { interval: nextInterval / 1000 + 's' })
+    }
+  }, [lastActivity, showWarning, handleSessionExpired, session, isLoggingOut, log])
 
   // Handle warning dialog actions
   const handleStayLoggedIn = useCallback(() => {
@@ -90,16 +176,43 @@ export function SessionMonitor() {
 
   // Set up activity tracking
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) return
+    if (!isLoaded || !isSignedIn || !session) return
 
-    // Initial delay before starting tracking
-    const initialTimer = setTimeout(() => {
-      // Add activity event listeners
-      const activityHandler = () => updateActivity()
+    log('Initializing session monitor')
 
-      SESSION_CONFIG.ACTIVITY_EVENTS.forEach((event) => {
-        window.addEventListener(event, activityHandler)
-      })
+    // Add activity event listeners immediately (no delay)
+    const activityHandler = () => {
+      if (isInitialized) {
+        updateActivity()
+      }
+    }
+
+    SESSION_CONFIG.ACTIVITY_EVENTS.forEach((event) => {
+      window.addEventListener(event, activityHandler)
+    })
+
+    // Set up BroadcastChannel for cross-tab communication
+    try {
+      broadcastChannelRef.current = new BroadcastChannel('session_monitor')
+      broadcastChannelRef.current.onmessage = (event) => {
+        if (event.data.type === 'activity' && event.data.time) {
+          log('Activity received from another tab', {
+            time: new Date(event.data.time).toISOString(),
+          })
+          setLastActivity(event.data.time)
+          if (showWarning) {
+            setShowWarning(false)
+          }
+        }
+      }
+    } catch {
+      log('BroadcastChannel not supported, falling back to localStorage only')
+    }
+
+    // Initialize activity tracking after a short delay to avoid initial false positives
+    const initTimer = setTimeout(() => {
+      setIsInitialized(true)
+      updateActivity() // Record initial activity
 
       // Set up session check interval
       checkIntervalRef.current = setInterval(
@@ -107,28 +220,41 @@ export function SessionMonitor() {
         SESSION_CONFIG.CHECK_INTERVAL_SECONDS * 1000
       )
 
-      // Cleanup function
-      return () => {
-        SESSION_CONFIG.ACTIVITY_EVENTS.forEach((event) => {
-          window.removeEventListener(event, activityHandler)
-        })
+      log('Session monitor initialized')
+    }, 2000) // 2 second delay instead of 5
 
-        if (checkIntervalRef.current) {
-          clearInterval(checkIntervalRef.current)
-        }
+    // Cleanup function
+    return () => {
+      clearTimeout(initTimer)
+
+      SESSION_CONFIG.ACTIVITY_EVENTS.forEach((event) => {
+        window.removeEventListener(event, activityHandler)
+      })
+
+      if (checkIntervalRef.current) {
+        clearInterval(checkIntervalRef.current)
+        checkIntervalRef.current = null
       }
-    }, SESSION_CONFIG.INITIAL_DELAY_SECONDS * 1000)
 
-    return () => clearTimeout(initialTimer)
-  }, [isLoaded, isSignedIn, updateActivity, checkSession])
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.close()
+        broadcastChannelRef.current = null
+      }
+
+      log('Session monitor cleaned up')
+    }
+  }, [isLoaded, isSignedIn, session, isInitialized, updateActivity, checkSession, showWarning, log])
 
   // Countdown timer for warning modal
   useEffect(() => {
-    if (showWarning && timeRemaining > 0) {
+    if (showWarning && timeRemaining > 0 && !isLoggingOut) {
+      log('Starting countdown timer', { timeRemaining: formatTimeRemaining(timeRemaining) })
+
       countdownIntervalRef.current = setInterval(() => {
         setTimeRemaining((prev) => {
           const newTime = prev - 1000
           if (newTime <= 0) {
+            log('Countdown reached zero')
             handleSessionExpired()
             return 0
           }
@@ -139,26 +265,37 @@ export function SessionMonitor() {
       return () => {
         if (countdownIntervalRef.current) {
           clearInterval(countdownIntervalRef.current)
+          countdownIntervalRef.current = null
         }
       }
     }
-  }, [showWarning, timeRemaining, handleSessionExpired])
+  }, [showWarning, timeRemaining, handleSessionExpired, isLoggingOut, log])
 
-  // Listen for storage events (cross-tab activity sync)
+  // Listen for storage events (cross-tab activity sync fallback)
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === SESSION_CONFIG.LAST_ACTIVITY_KEY && e.newValue) {
-        setLastActivity(parseInt(e.newValue))
-        // Hide warning if activity detected in another tab
-        if (showWarning) {
-          setShowWarning(false)
+        try {
+          const newActivityTime = parseInt(e.newValue)
+          if (!isNaN(newActivityTime)) {
+            log('Activity sync from storage event', {
+              time: new Date(newActivityTime).toISOString(),
+            })
+            setLastActivity(newActivityTime)
+            // Hide warning if activity detected in another tab
+            if (showWarning && !isLoggingOut) {
+              setShowWarning(false)
+            }
+          }
+        } catch (error) {
+          console.error('[SessionMonitor] Failed to parse activity time from storage:', error)
         }
       }
     }
 
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
-  }, [showWarning])
+  }, [showWarning, isLoggingOut, log])
 
   // Handle dialog open/close changes - prevent closing during logout
   const handleOpenChange = useCallback(
@@ -170,8 +307,8 @@ export function SessionMonitor() {
     [isLoggingOut]
   )
 
-  // Don't render anything if not authenticated
-  if (!isLoaded || !isSignedIn) return null
+  // Don't render anything if not authenticated or no session
+  if (!isLoaded || !isSignedIn || !session) return null
 
   return (
     <Dialog open={showWarning} onOpenChange={handleOpenChange}>

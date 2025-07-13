@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
-import { requireCategoryAccess } from '@/lib/auth-middleware'
+import { requireCategoryAccess, requireCategoryWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody, categoryUpdateSchema } from '@/lib/validation'
 import { apiRateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
@@ -42,8 +42,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const { id } = await params
 
-    // Verify user has access to this category
-    const result = await requireCategoryAccess(request, id)
+    // Verify user has write access to this category
+    const result = await requireCategoryWriteAccess(request, id)
     if (result instanceof NextResponse) {
       return result
     }
@@ -114,8 +114,8 @@ export async function DELETE(
 
     const { id } = await params
 
-    // Verify user has access to this category
-    const result = await requireCategoryAccess(request, id)
+    // Verify user has write access to this category
+    const result = await requireCategoryWriteAccess(request, id)
     if (result instanceof NextResponse) {
       return result
     }

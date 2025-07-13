@@ -17,8 +17,9 @@ interface TransactionCategory {
 }
 
 export function CategoriesManager() {
-  const { selectedHousehold } = useHousehold()
+  const { selectedHousehold, getUserRole } = useHousehold()
   const [isCreatingBulk, setIsCreatingBulk] = useState(false)
+  const userRole = getUserRole(selectedHousehold?.id)
   const {
     items: categories,
     formOpen,
@@ -29,7 +30,8 @@ export function CategoriesManager() {
     handleDelete,
     closeForm,
     fetchItems,
-  } = useCRUD<TransactionCategory>('categories', 'Category', selectedHousehold?.id)
+    canEdit,
+  } = useCRUD<TransactionCategory>('categories', 'Category', selectedHousehold?.id, userRole)
 
   const handleBulkCreate = async () => {
     if (!selectedHousehold) return
@@ -81,10 +83,12 @@ export function CategoriesManager() {
         <CardHeader className="p-6">
           <CardTitle className="flex justify-between items-center">
             Categories
-            <Button onClick={() => setFormOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Category
-            </Button>
+            {canEdit && (
+              <Button onClick={() => setFormOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Category
+              </Button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
@@ -107,12 +111,16 @@ export function CategoriesManager() {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(category)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(category.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {canEdit && (
+                    <>
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(category)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(category.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -123,18 +131,26 @@ export function CategoriesManager() {
                   <Tag className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No categories found</h3>
                   <p className="text-muted-foreground mb-4">
-                    Create your first category to organize your transactions by type.
+                    {canEdit
+                      ? 'Create your first category to organize your transactions by type.'
+                      : 'No categories have been created for this household yet.'}
                   </p>
-                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <Button onClick={() => setFormOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Your First Category
-                    </Button>
-                    <Button variant="outline" onClick={handleBulkCreate} disabled={isCreatingBulk}>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      {isCreatingBulk ? 'Creating...' : 'Prepopulate Common Categories'}
-                    </Button>
-                  </div>
+                  {canEdit && (
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <Button onClick={() => setFormOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Your First Category
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={handleBulkCreate}
+                        disabled={isCreatingBulk}
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        {isCreatingBulk ? 'Creating...' : 'Prepopulate Common Categories'}
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}

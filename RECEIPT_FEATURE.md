@@ -1,7 +1,7 @@
 # Receipt Photo Processing Feature Plan
 
 ## Overview
-Add an "Add by Photo" button to the manage transactions page that opens a mobile-friendly photo upload dialog. Use Anthropic's Claude Vision API to extract transaction data (description, amount, date, category) from receipt images, then populate the existing transaction form for user review and submission.
+Add an "Add by Receipt" button to the manage transactions page that opens a mobile-friendly photo upload dialog. Use Anthropic's Claude Vision API to extract transaction data (description, amount, date, category) from receipt images, then populate the existing transaction form for user review and submission.
 
 ## Implementation Steps
 
@@ -42,7 +42,7 @@ Add an "Add by Photo" button to the manage transactions page that opens a mobile
 - Chain photo upload → AI processing → form population
 
 ### 6. UI Integration
-- Add "Add by Photo" button to manage transactions page
+- Add "Add by Receipt" button to manage transactions page
 - Implement mobile-responsive design patterns
 - Add success/error notifications
 

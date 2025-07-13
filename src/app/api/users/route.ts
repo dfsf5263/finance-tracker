@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
 import { apiRateLimit } from '@/lib/rate-limit'
+import { requireHouseholdAccess, requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,6 +15,12 @@ export async function GET(request: NextRequest) {
 
     if (!householdId) {
       return NextResponse.json({ error: 'Household ID is required' }, { status: 400 })
+    }
+
+    // Verify user has access to this household
+    const result = await requireHouseholdAccess(request, householdId)
+    if (result instanceof NextResponse) {
+      return result
     }
 
     const users = await db.householdUser.findMany({
@@ -38,6 +45,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let data
   try {
+    // Apply rate limiting
+    const rateLimitResult = await apiRateLimit(request)
+    if (rateLimitResult) return rateLimitResult
+
     data = await request.json()
     const { name, annualBudget, householdId } = data
 
@@ -47,6 +58,12 @@ export async function POST(request: NextRequest) {
 
     if (!householdId) {
       return NextResponse.json({ error: 'Household ID is required' }, { status: 400 })
+    }
+
+    // Verify user has write access to this household
+    const result = await requireHouseholdWriteAccess(request, householdId)
+    if (result instanceof NextResponse) {
+      return result
     }
 
     const userData: { name: string; householdId: string; annualBudget?: string | number } = {

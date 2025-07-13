@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
-import { requireAccountAccess } from '@/lib/auth-middleware'
+import { requireAccountAccess, requireAccountWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody, accountUpdateSchema } from '@/lib/validation'
 import { apiRateLimit } from '@/lib/rate-limit'
 
@@ -41,8 +41,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const { id } = await params
 
-    // Verify user has access to this account
-    const result = await requireAccountAccess(request, id)
+    // Verify user has write access to this account
+    const result = await requireAccountWriteAccess(request, id)
     if (result instanceof NextResponse) {
       return result
     }
@@ -92,8 +92,8 @@ export async function DELETE(
 
     const { id } = await params
 
-    // Verify user has access to this account
-    const result = await requireAccountAccess(request, id)
+    // Verify user has write access to this account
+    const result = await requireAccountWriteAccess(request, id)
     if (result instanceof NextResponse) {
       return result
     }

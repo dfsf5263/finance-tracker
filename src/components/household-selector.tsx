@@ -10,10 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useHousehold } from '@/contexts/household-context'
+import { getRoleLabel } from '@/lib/role-utils'
+import { Badge } from '@/components/ui/badge'
 
 export function HouseholdSelector() {
-  const { households, selectedHousehold, selectHousehold, isLoading } = useHousehold()
+  const { households, selectedHousehold, selectHousehold, isLoading, getUserRole } = useHousehold()
 
   if (isLoading) {
     return (
@@ -45,16 +48,30 @@ export function HouseholdSelector() {
           }
         }}
       >
-        <SelectTrigger>
-          <div className="flex items-center gap-2 overflow-x-hidden">
-            <Home className="h-4 w-4" />
-            <SelectValue placeholder="Select household..." />
-          </div>
-        </SelectTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <SelectTrigger>
+              <div className="flex items-center gap-2 overflow-x-hidden">
+                <Home className="h-4 w-4 flex-shrink-0" />
+                <SelectValue placeholder="Select household..." />
+              </div>
+            </SelectTrigger>
+          </TooltipTrigger>
+          {selectedHousehold && (
+            <TooltipContent>
+              <p>{selectedHousehold.name}</p>
+            </TooltipContent>
+          )}
+        </Tooltip>
         <SelectContent>
           {households.map((household) => (
             <SelectItem key={household.id} value={household.id}>
-              <span title={household.name}>{household.name}</span>
+              <div className="flex items-center gap-2 w-full">
+                <Badge variant="outline" className="text-xs">
+                  {getRoleLabel(getUserRole(household.id))}
+                </Badge>
+                <span title={household.name}>{household.name}</span>
+              </div>
             </SelectItem>
           ))}
         </SelectContent>

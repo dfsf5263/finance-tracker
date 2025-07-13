@@ -19,6 +19,9 @@ import { useCRUD } from '@/hooks/useCRUD'
 import { useHousehold } from '@/contexts/household-context'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
+import { canDeleteHousehold, canManageData, canInviteMembers } from '@/lib/role-utils'
+import { apiFetch } from '@/lib/http-utils'
+import { toast } from 'sonner'
 
 interface Household {
   id: string
@@ -38,6 +41,7 @@ export function HouseholdsManager() {
     refreshHouseholds,
     households: contextHouseholds,
     isLoading: contextLoading,
+    getUserRole,
   } = useHousehold()
   const {
     items: households,
@@ -46,7 +50,6 @@ export function HouseholdsManager() {
     setFormOpen,
     handleCreate: originalHandleCreate,
     handleEdit,
-    handleDelete: originalHandleDelete,
     closeForm,
     fetchItems,
   } = useCRUD<Household>('households', 'Household')
@@ -75,11 +78,26 @@ export function HouseholdsManager() {
     await refreshHouseholds()
   }
 
-  // Override handleDelete to refresh household context after deletion
+  // Custom delete handler that bypasses useCRUD's permission check
   const handleDelete = async (id: string) => {
-    await originalHandleDelete(id)
-    // Refresh the household context to update sidebar and header
-    await refreshHouseholds()
+    // We check permissions at the component level, so directly call the API
+    const { error } = await apiFetch(`/api/households/${id}`, {
+      method: 'DELETE',
+      showErrorToast: false,
+      showRateLimitToast: true,
+    })
+
+    if (!error) {
+      fetchItems()
+      toast.success('Household deleted successfully')
+      // Refresh the household context to update sidebar and header
+      await refreshHouseholds()
+    } else {
+      console.error('Failed to delete household:', error)
+      if (!error.includes('Rate limit exceeded')) {
+        toast.error('Failed to delete household')
+      }
+    }
   }
 
   // Handle share/invite navigation
@@ -149,20 +167,30 @@ export function HouseholdsManager() {
                     )}
 
                     <div className="flex justify-end gap-1 pt-1">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(household)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleShare(household.id)}
-                        title="Share household"
-                      >
-                        <UserRoundPlus className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(household.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {canManageData(getUserRole(household.id)) && (
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(household)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canInviteMembers(getUserRole(household.id)) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleShare(household.id)}
+                          title="Share household"
+                        >
+                          <UserRoundPlus className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canDeleteHousehold(getUserRole(household.id)) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(household.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>

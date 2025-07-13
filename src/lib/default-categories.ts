@@ -8,6 +8,8 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
   { name: 'Transportation' },
   { name: 'Bills & Utilities' },
   { name: 'Healthcare' },
+  { name: 'Gas' },
+  { name: 'Groceries' },
 
   // Lifestyle & Entertainment
   { name: 'Entertainment' },
@@ -20,6 +22,7 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
   { name: 'Family & Kids' },
   { name: 'Education' },
   { name: 'Gifts & Donations' },
+  { name: 'Health & Wellness' },
 
   // Miscellaneous
   { name: 'Pets' },

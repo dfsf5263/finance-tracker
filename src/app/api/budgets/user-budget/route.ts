@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
+import { requireHouseholdAccess } from '@/lib/auth-middleware'
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,6 +20,12 @@ export async function GET(request: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 })
+    }
+
+    // Verify user has access to this household
+    const accessResult = await requireHouseholdAccess(request, householdId)
+    if (accessResult instanceof NextResponse) {
+      return accessResult
     }
 
     // Fetch user with budget

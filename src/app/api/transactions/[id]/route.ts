@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
-import { requireTransactionAccess } from '@/lib/auth-middleware'
+import { requireTransactionAccess, requireTransactionWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody, transactionUpdateSchema } from '@/lib/validation'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -43,8 +43,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params
 
-    // Verify user has access to this transaction
-    const result = await requireTransactionAccess(request, id)
+    // Verify user has write access to this transaction
+    const result = await requireTransactionWriteAccess(request, id)
     if (result instanceof NextResponse) {
       return result
     }
@@ -133,8 +133,8 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    // Verify user has access to this transaction
-    const result = await requireTransactionAccess(request, id)
+    // Verify user has write access to this transaction
+    const result = await requireTransactionWriteAccess(request, id)
     if (result instanceof NextResponse) {
       return result
     }

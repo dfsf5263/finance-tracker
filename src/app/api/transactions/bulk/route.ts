@@ -4,7 +4,7 @@ import { Decimal } from '@prisma/client/runtime/library'
 import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
 import { bulkUploadRateLimit } from '@/lib/rate-limit'
-import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody } from '@/lib/validation'
 import { bulkUploadRequestSchema, type BulkTransaction } from '@/lib/validation/bulk-upload'
 // parseMMDDYYYY is no longer needed - dates are now in ISO format from validation
@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
 
     const { transactions, householdId } = validation.data
 
-    // Verify user has access to household
-    const authResult = await requireHouseholdAccess(request, householdId)
+    // Verify user has write access to household
+    const authResult = await requireHouseholdWriteAccess(request, householdId)
     if (authResult instanceof NextResponse) return authResult
 
     // Check for intra-file duplicates first

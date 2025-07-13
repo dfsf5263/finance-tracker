@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { invalidateActiveMonthCache } from './use-active-month'
 import { apiFetch } from '@/lib/http-utils'
+import { canManageData } from '@/lib/role-utils'
 
 export function useCRUD<T extends { id: string }>(
   apiEndpoint: string,
   entityName: string,
-  householdId?: string
+  householdId?: string,
+  userRole?: string
 ) {
   const [items, setItems] = useState<T[]>([])
   const [formOpen, setFormOpen] = useState(false)
@@ -34,6 +36,12 @@ export function useCRUD<T extends { id: string }>(
   }, [fetchItems])
 
   const handleCreate = async (itemData: Omit<T, 'id'>) => {
+    // Check permissions
+    if (!canManageData(userRole)) {
+      toast.error('You do not have permission to modify data in this household')
+      return
+    }
+
     const isEditing = !!editingItem
     const url = isEditing ? `/api/${apiEndpoint}/${editingItem.id}` : `/api/${apiEndpoint}`
     const method = isEditing ? 'PUT' : 'POST'
@@ -69,11 +77,23 @@ export function useCRUD<T extends { id: string }>(
   }
 
   const handleEdit = (item: T) => {
+    // Check permissions
+    if (!canManageData(userRole)) {
+      toast.error('You do not have permission to modify data in this household')
+      return
+    }
+
     setEditingItem(item)
     setFormOpen(true)
   }
 
   const handleDelete = async (id: string) => {
+    // Check permissions
+    if (!canManageData(userRole)) {
+      toast.error('You do not have permission to modify data in this household')
+      return
+    }
+
     const { error } = await apiFetch(`/api/${apiEndpoint}/${id}`, {
       method: 'DELETE',
       showErrorToast: false, // We'll handle success/error toasts manually
@@ -112,5 +132,6 @@ export function useCRUD<T extends { id: string }>(
     handleDelete,
     closeForm,
     fetchItems,
+    canEdit: canManageData(userRole),
   }
 }
