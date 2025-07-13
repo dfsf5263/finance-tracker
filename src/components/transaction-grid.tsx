@@ -534,6 +534,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Users</SelectItem>
+                    <SelectItem value="__household__">Household</SelectItem>
                     {users.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.name}

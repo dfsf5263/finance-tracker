@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   BarChart,
   Bar,
@@ -26,7 +27,22 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Filter, TrendingUp, TrendingDown, Target, AlertCircle, Settings } from 'lucide-react'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import {
+  Filter,
+  TrendingUp,
+  TrendingDown,
+  Target,
+  AlertCircle,
+  Settings,
+  Info,
+  ExternalLink,
+} from 'lucide-react'
 import {
   formatCurrency,
   getDateRange,
@@ -300,6 +316,84 @@ export function HouseholdBudget() {
 
   return (
     <div className="space-y-6">
+      {/* Information Accordion */}
+      <Accordion type="single" collapsible >
+        <AccordionItem value="purpose">
+          <AccordionTrigger>Purpose</AccordionTrigger>
+          <AccordionContent className='pb-2'>
+            <div className="pt-0 pb-4 px-4">
+              <p className="text-sm text-muted-foreground">
+                Track household spending against both category budgets and overall household budget to monitor financial health and
+                identify areas of overspending or savings opportunities.
+              </p>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="setup">
+          <AccordionTrigger>Required Setup</AccordionTrigger>
+          <AccordionContent className='pb-2'>
+            <div className="pt-0 pb-4 px-4">
+              <div className="text-sm text-muted-foreground space-y-2">
+                <p>
+                  To use this page effectively, you need to set up both category budgets and household budget:
+                </p>
+                <ul className="list-disc list-outside ml-4 space-y-1">
+                  <li>
+                    <Link
+                      href="/dashboard/definitions/categories"
+                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800"
+                    >
+                      Manage Category Budgets <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/dashboard/definitions/households"
+                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800"
+                    >
+                      Set Up Household Budget <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="how-it-works">
+          <AccordionTrigger>How It Works</AccordionTrigger>
+          <AccordionContent className='pb-2'>
+            <div className="pt-0 pb-4 px-4">
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <li><strong>Category Summary:</strong> Compare actual spending vs. budgeted amounts for each category</li>
+                <li><strong>Household Summary:</strong> Track overall spending against total household budget with spending trends over time</li>
+                <li>View data by month, quarter, or year</li>
+                <li>Visual indicators show over/under budget categories and overall household performance</li>
+                <li>Track spending patterns and trends over time</li>
+              </ul>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="strategy">
+          <AccordionTrigger>Budget Setting Strategy</AccordionTrigger>
+          <AccordionContent className='pb-2'>
+            <div className="pt-0 pb-4 px-4">
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <li>Review historical spending data to establish realistic baselines</li>
+                <li>Start with conservative estimates and adjust based on actual patterns</li>
+                <li>
+                  Separate essential expenses (housing, utilities) from discretionary spending
+                </li>
+                <li>Build in a buffer for unexpected expenses</li>
+                <li>Review and adjust budgets quarterly based on changing needs</li>
+              </ul>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+
       {/* Header and Filters */}
       <Card className="p-4">
         <CardHeader>

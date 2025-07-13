@@ -42,7 +42,13 @@ export async function GET(request: NextRequest) {
     if (category) where.categoryId = category
     if (type) where.typeId = type
     if (account) where.accountId = account
-    if (user) where.userId = user
+    if (user) {
+      if (user === '__household__') {
+        where.userId = null
+      } else {
+        where.userId = user
+      }
+    }
     if (startDate || endDate) {
       where.transactionDate = {}
       if (startDate) where.transactionDate.gte = new Date(startDate)

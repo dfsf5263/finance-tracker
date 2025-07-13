@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
 import {
   Select,
@@ -16,6 +17,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import {
   TrendingUp,
   TrendingDown,
   Target,
@@ -25,6 +32,8 @@ import {
   Check,
   AlertTriangle,
   HelpCircle,
+  Info,
+  ExternalLink,
 } from 'lucide-react'
 import {
   formatCurrency,
@@ -287,29 +296,110 @@ export function UserBudget() {
     }
   }
 
+  // Info Accordion Component - reusable across all states
+  const InfoAccordion = (
+    <Accordion type="single" collapsible>
+      <AccordionItem value="purpose">
+        <AccordionTrigger>Purpose</AccordionTrigger>
+        <AccordionContent className='pb-2'>
+          <div className="pt-0 pb-4 px-4">
+            <p className="text-sm text-muted-foreground">
+              Track individual user spending against personal budgets to monitor spending
+              patterns, compare between household members, and manage personal financial goals.
+            </p>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="setup">
+        <AccordionTrigger>Required Setup</AccordionTrigger>
+        <AccordionContent className='pb-2'>
+          <div className="pt-0 pb-4 px-4">
+            <div className="text-sm text-muted-foreground space-y-2">
+              <p>
+                To use this page effectively, you need to set annual budgets for each user in your
+                household. The system automatically calculates period budgets (monthly/quarterly)
+                from your annual amounts.
+              </p>
+              <Link
+                href="/dashboard/definitions/users"
+                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800"
+              >
+                Manage User Budgets <ExternalLink className="h-3 w-3" />
+              </Link>
+            </div>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="how-it-works">
+        <AccordionTrigger>How It Works</AccordionTrigger>
+        <AccordionContent className='pb-2'>
+          <div className="pt-0 pb-4 px-4">
+            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+              <li>Compare actual spending vs. budgeted amounts for each user</li>
+              <li>View category breakdown to see where money is spent</li>
+              <li>
+                Option to include income (inflow) for net spending calculation
+                <ul className="list-disc list-inside mt-1 ml-4 space-y-1">
+                  <li>Only includes inflow transactions attributed to the filtered user</li>
+                  <li>Standard income like paychecks should be attributed to the household</li>
+                  <li>User income should be "side hustle" income (e.g., sold items, freelance work)</li>
+                </ul>
+              </li>
+              <li>View data by month, quarter, or year</li>
+              <li>Track top transactions and spending patterns</li>
+            </ul>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="strategy">
+        <AccordionTrigger>Budget Setting Strategy</AccordionTrigger>
+        <AccordionContent className='pb-2'>
+          <div className="pt-0 pb-4 px-4">
+            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+              <li>Set realistic personal spending limits based on household income</li>
+              <li>Consider individual needs, responsibilities, and discretionary spending</li>
+              <li>Account for both personal expenses and shared household costs</li>
+              <li>Use historical transaction data as a baseline for realistic budgets</li>
+              <li>Adjust budgets as circumstances change (job changes, major purchases, etc.)</li>
+              <li>Regular family discussions about spending goals and priorities</li>
+            </ul>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  )
+
   if (users.length === 0 && !loading) {
     return (
-      <Card className="p-4">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            User Budget
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="text-center py-8">
-            <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No User Budgets Found</h3>
-            <p className="text-muted-foreground mb-4">
-              To use the budget tracker, you need to set annual budgets for users.
-            </p>
-            <Button onClick={() => router.push('/dashboard/definitions/users')}>
-              <Settings className="h-4 w-4 mr-2" />
-              Set User Budgets
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        {/* Information Accordion */}
+        {InfoAccordion}
+        
+        <Card className="p-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              User Budget
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="text-center py-8">
+              <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No User Budgets Found</h3>
+              <p className="text-muted-foreground mb-4">
+                To use the budget tracker, you need to set annual budgets for users.
+              </p>
+              <Button onClick={() => router.push('/dashboard/definitions/users')}>
+                <Settings className="h-4 w-4 mr-2" />
+                Set User Budgets
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
@@ -354,27 +444,32 @@ export function UserBudget() {
 
   if (noBudget) {
     return (
-      <Card className="p-4">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            User Budget
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="text-center py-8">
-            <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Budget Set</h3>
-            <p className="text-muted-foreground mb-4">
-              The selected user doesn&apos;t have an annual budget set.
-            </p>
-            <Button onClick={() => router.push('/dashboard/definitions/users')}>
-              <Settings className="h-4 w-4 mr-2" />
-              Set User Budget
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        {/* Information Accordion */}
+        {InfoAccordion}
+        
+        <Card className="p-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              User Budget
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="text-center py-8">
+              <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Budget Set</h3>
+              <p className="text-muted-foreground mb-4">
+                The selected user doesn&apos;t have an annual budget set.
+              </p>
+              <Button onClick={() => router.push('/dashboard/definitions/users')}>
+                <Settings className="h-4 w-4 mr-2" />
+                Set User Budget
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
@@ -382,6 +477,9 @@ export function UserBudget() {
 
   return (
     <div className="space-y-6">
+      {/* Information Accordion */}
+      {InfoAccordion}
+
       {/* Header and Filters */}
       <Card className="p-4">
         <CardHeader>

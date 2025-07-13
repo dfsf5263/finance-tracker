@@ -84,7 +84,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
 
   const [formData, setFormData] = useState<Omit<Transaction, 'id'> & { userId: string }>({
     accountId: transaction?.accountId || '',
-    userId: transaction?.userId || '__none__',
+    userId: transaction?.userId || '__household__',
     transactionDate: transaction?.transactionDate
       ? transaction.transactionDate.split('T')[0] // Convert to ISO date string (YYYY-MM-DD)
       : toISODateString(new Date()),
@@ -104,7 +104,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
     if (transaction) {
       setFormData({
         accountId: transaction.accountId || '',
-        userId: transaction.userId || '__none__',
+        userId: transaction.userId || '__household__',
         transactionDate: transaction.transactionDate
           ? transaction.transactionDate.split('T')[0] // Convert to ISO date string (YYYY-MM-DD)
           : toISODateString(new Date()),
@@ -122,7 +122,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
       // Reset form for new transaction
       setFormData({
         accountId: '',
-        userId: '__none__',
+        userId: '__household__',
         transactionDate: toISODateString(new Date()),
         postDate: '',
         description: '',
@@ -238,7 +238,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
 
     const submitData = {
       ...formData,
-      userId: formData.userId === '__none__' || !formData.userId ? null : formData.userId, // Convert __none__ or empty string to null
+      userId: formData.userId === '__household__' || !formData.userId ? null : formData.userId, // Convert __household__ or empty string to null
       amount:
         typeof formData.amount === 'string' ? parseFloat(formData.amount) || 0 : formData.amount,
       postDate: formData.postDate || formData.transactionDate, // Default to transaction date if not provided
@@ -303,7 +303,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
           </div>
 
           <div>
-            <Label htmlFor="user">User (optional)</Label>
+            <Label htmlFor="user">User</Label>
             <div className="mt-2">
               <Select
                 value={formData.userId}
@@ -313,7 +313,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
                   <SelectValue placeholder="Select user" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">None</SelectItem>
+                  <SelectItem value="__household__">Household</SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.name}

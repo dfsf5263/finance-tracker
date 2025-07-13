@@ -13,7 +13,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
-import { Upload, FileText, AlertCircle, Download, CheckCircle, ArrowRight } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import {
+  Upload,
+  FileText,
+  AlertCircle,
+  Download,
+  CheckCircle,
+  ArrowRight,
+  ExternalLink,
+} from 'lucide-react'
 import Papa from 'papaparse'
 import { toast } from 'sonner'
 import {
@@ -735,23 +744,197 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
               </div>
             )}
 
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">Required Columns</h4>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <div>• Account - Financial account name</div>
-                <div>• Transaction Date - Date of the transaction</div>
-                <div>• Description - Transaction description</div>
-                <div>• Category - Expense/income category</div>
-                <div>• Type - Transaction type</div>
-                <div>• Amount - Transaction amount</div>
-              </div>
-              <h4 className="text-sm font-medium">Optional Columns</h4>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <div>• User - Person who made the transaction</div>
-                <div>• Post Date - When transaction posted</div>
-                <div>• Memo - Additional notes</div>
-              </div>
-            </div>
+            <Card className="p-4">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">CSV Instructions</CardTitle>
+                <CardDescription className="pb-2">
+                  Your CSV file should include the following columns. Column names are
+                  case-insensitive. The order of the columns does not matter and you can map them
+                  after uploading/selecting your file.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3">
+                  {/* Account */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium">Account</span>
+                        <Badge variant="destructive" className="text-xs">
+                          Required
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Financial account name (e.g., &quot;Chase Checking&quot;, &quot;Wells Fargo
+                        Credit Card&quot;)
+                      </p>
+                      <p className="text-xs text-muted-foreground">Format: Text</p>
+                    </div>
+                    <Link
+                      href="/dashboard/definitions/accounts"
+                      className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 whitespace-nowrap"
+                    >
+                      Manage Accounts <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </div>
+
+                  {/* Transaction Date */}
+                  <div className="flex flex-col gap-2 p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium">Transaction Date</span>
+                        <Badge variant="destructive" className="text-xs">
+                          Required
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Date when the transaction occurred
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Format: MM/DD/YYYY (e.g., 12/25/2024)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div className="flex flex-col gap-2 p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium">Description</span>
+                        <Badge variant="destructive" className="text-xs">
+                          Required
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Transaction description or merchant name
+                      </p>
+                      <p className="text-xs text-muted-foreground">Format: Text</p>
+                    </div>
+                  </div>
+
+                  {/* Category */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium">Category</span>
+                        <Badge variant="destructive" className="text-xs">
+                          Required
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Expense or income category (e.g., &quot;Food &amp; Dining&quot;,
+                        &quot;Salary&quot;)
+                      </p>
+                      <p className="text-xs text-muted-foreground">Format: Text</p>
+                    </div>
+                    <Link
+                      href="/dashboard/definitions/categories"
+                      className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 whitespace-nowrap"
+                    >
+                      Manage Categories <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </div>
+
+                  {/* Type */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium">Type</span>
+                        <Badge variant="destructive" className="text-xs">
+                          Required
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Transaction type (e.g., &quot;Purchase&quot;, &quot;Transfer&quot;,
+                        &quot;Payment&quot;)
+                      </p>
+                      <p className="text-xs text-muted-foreground">Format: Text</p>
+                    </div>
+                    <Link
+                      href="/dashboard/definitions/types"
+                      className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 whitespace-nowrap"
+                    >
+                      Manage Types <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </div>
+
+                  {/* Amount */}
+                  <div className="flex flex-col gap-2 p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium">Amount</span>
+                        <Badge variant="destructive" className="text-xs">
+                          Required
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Transaction amount (positive for income, negative for expenses)
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Format: Decimal number (e.g., -25.50, 1250.00)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* User */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium">User</span>
+                        <Badge variant="secondary" className="text-xs">
+                          Optional
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Person who made the transaction (leave empty for household-level)
+                      </p>
+                      <p className="text-xs text-muted-foreground">Format: Text</p>
+                    </div>
+                    <Link
+                      href="/dashboard/definitions/users"
+                      className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 whitespace-nowrap"
+                    >
+                      Manage Users <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </div>
+
+                  {/* Post Date */}
+                  <div className="flex flex-col gap-2 p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium">Post Date</span>
+                        <Badge variant="secondary" className="text-xs">
+                          Optional
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Date when transaction posted to account (defaults to transaction date if not
+                        provided)
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Format: MM/DD/YYYY (e.g., 12/27/2024)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Memo */}
+                  <div className="flex flex-col gap-2 p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium">Memo</span>
+                        <Badge variant="secondary" className="text-xs">
+                          Optional
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Additional notes or comments about the transaction
+                      </p>
+                      <p className="text-xs text-muted-foreground">Format: Text</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </CardContent>
         </Card>
       )}
