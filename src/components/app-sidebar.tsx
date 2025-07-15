@@ -9,11 +9,13 @@ import {
   Home,
   LayoutDashboard,
   List,
+  Mail,
   PieChart,
   Tag,
   Target,
   TrendingUp,
   Upload,
+  User,
   Users,
   Wallet,
   Trash2,
@@ -112,6 +114,23 @@ const data = {
       icon: Trash2,
     },
   ],
+  settings: [
+    {
+      name: 'Profile',
+      url: '/dashboard/settings/profile',
+      icon: User,
+    },
+    {
+      name: 'Household',
+      url: '/dashboard/settings/household',
+      icon: Home,
+    },
+    {
+      name: 'Email Subscriptions',
+      url: '/dashboard/settings/email-subscriptions',
+      icon: Mail,
+    },
+  ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -145,6 +164,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavGroup title="Budgeting" items={data.budgeting} />
         <NavGroup title="Definitions" items={data.definitions} />
         <NavGroup title="Utility" items={data.utility} />
+        <NavGroup title="Settings" items={data.settings} />
       </SidebarContent>
       <SidebarFooter>
         <NavUserErrorBoundary>

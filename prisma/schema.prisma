@@ -31,13 +31,14 @@ enum HouseholdRole {
 }
 
 model UserHousehold {
-  userId      String         @map("user_id") @db.Uuid
-  householdId String         @map("household_id") @db.Uuid
-  role        HouseholdRole  @default(MEMBER)
-  joinedAt    DateTime       @default(now()) @map("joined_at")
-  invitedBy   String?        @map("invited_by") @db.Uuid
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  household   Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  userId        String         @map("user_id") @db.Uuid
+  householdId   String         @map("household_id") @db.Uuid
+  role          HouseholdRole  @default(MEMBER)
+  joinedAt      DateTime       @default(now()) @map("joined_at")
+  invitedBy     String?        @map("invited_by") @db.Uuid
+  weeklySummary Boolean        @default(true) @map("weekly_summary")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household     Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
   @@id([userId, householdId])
   @@map("user_household")

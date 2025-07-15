@@ -74,7 +74,7 @@ export function NavUser() {
   }
 
   const handleAccountClick = () => {
-    router.push('/dashboard/settings')
+    router.push('/dashboard/settings/profile')
   }
 
   const displayName =

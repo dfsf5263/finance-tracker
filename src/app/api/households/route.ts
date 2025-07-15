@@ -94,6 +94,7 @@ export async function POST(request: NextRequest) {
           userId: user!.id,
           householdId: household.id,
           role: 'OWNER',
+          weeklySummary: true,
         },
       })
 

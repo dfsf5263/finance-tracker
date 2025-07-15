@@ -13,6 +13,7 @@ import {
   Settings,
   DollarSign,
   UserRoundPlus,
+  LogOut,
 } from 'lucide-react'
 import { HouseholdForm } from './household-form'
 import { useCRUD } from '@/hooks/useCRUD'
@@ -23,10 +24,14 @@ import {
   canDeleteHousehold,
   canManageHouseholdSettings,
   canInviteMembers,
+  canLeaveHousehold,
   getRoleLabel,
 } from '@/lib/role-utils'
 import { apiFetch } from '@/lib/http-utils'
 import { toast } from 'sonner'
+import { LeaveHouseholdDialog } from './leave-household-dialog'
+import { DeleteHouseholdDialog } from './delete-household-dialog'
+import { useDbUser } from '@/hooks/useDbUser'
 
 interface Household {
   id: string
@@ -37,16 +42,19 @@ interface Household {
     users: number
     categories: number
     types: number
+    transactions: number
   }
 }
 
 export function HouseholdsManager() {
   const router = useRouter()
+  const { dbUser } = useDbUser()
   const {
     refreshHouseholds,
     households: contextHouseholds,
     isLoading: contextLoading,
     getUserRole,
+    selectHousehold,
   } = useHousehold()
   const {
     items: households,
@@ -59,8 +67,12 @@ export function HouseholdsManager() {
     fetchItems,
   } = useCRUD<Household>('households', 'Household')
 
-  // Local state for editing
+  // Local state for editing, leaving, and deleting
   const [localEditingHousehold, setLocalEditingHousehold] = useState<Household | undefined>()
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
+  const [householdToLeave, setHouseholdToLeave] = useState<Household | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [householdToDelete, setHouseholdToDelete] = useState<Household | null>(null)
 
   // Track previous household count to detect creation scenarios
   const previousCountRef = useRef<number>(contextHouseholds.length)
@@ -135,31 +147,38 @@ export function HouseholdsManager() {
     }
   }
 
-  // Custom delete handler that bypasses useCRUD's permission check
-  const handleDelete = async (id: string) => {
-    // We check permissions at the component level, so directly call the API
-    const { error } = await apiFetch(`/api/households/${id}`, {
-      method: 'DELETE',
-      showErrorToast: false,
-      showRateLimitToast: true,
-    })
+  // Handle delete button click - open confirmation dialog
+  const handleDeleteClick = (household: Household) => {
+    setHouseholdToDelete(household)
+    setDeleteDialogOpen(true)
+  }
 
-    if (!error) {
-      fetchItems()
-      toast.success('Household deleted successfully')
-      // Refresh the household context to update sidebar and header
-      await refreshHouseholds()
-    } else {
-      console.error('Failed to delete household:', error)
-      if (!error.includes('Rate limit exceeded')) {
-        toast.error('Failed to delete household')
-      }
-    }
+  // Handle successful delete
+  const handleDeleteSuccess = async () => {
+    fetchItems()
+    await refreshHouseholds()
+    setHouseholdToDelete(null)
   }
 
   // Handle share/invite navigation
-  const handleShare = (householdId: string) => {
-    router.push(`/dashboard/households/${householdId}/settings?tab=invitations`)
+  const handleShare = (household: Household) => {
+    // Set the household in context
+    selectHousehold(household)
+    // Navigate to the new settings page with invitations tab
+    router.push(`/dashboard/settings/household?tab=invitations`)
+  }
+
+  // Handle leave household
+  const handleLeave = (household: Household) => {
+    setHouseholdToLeave(household)
+    setLeaveDialogOpen(true)
+  }
+
+  // Handle successful leave
+  const handleLeaveSuccess = async () => {
+    fetchItems()
+    // Refresh the household context to update sidebar and header
+    await refreshHouseholds()
   }
 
   const formatCurrency = (amount: number | null | undefined) => {
@@ -238,17 +257,27 @@ export function HouseholdsManager() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleShare(household.id)}
+                          onClick={() => handleShare(household)}
                           title="Share household"
                         >
                           <UserRoundPlus className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canLeaveHousehold(getUserRole(household.id)) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleLeave(household)}
+                          title="Leave household"
+                        >
+                          <LogOut className="h-4 w-4" />
                         </Button>
                       )}
                       {canDeleteHousehold(getUserRole(household.id)) && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(household.id)}
+                          onClick={() => handleDeleteClick(household)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -289,6 +318,28 @@ export function HouseholdsManager() {
         }}
         onSubmit={handleCreateOrUpdate}
       />
+
+      {householdToLeave && dbUser && (
+        <LeaveHouseholdDialog
+          open={leaveDialogOpen}
+          onOpenChange={setLeaveDialogOpen}
+          householdId={householdToLeave.id}
+          householdName={householdToLeave.name}
+          userId={dbUser.id}
+          onSuccess={handleLeaveSuccess}
+        />
+      )}
+
+      {/* Delete Household Dialog */}
+      {householdToDelete && (
+        <DeleteHouseholdDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          householdId={householdToDelete.id}
+          householdName={householdToDelete.name}
+          onSuccess={handleDeleteSuccess}
+        />
+      )}
     </div>
   )
 }

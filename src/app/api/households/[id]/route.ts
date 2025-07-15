@@ -123,6 +123,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let deletionCounts: Record<string, number> = {}
   try {
     const { id } = await params
 
@@ -140,33 +141,93 @@ export async function DELETE(
       )
     }
 
-    // Check if household has any transactions
-    const transactionCount = await db.transaction.count({
-      where: { householdId: id },
-    })
+    // Get counts of related records for logging and response
+    const [
+      transactionCount,
+      userHouseholdCount,
+      invitationCount,
+      accountCount,
+      householdUserCount,
+      categoryCount,
+      typeCount,
+    ] = await Promise.all([
+      db.transaction.count({ where: { householdId: id } }),
+      db.userHousehold.count({ where: { householdId: id } }),
+      db.householdInvitation.count({ where: { householdId: id } }),
+      db.householdAccount.count({ where: { householdId: id } }),
+      db.householdUser.count({ where: { householdId: id } }),
+      db.householdCategory.count({ where: { householdId: id } }),
+      db.householdType.count({ where: { householdId: id } }),
+    ])
 
-    if (transactionCount > 0) {
-      return NextResponse.json(
-        {
-          error:
-            'Cannot delete this household because it has existing transactions. Please delete all transactions first.',
-          errorType: 'HAS_TRANSACTIONS',
-        },
-        { status: 409 }
-      )
+    deletionCounts = {
+      transactions: transactionCount,
+      userHouseholds: userHouseholdCount,
+      invitations: invitationCount,
+      accounts: accountCount,
+      householdUsers: householdUserCount,
+      categories: categoryCount,
+      types: typeCount,
     }
 
-    await db.household.delete({
-      where: { id },
+    // Perform cascading deletion in a transaction
+    await db.$transaction(async (tx) => {
+      // Delete in dependency order (most dependent first)
+
+      // 1. Delete transactions (references accounts, categories, types, users)
+      await tx.transaction.deleteMany({
+        where: { householdId: id },
+      })
+
+      // 2. Delete user-household relationships
+      await tx.userHousehold.deleteMany({
+        where: { householdId: id },
+      })
+
+      // 3. Delete household invitations
+      await tx.householdInvitation.deleteMany({
+        where: { householdId: id },
+      })
+
+      // 4. Delete household accounts
+      await tx.householdAccount.deleteMany({
+        where: { householdId: id },
+      })
+
+      // 5. Delete household users
+      await tx.householdUser.deleteMany({
+        where: { householdId: id },
+      })
+
+      // 6. Delete household categories
+      await tx.householdCategory.deleteMany({
+        where: { householdId: id },
+      })
+
+      // 7. Delete household types
+      await tx.householdType.deleteMany({
+        where: { householdId: id },
+      })
+
+      // 8. Finally, delete the household itself
+      await tx.household.delete({
+        where: { id },
+      })
     })
 
-    return NextResponse.json({ message: 'Household deleted successfully' })
+    return NextResponse.json({
+      message: 'Household and all related data deleted successfully',
+      deletedCounts: deletionCounts,
+    })
   } catch (error) {
     await logApiError({
       request,
       error,
-      operation: 'delete household',
-      context: { id: (await params).id },
+      operation: 'cascade delete household',
+      context: {
+        householdId: (await params).id,
+        deletionCounts,
+      },
     })
     return NextResponse.json({ error: 'Failed to delete household' }, { status: 500 })
   }

@@ -82,6 +82,7 @@ export async function POST(
           householdId: invitation.householdId,
           role: role,
           invitedBy: invitation.inviterUserId,
+          weeklySummary: true,
         },
       })
 

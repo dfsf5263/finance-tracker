@@ -46,6 +46,24 @@ export function canManageHouseholdSettings(role?: string | HouseholdRole): boole
 }
 
 /**
+ * Check if a user can view and manage invitations
+ * Only OWNER can view invitations, MEMBER and VIEWER cannot
+ */
+export function canViewInvitations(role?: string | HouseholdRole): boolean {
+  if (!role) return false
+  return role === HouseholdRole.OWNER
+}
+
+/**
+ * Check if a user can leave a household
+ * MEMBER and VIEWER can leave, OWNER cannot (must transfer ownership first)
+ */
+export function canLeaveHousehold(role?: string | HouseholdRole): boolean {
+  if (!role) return false
+  return role === HouseholdRole.MEMBER || role === HouseholdRole.VIEWER
+}
+
+/**
  * Check if a user can remove members from household
  * Only OWNER can remove members (except themselves)
  */

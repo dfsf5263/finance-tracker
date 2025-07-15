@@ -14,10 +14,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Copy, Trash2, Calendar, User, UserPlus } from 'lucide-react'
+import { Copy, Trash2, Calendar, User, UserPlus, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { CreateInvitationModal } from '@/components/create-invitation-modal'
+import { canViewInvitations } from '@/lib/role-utils'
 
 interface Invitation {
   id: string
@@ -168,9 +169,30 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
   }
 
   const canManageMembers = currentUserRole === 'OWNER'
+  const canViewInvitationsPermission = canViewInvitations(currentUserRole || undefined)
 
   if (loading) {
     return <div className="text-center py-4">Loading invitations...</div>
+  }
+
+  // If user doesn't have permission to view invitations, show permission denied message
+  if (!canViewInvitationsPermission) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-6">
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <Lock className="h-12 w-12 mx-auto text-muted-foreground" />
+              <h3 className="text-lg font-semibold">Access Restricted</h3>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                You don&apos;t have permission to view or manage invitations for this household.
+                Contact the household owner if you need access to invitations.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   const activeInvitations = invitations.filter(
