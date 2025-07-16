@@ -357,6 +357,11 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
         }
       })
 
+      // Default postDate to transactionDate if not provided
+      if (!transaction.postDate?.trim() && transaction.transactionDate?.trim()) {
+        transaction.postDate = transaction.transactionDate
+      }
+
       // Validate required fields
       const rowErrors: ValidationError[] = []
 
@@ -477,7 +482,20 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
   const uploadTransactions = async () => {
     setUploading(true)
 
-    const { data, error } = await apiFetch<{
+    // Validate required data before upload
+    if (!selectedHousehold?.id) {
+      toast.error('No household selected')
+      setUploading(false)
+      return
+    }
+
+    if (!processedData || processedData.length === 0) {
+      toast.error('No transaction data to upload')
+      setUploading(false)
+      return
+    }
+
+    const { data, error, errorData } = await apiFetch<{
       success: boolean
       message?: string
       results?: {
@@ -540,14 +558,35 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
       setStep('complete')
     } else if (error) {
       console.error('Upload error:', error)
+      if (errorData) {
+        console.error('Error details:', errorData)
+      }
+
       // Only show toast if it's not a rate limit error (already handled by apiFetch)
       if (!error.includes('Rate limit exceeded')) {
-        // Check if this is a validation error with specific format
-        if (error.includes('Validation failed') || error.includes('validation')) {
-          toast.error('Validation errors found')
+        // Check if we have detailed validation errors
+        const apiErrorData = errorData as
+          | { validationErrors?: ValidationError[]; details?: string }
+          | undefined
+
+        if (apiErrorData?.validationErrors && apiErrorData.validationErrors.length > 0) {
+          // Set validation errors and go back to preview step
+          setValidationErrors(apiErrorData.validationErrors)
+          toast.error(`Validation failed: ${apiErrorData.validationErrors.length} errors found`)
+          setStep('preview')
+        } else if (error.includes('Validation failed') || error.includes('validation')) {
+          // Fallback for generic validation errors
+          toast.error('Validation errors found - please check your data')
+          setStep('preview')
+        } else if (error.includes('Missing entities')) {
+          // Entity validation errors
+          toast.error(
+            'Missing entities - please define required accounts, categories, types, or users first'
+          )
           setStep('preview')
         } else {
-          toast.error('Failed to upload transactions')
+          // Other errors
+          toast.error(`Upload failed: ${error}`)
         }
       }
     }

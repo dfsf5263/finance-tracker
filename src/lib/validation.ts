@@ -131,7 +131,8 @@ export function validateRequestBody<T>(
       const messages = error.issues.map((err) => `${err.path.join('.')}: ${err.message}`)
       return { success: false, error: messages.join(', ') }
     }
-    return { success: false, error: 'Invalid request data' }
+    const errorMessage = error instanceof Error ? error.message : 'Unknown validation error'
+    return { success: false, error: `Invalid request data: ${errorMessage}` }
   }
 }
 

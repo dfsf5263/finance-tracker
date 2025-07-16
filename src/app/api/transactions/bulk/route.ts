@@ -29,11 +29,13 @@ export async function POST(request: NextRequest) {
     const validation = validateRequestBody(bulkUploadRequestSchema, body)
 
     if (!validation.success) {
+      const parsedErrors = parseValidationErrors(validation.error)
+
       return NextResponse.json(
         {
           error: 'Validation failed',
           details: validation.error,
-          validationErrors: parseValidationErrors(validation.error),
+          validationErrors: parsedErrors,
         },
         { status: 400 }
       )
@@ -287,7 +289,15 @@ function parseValidationErrors(errorString: string): ValidationError[] {
   const parts = errorString.split(', ')
 
   parts.forEach((part) => {
-    const match = part.match(/transactions\.(\d+)\.(\w+): (.+)/)
+    // Try multiple regex patterns to match different Zod error formats
+    let match = part.match(/transactions\.(\d+)\.(\w+): (.+)/) // transactions.0.field: message
+    if (!match) {
+      match = part.match(/(\d+)\.(\w+): (.+)/) // 0.field: message
+    }
+    if (!match) {
+      match = part.match(/transactions\[(\d+)\]\.(\w+): (.+)/) // transactions[0].field: message
+    }
+
     if (match) {
       const [, rowIndex, field, message] = match
       errors.push({
@@ -296,6 +306,25 @@ function parseValidationErrors(errorString: string): ValidationError[] {
         value: '',
         message,
       })
+    } else {
+      // Fallback: try to extract any numbers and create a generic error
+      const numberMatch = part.match(/(\d+)/)
+      if (numberMatch) {
+        errors.push({
+          row: parseInt(numberMatch[1]) + 2,
+          field: 'unknown',
+          value: '',
+          message: part,
+        })
+      } else {
+        // Last resort: create a general error for row 1
+        errors.push({
+          row: 2,
+          field: 'general',
+          value: '',
+          message: part,
+        })
+      }
     }
   })
 

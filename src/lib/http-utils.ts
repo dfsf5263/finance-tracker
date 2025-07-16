@@ -5,6 +5,13 @@ export interface ApiResponse<T = unknown> {
   error?: string
   message?: string
   retryAfter?: number
+  validationErrors?: Array<{
+    row: number
+    field: string
+    value: string
+    message: string
+  }>
+  details?: unknown
 }
 
 export interface FetchOptions extends RequestInit {
@@ -18,7 +25,7 @@ export interface FetchOptions extends RequestInit {
 export async function apiFetch<T = unknown>(
   url: string,
   options: FetchOptions = {}
-): Promise<{ data: T | null; error: string | null; response: Response }> {
+): Promise<{ data: T | null; error: string | null; response: Response; errorData?: unknown }> {
   const { showErrorToast = true, showRateLimitToast = true, ...fetchOptions } = options
 
   try {
@@ -48,6 +55,7 @@ export async function apiFetch<T = unknown>(
         data: null,
         error: fullMessage,
         response,
+        errorData,
       }
     }
 
@@ -65,6 +73,7 @@ export async function apiFetch<T = unknown>(
         data: null,
         error: errorMessage,
         response,
+        errorData,
       }
     }
 
@@ -86,6 +95,7 @@ export async function apiFetch<T = unknown>(
       data: null,
       error: errorMessage,
       response: new Response(null, { status: 0 }),
+      errorData: undefined,
     }
   }
 }
@@ -96,13 +106,14 @@ export async function apiFetch<T = unknown>(
 export async function rateAwareApiFetch<T = unknown>(
   url: string,
   options: FetchOptions = {}
-): Promise<{ data: T | null; error: string | null; isRateLimited: boolean }> {
+): Promise<{ data: T | null; error: string | null; isRateLimited: boolean; errorData?: unknown }> {
   const result = await apiFetch<T>(url, options)
 
   return {
     data: result.data,
     error: result.error,
     isRateLimited: result.response.status === 429,
+    errorData: result.errorData,
   }
 }
 

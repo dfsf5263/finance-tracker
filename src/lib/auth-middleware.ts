@@ -39,7 +39,10 @@ export async function requireAuth(): Promise<AuthContext | NextResponse> {
   })
 
   if (!user) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'User account not properly synced. Please sign out and sign back in.' },
+      { status: 401 }
+    )
   }
 
   return {
@@ -91,7 +94,10 @@ export async function requireHouseholdAccess(
   })
 
   if (!userHousehold) {
-    return NextResponse.json({ error: 'Household not found or access denied' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'Access denied. You do not have permission to access this household.' },
+      { status: 403 }
+    )
   }
 
   return {
@@ -186,7 +192,10 @@ export async function requireTransactionAccess(
   })
 
   if (!transaction) {
-    return NextResponse.json({ error: 'Transaction not found or access denied' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'Access denied. You do not have permission to access this transaction.' },
+      { status: 403 }
+    )
   }
 
   // Get user's role for this household
@@ -284,7 +293,10 @@ export async function requireAccountAccess(
   })
 
   if (!account) {
-    return NextResponse.json({ error: 'Account not found or access denied' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'Access denied. You do not have permission to access this account.' },
+      { status: 403 }
+    )
   }
 
   // Get user's role for this household
@@ -375,7 +387,10 @@ export async function requireCategoryAccess(
   })
 
   if (!category) {
-    return NextResponse.json({ error: 'Category not found or access denied' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'Access denied. You do not have permission to access this category.' },
+      { status: 403 }
+    )
   }
 
   return {
@@ -431,7 +446,10 @@ export async function requireTypeAccess(
   })
 
   if (!type) {
-    return NextResponse.json({ error: 'Type not found or access denied' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'Access denied. You do not have permission to access this type.' },
+      { status: 403 }
+    )
   }
 
   return {
@@ -492,7 +510,10 @@ export async function requireTypeWriteAccess(
   })
 
   if (!type) {
-    return NextResponse.json({ error: 'Type not found or access denied' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'Access denied. You do not have permission to access this type.' },
+      { status: 403 }
+    )
   }
 
   // Get user's role for this household
@@ -573,7 +594,10 @@ export async function requireCategoryWriteAccess(
   })
 
   if (!category) {
-    return NextResponse.json({ error: 'Category not found or access denied' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'Access denied. You do not have permission to access this category.' },
+      { status: 403 }
+    )
   }
 
   // Get user's role for this household
@@ -652,7 +676,10 @@ export async function requireUserAccess(
   })
 
   if (!user) {
-    return NextResponse.json({ error: 'User not found or access denied' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'Access denied. You do not have permission to access this user.' },
+      { status: 403 }
+    )
   }
 
   // Get user's role for this household

@@ -1,7 +1,7 @@
 import { headers } from 'next/headers'
 import { WebhookEvent } from '@clerk/nextjs/server'
 import { Webhook } from 'svix'
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/db'
 
 export async function POST(req: Request) {
   // Get the headers
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
 
     try {
       // Create or update user in database
-      await prisma.user.upsert({
+      await db.user.upsert({
         where: { clerkUserId: id },
         create: upsertData,
         update: {
@@ -100,7 +100,7 @@ export async function POST(req: Request) {
 
     try {
       // Delete user from database
-      await prisma.user.delete({
+      await db.user.delete({
         where: { clerkUserId: id },
       })
     } catch (error) {

@@ -30,9 +30,9 @@ export async function GET() {
     if (!userWithHouseholds) {
       return NextResponse.json(
         {
-          error: 'User not found in database. Please try logging out and back in.',
+          error: 'User account not properly synced. Please sign out and sign back in.',
         },
-        { status: 404 }
+        { status: 401 }
       )
     }
 
