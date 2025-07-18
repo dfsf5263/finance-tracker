@@ -41,6 +41,7 @@ import {
   AlertCircle,
   Settings,
   ExternalLink,
+  Loader2,
 } from 'lucide-react'
 import {
   formatCurrency,
@@ -49,6 +50,7 @@ import {
   getCurrentYear,
   getCurrentMonth,
   getCurrentQuarter,
+  formatDateFromISO,
 } from '@/lib/utils'
 import { useHousehold } from '@/contexts/household-context'
 
@@ -94,6 +96,27 @@ interface HouseholdSummaryData {
     category: string
     amount: number
   }>
+}
+
+interface Transaction {
+  id: string
+  description: string
+  amount: number
+  transactionDate: string
+  postDate: string
+  account?: {
+    name: string
+  }
+  user?: {
+    name: string
+  }
+  category?: {
+    name: string
+  }
+  type?: {
+    name: string
+    isOutflow: boolean
+  }
 }
 
 const CustomTooltip = ({
@@ -175,6 +198,8 @@ export function HouseholdBudget() {
   })
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [categories, setCategories] = useState<Category[]>([])
+  const [transactions, setTransactions] = useState<Record<string, Transaction[]>>({})
+  const [loadingTransactions, setLoadingTransactions] = useState<Record<string, boolean>>({})
 
   // Generate static year list for last 5 years
   const yearOptions = Array.from({ length: 5 }, (_, i) => getCurrentYear() - i)
@@ -253,10 +278,44 @@ export function HouseholdBudget() {
     }
   }
 
+  const fetchTransactionsForCategory = async (categoryId: string) => {
+    if (!selectedHousehold || transactions[categoryId]) return
+
+    setLoadingTransactions((prev) => ({ ...prev, [categoryId]: true }))
+
+    try {
+      const params = new URLSearchParams({
+        householdId: selectedHousehold.id,
+        category: categoryId,
+        limit: '1000', // Get all transactions for the category
+      })
+
+      const dateRange = getDateRangeFromPeriod(timePeriod)
+      if (dateRange.startDate) params.append('startDate', dateRange.startDate)
+      if (dateRange.endDate) params.append('endDate', dateRange.endDate)
+
+      const response = await fetch(`/api/transactions?${params}`)
+      if (response.ok) {
+        const data = await response.json()
+        setTransactions((prev) => ({ ...prev, [categoryId]: data.transactions }))
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error)
+    } finally {
+      setLoadingTransactions((prev) => ({ ...prev, [categoryId]: false }))
+    }
+  }
+
   useEffect(() => {
     fetchHouseholdBudget()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedHousehold, timePeriod, categoryFilter, budgetType])
+
+  // Clear transactions when period or filter changes
+  useEffect(() => {
+    setTransactions({})
+    setLoadingTransactions({})
+  }, [timePeriod, categoryFilter])
 
   // Prepare chart data
   const chartData = data.map((item) => ({
@@ -660,50 +719,112 @@ export function HouseholdBudget() {
                 </CardContent>
               </Card>
 
-              {/* Detailed Table */}
+              {/* Detailed Budget Analysis with Accordion */}
               <Card className="p-4">
                 <CardHeader>
                   <CardTitle>Detailed Budget Analysis</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left p-2">Category</th>
-                          <th className="text-right p-2">Budget</th>
-                          <th className="text-right p-2">Actual</th>
-                          <th className="text-right p-2">% Used</th>
-                          <th className="text-right p-2">Variance</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.map((item) => (
-                          <tr key={item.categoryId} className="border-b">
-                            <td className="p-2 font-medium">{item.categoryName}</td>
-                            <td className="p-2 text-right">
+                  {/* Column Headers for Accordion */}
+                  <div className="grid grid-cols-5 gap-4 text-xs text-muted-foreground font-medium py-2 px-4 border-b mb-2">
+                    <div className="text-left">Category</div>
+                    <div className="text-right">Budget</div>
+                    <div className="text-right">Actual</div>
+                    <div className="text-right">% Used</div>
+                    <div className="text-right">Variance</div>
+                  </div>
+                  <Accordion
+                    type="single"
+                    collapsible
+                    className="w-full"
+                    onValueChange={(value) => {
+                      if (value) {
+                        fetchTransactionsForCategory(value)
+                      }
+                    }}
+                  >
+                    {data.map((item) => (
+                      <AccordionItem
+                        key={item.categoryId}
+                        value={item.categoryId}
+                        className="border-b"
+                      >
+                        <AccordionTrigger className="py-4 hover:no-underline">
+                          <div className="grid grid-cols-5 gap-4 w-full pr-4 text-sm">
+                            <div className="text-left font-medium">{item.categoryName}</div>
+                            <div className="text-right">
                               {item.periodBudget ? formatCurrency(item.periodBudget) : 'Not set'}
-                            </td>
-                            <td className="p-2 text-right">
-                              {formatCurrency(item.actualSpending)}
-                            </td>
-                            <td className="p-2 text-right">
+                            </div>
+                            <div className="text-right">{formatCurrency(item.actualSpending)}</div>
+                            <div className="text-right">
                               {item.periodBudget ? `${item.budgetUsedPercentage.toFixed(1)}%` : '-'}
-                            </td>
-                            <td
-                              className={`p-2 text-right font-medium ${
+                            </div>
+                            <div
+                              className={`text-right font-medium ${
                                 item.overspend ? 'text-red-600' : 'text-green-600'
                               }`}
                             >
                               {item.periodBudget
                                 ? formatCurrency((item.actualSpending - item.periodBudget) * -1)
                                 : '-'}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4">
+                          {loadingTransactions[item.categoryId] ? (
+                            <div className="flex items-center justify-center py-8">
+                              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                            </div>
+                          ) : transactions[item.categoryId] ? (
+                            <div className="mt-4 space-y-2">
+                              <div className="text-xs text-muted-foreground mb-2">
+                                Individual transactions for {item.categoryName}:
+                              </div>
+                              <div className="max-h-96 overflow-auto">
+                                <table className="w-full text-xs">
+                                  <thead className="border-b">
+                                    <tr>
+                                      <th className="text-left py-2">Date</th>
+                                      <th className="text-left py-2">Description</th>
+                                      <th className="text-left py-2">Account</th>
+                                      <th className="text-left py-2">User</th>
+                                      <th className="text-right py-2">Amount</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {transactions[item.categoryId].map((transaction) => (
+                                      <tr key={transaction.id} className="border-b">
+                                        <td className="py-2">
+                                          {formatDateFromISO(transaction.transactionDate)}
+                                        </td>
+                                        <td className="py-2">{transaction.description}</td>
+                                        <td className="py-2">{transaction.account?.name || '-'}</td>
+                                        <td className="py-2">
+                                          {transaction.user?.name || 'Household'}
+                                        </td>
+                                        <td
+                                          className={`py-2 text-right font-medium ${
+                                            transaction.type?.isOutflow
+                                              ? 'text-red-600'
+                                              : 'text-green-600'
+                                          }`}
+                                        >
+                                          {formatCurrency(transaction.amount)}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                              <div className="text-xs text-muted-foreground text-right mt-2">
+                                Total: {transactions[item.categoryId].length} transactions
+                              </div>
+                            </div>
+                          ) : null}
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
                 </CardContent>
               </Card>
             </>
