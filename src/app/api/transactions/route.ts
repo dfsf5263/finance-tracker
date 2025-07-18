@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     const user = searchParams.get('user')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const search = searchParams.get('search')
 
     if (!householdId) {
       return NextResponse.json({ error: 'householdId is required' }, { status: 400 })
@@ -53,6 +54,15 @@ export async function GET(request: NextRequest) {
       where.transactionDate = {}
       if (startDate) where.transactionDate.gte = new Date(startDate)
       if (endDate) where.transactionDate.lte = new Date(endDate)
+    }
+    if (search) {
+      where.OR = [
+        { description: { contains: search, mode: 'insensitive' } },
+        { account: { name: { contains: search, mode: 'insensitive' } } },
+        { user: { name: { contains: search, mode: 'insensitive' } } },
+        { category: { name: { contains: search, mode: 'insensitive' } } },
+        { type: { name: { contains: search, mode: 'insensitive' } } },
+      ]
     }
 
     const [transactions, total] = await Promise.all([

@@ -146,6 +146,6 @@ export const strictRateLimit = createRateLimit({
 // Enhanced bulk upload rate limiter with stricter limits
 export const bulkUploadRateLimit = createRateLimit({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 20, // Only 10 bulk uploads per 1 minute
+  maxRequests: 30, // Only 10 bulk uploads per 1 minute
   message: 'Too many bulk uploads. Please wait before uploading again.',
 })

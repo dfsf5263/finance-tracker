@@ -88,7 +88,12 @@ export async function POST(request: NextRequest) {
     if (description) categoryData.description = description
     if (icon) categoryData.icon = icon
     if (color) categoryData.color = color
-    if (annualBudget !== undefined && annualBudget !== null && annualBudget !== '') {
+    if (
+      annualBudget !== undefined &&
+      annualBudget !== null &&
+      annualBudget !== '' &&
+      annualBudget !== '0'
+    ) {
       categoryData.annualBudget = annualBudget
     }
 

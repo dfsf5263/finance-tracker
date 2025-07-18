@@ -146,6 +146,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     if (filters.user && filters.user !== 'all') params.append('user', filters.user)
     if (filters.startDate) params.append('startDate', filters.startDate)
     if (filters.endDate) params.append('endDate', filters.endDate)
+    if (filters.search) params.append('search', filters.search)
 
     const { data, error } = await apiFetch<{
       transactions: Transaction[]
@@ -156,20 +157,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     })
 
     if (data) {
-      let filteredTransactions = data.transactions
-
-      if (filters.search) {
-        filteredTransactions = filteredTransactions.filter(
-          (t: Transaction) =>
-            t.description.toLowerCase().includes(filters.search.toLowerCase()) ||
-            (t.account?.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
-            (t.user?.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
-            (t.category?.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
-            (t.type?.name || '').toLowerCase().includes(filters.search.toLowerCase())
-        )
-      }
-
-      setTransactions(filteredTransactions)
+      setTransactions(data.transactions)
       setTotalPages(data.pagination.pages)
     } else if (error) {
       console.error('Error fetching transactions:', error)

@@ -54,11 +54,6 @@ export default function DashboardPage() {
         {/* Financial Summary Cards */}
         <DashboardSummaryCards />
 
-        {/* Budget Alerts - Prominent Position */}
-        <div className="px-4 lg:px-6">
-          <BudgetAlerts />
-        </div>
-
         {/* Main Charts Section */}
         <div className="px-4 lg:px-6">
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -74,9 +69,15 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Bottom Section - Recent Activity */}
+        {/* Bottom Section - Budget Alerts & Recent Activity */}
         <div className="px-4 lg:px-6">
-          <RecentTransactionsList />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Budget Alerts */}
+            <BudgetAlerts />
+
+            {/* Recent Transactions */}
+            <RecentTransactionsList />
+          </div>
         </div>
       </div>
     </div>
