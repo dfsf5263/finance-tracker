@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logApiError } from '@/lib/error-logger'
-import { strictRateLimit } from '@/lib/rate-limit'
 import { getTransactionAnalytics } from '@/lib/analytics'
 
 export async function GET(request: NextRequest) {
   try {
-    // Apply strict rate limiting for expensive analytics queries
-    const rateLimitResult = await strictRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')

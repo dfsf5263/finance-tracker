@@ -2,14 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess, requireTypeWriteAccess } from '@/lib/auth-middleware'
-import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { id } = await params
     const type = await db.householdType.findUnique({
       where: { id },
@@ -41,10 +36,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let requestData
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { id } = await params
     requestData = await request.json()
     const { name, isOutflow } = requestData
@@ -90,10 +81,6 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { id } = await params
 
     // Verify user has write access to this type

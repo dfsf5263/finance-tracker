@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { authClient } from '@/lib/auth-client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -41,7 +41,7 @@ interface HouseholdMembersListProps {
 }
 
 export function HouseholdMembersList({ householdId }: HouseholdMembersListProps) {
-  const { user } = useUser()
+  const { data: session } = authClient.useSession()
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)
@@ -56,9 +56,7 @@ export function HouseholdMembersList({ householdId }: HouseholdMembersListProps)
         setMembers(data)
 
         // Find current user's role
-        const currentMember = data.find(
-          (m: Member) => m.user.email === user?.primaryEmailAddress?.emailAddress
-        )
+        const currentMember = data.find((m: Member) => m.user.email === session?.user?.email)
         if (currentMember) {
           setCurrentUserRole(currentMember.role)
         }
@@ -70,7 +68,7 @@ export function HouseholdMembersList({ householdId }: HouseholdMembersListProps)
     } finally {
       setLoading(false)
     }
-  }, [householdId, user?.primaryEmailAddress?.emailAddress])
+  }, [householdId, session?.user?.email])
 
   useEffect(() => {
     fetchMembers()
@@ -154,7 +152,7 @@ export function HouseholdMembersList({ householdId }: HouseholdMembersListProps)
   }
 
   const canManageMembers = currentUserRole === 'OWNER'
-  const currentUserEmail = user?.primaryEmailAddress?.emailAddress
+  const currentUserEmail = session?.user?.email
 
   if (loading) {
     return <div className="text-center py-4">Loading members...</div>

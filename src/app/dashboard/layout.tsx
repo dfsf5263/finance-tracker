@@ -6,7 +6,7 @@ import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
 import { HouseholdProvider, useHousehold } from '@/contexts/household-context'
 import { HouseholdCreationModal } from '@/components/household-creation-modal'
-import { SessionMonitor } from '@/components/session-monitor'
+import { AuthGuard } from '@/components/auth-guard'
 import { getPageTitle } from '@/lib/route-titles'
 
 function DashboardContent({ children, title }: { children: React.ReactNode; title: string }) {
@@ -15,7 +15,6 @@ function DashboardContent({ children, title }: { children: React.ReactNode; titl
 
   return (
     <>
-      <SessionMonitor />
       <SidebarProvider
         style={
           {
@@ -40,8 +39,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const title = getPageTitle(pathname)
 
   return (
-    <HouseholdProvider>
-      <DashboardContent title={title}>{children}</DashboardContent>
-    </HouseholdProvider>
+    <AuthGuard>
+      <HouseholdProvider>
+        <DashboardContent title={title}>{children}</DashboardContent>
+      </HouseholdProvider>
+    </AuthGuard>
   )
 }

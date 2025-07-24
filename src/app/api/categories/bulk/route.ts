@@ -2,15 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess } from '@/lib/auth-middleware'
-import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   let requestData
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     requestData = await request.json()
     const { categories, householdId } = requestData
 

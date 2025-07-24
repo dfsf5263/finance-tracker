@@ -257,9 +257,6 @@ export function RecentTransactionsList() {
             <p className="text-sm text-muted-foreground">
               Showing top 10 outflow transactions this month
             </p>
-            <button className="text-sm text-primary hover:underline mt-1">
-              View all transactions →
-            </button>
           </div>
         )}
       </CardContent>

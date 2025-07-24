@@ -3,14 +3,9 @@ import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
 import { requireAccountAccess, requireAccountWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody, accountUpdateSchema } from '@/lib/validation'
-import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { id } = await params
 
     // Verify user has access to this account
@@ -35,10 +30,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let requestData
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { id } = await params
 
     // Verify user has write access to this account
@@ -86,10 +77,6 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { id } = await params
 
     // Verify user has write access to this account

@@ -3,14 +3,9 @@ import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess, requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody, accountCreateSchema } from '@/lib/validation'
-import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { searchParams } = new URL(request.url)
     const householdId = searchParams.get('householdId')
 
@@ -46,10 +41,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let requestData
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     // Parse and validate request body
     requestData = await request.json()
     const validation = validateRequestBody(accountCreateSchema, requestData)

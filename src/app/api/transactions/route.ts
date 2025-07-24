@@ -5,14 +5,9 @@ import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess, requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody, transactionCreateSchema } from '@/lib/validation'
-import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
   try {
-    // Apply api rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
@@ -113,10 +108,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let body
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     // Parse and validate request body
     body = await request.json()
     const validation = validateRequestBody(transactionCreateSchema, body)

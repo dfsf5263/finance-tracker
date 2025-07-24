@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
-import { apiRateLimit } from '@/lib/rate-limit'
 import { requireHouseholdAccess, requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 
 export async function GET(request: NextRequest) {
   try {
-    // Apply api rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { searchParams } = new URL(request.url)
     const householdId = searchParams.get('householdId')
 
@@ -45,10 +40,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let data
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     data = await request.json()
     const { name, annualBudget, householdId } = data
 

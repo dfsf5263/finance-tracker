@@ -112,10 +112,6 @@ function sanitizeRequestData(data: unknown): unknown {
     'api_key',
     'access_token',
     'refresh_token',
-    'clerk_user_id',
-    'svix-signature',
-    'svix-id',
-    'svix-timestamp',
   ]
 
   const sanitized: Record<string, unknown> | unknown[] = Array.isArray(data) ? [] : {}
@@ -155,8 +151,7 @@ function sanitizeHeaders(headers: Record<string, string>): Record<string, string
     if (
       keyLower.includes('authorization') ||
       keyLower.includes('token') ||
-      keyLower.includes('secret') ||
-      keyLower.includes('svix-signature')
+      keyLower.includes('secret')
     ) {
       sanitized[key] = value
         ? `${value.substring(0, 2)}***${value.substring(value.length - 2)}`

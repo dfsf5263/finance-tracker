@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { authCompat } from '@/lib/auth-helpers'
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { HouseholdRole } from '@prisma/client'
@@ -8,7 +8,6 @@ export interface AuthContext {
   userId: string
   user: {
     id: string
-    clerkUserId: string
     email: string
     firstName: string | null
     lastName: string | null
@@ -20,7 +19,7 @@ export interface AuthContext {
  * Returns the authenticated user context or an error response
  */
 export async function requireAuth(): Promise<AuthContext | NextResponse> {
-  const { userId } = await auth()
+  const { userId } = await authCompat()
 
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -28,10 +27,9 @@ export async function requireAuth(): Promise<AuthContext | NextResponse> {
 
   // Get user from database
   const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
+    where: { id: userId },
     select: {
       id: true,
-      clerkUserId: true,
       email: true,
       firstName: true,
       lastName: true,
@@ -77,7 +75,7 @@ export async function requireHouseholdAccess(
     where: {
       householdId,
       user: {
-        clerkUserId: authResult.userId,
+        id: authResult.userId,
       },
     },
     include: {
@@ -163,7 +161,7 @@ export async function requireTransactionAccess(
         members: {
           some: {
             user: {
-              clerkUserId: authResult.userId,
+              id: authResult.userId,
             },
           },
         },
@@ -179,7 +177,7 @@ export async function requireTransactionAccess(
           members: {
             where: {
               user: {
-                clerkUserId: authResult.userId,
+                id: authResult.userId,
               },
             },
             include: {
@@ -268,7 +266,7 @@ export async function requireAccountAccess(
         members: {
           some: {
             user: {
-              clerkUserId: authResult.userId,
+              id: authResult.userId,
             },
           },
         },
@@ -280,7 +278,7 @@ export async function requireAccountAccess(
           members: {
             where: {
               user: {
-                clerkUserId: authResult.userId,
+                id: authResult.userId,
               },
             },
             include: {
@@ -367,7 +365,7 @@ export async function requireCategoryAccess(
         members: {
           some: {
             user: {
-              clerkUserId: authResult.userId,
+              id: authResult.userId,
             },
           },
         },
@@ -426,7 +424,7 @@ export async function requireTypeAccess(
         members: {
           some: {
             user: {
-              clerkUserId: authResult.userId,
+              id: authResult.userId,
             },
           },
         },
@@ -485,7 +483,7 @@ export async function requireTypeWriteAccess(
         members: {
           some: {
             user: {
-              clerkUserId: authResult.userId,
+              id: authResult.userId,
             },
           },
         },
@@ -497,7 +495,7 @@ export async function requireTypeWriteAccess(
           members: {
             where: {
               user: {
-                clerkUserId: authResult.userId,
+                id: authResult.userId,
               },
             },
             include: {
@@ -569,7 +567,7 @@ export async function requireCategoryWriteAccess(
         members: {
           some: {
             user: {
-              clerkUserId: authResult.userId,
+              id: authResult.userId,
             },
           },
         },
@@ -581,7 +579,7 @@ export async function requireCategoryWriteAccess(
           members: {
             where: {
               user: {
-                clerkUserId: authResult.userId,
+                id: authResult.userId,
               },
             },
             include: {
@@ -651,7 +649,7 @@ export async function requireUserAccess(
         members: {
           some: {
             user: {
-              clerkUserId: authResult.userId,
+              id: authResult.userId,
             },
           },
         },
@@ -663,7 +661,7 @@ export async function requireUserAccess(
           members: {
             where: {
               user: {
-                clerkUserId: authResult.userId,
+                id: authResult.userId,
               },
             },
             include: {

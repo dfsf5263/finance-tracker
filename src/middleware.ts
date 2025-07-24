@@ -1,20 +1,35 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { bulkUploadSizeLimit, standardApiSizeLimit } from '@/lib/middleware/request-size'
+import type { NextRequest } from 'next/server'
+import { getSessionCookie } from 'better-auth/cookies'
+import { standardApiSizeLimit, bulkUploadSizeLimit } from '@/lib/middleware/request-size'
 
 // Define public routes that don't require authentication
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/api/webhooks/clerk(.*)',
-  '/api/health',
-  '/api/cron/(.*)',
-])
+const isPublicRoute = (pathname: string) => {
+  const publicPaths = [
+    '/',
+    '/sign-in',
+    '/sign-up',
+    '/forgot-password',
+    '/reset-password',
+    '/verify-email-sent',
+    '/email-verified',
+    '/api/auth',
+    '/api/health',
+    '/api/cron',
+  ]
 
-export default clerkMiddleware(async (auth, req) => {
-  // Add security headers to all responses
+  return publicPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
+}
+
+// Define routes that require partial authentication (signed in but may need 2FA)
+const isPartialAuthRoute = (pathname: string) => {
+  const partialAuthPaths = ['/two-factor']
+  return partialAuthPaths.includes(pathname)
+}
+
+export default async function middleware(req: NextRequest) {
   const response = NextResponse.next()
+  const pathname = req.nextUrl.pathname
 
   // CORS headers for API routes
   if (req.nextUrl.pathname.startsWith('/api/')) {
@@ -27,6 +42,7 @@ export default clerkMiddleware(async (auth, req) => {
       const sizeCheck = await standardApiSizeLimit(req)
       if (sizeCheck) return sizeCheck
     }
+
     response.headers.set('Access-Control-Allow-Origin', req.headers.get('origin') || '*')
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
     response.headers.set(
@@ -52,11 +68,11 @@ export default clerkMiddleware(async (auth, req) => {
   // Content Security Policy
   const cspHeader = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.com https://*.clerk.com https://*.clerk.accounts.dev https://clerk.finance.crowland.us https://challenges.cloudflare.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' https://fonts.gstatic.com",
-    "connect-src 'self' https://clerk.com https://*.clerk.com https://*.clerk.accounts.dev https://api.clerk.com https://clerk.finance.crowland.us wss://*.clerk.com wss://*.clerk.accounts.dev wss://clerk.finance.crowland.us",
+    "connect-src 'self'",
     "frame-src 'self' https://challenges.cloudflare.com",
     "worker-src 'self' blob:",
     "object-src 'none'",
@@ -77,12 +93,32 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   // Protect all routes except public ones
-  if (!isPublicRoute(req)) {
-    await auth.protect()
+  if (!isPublicRoute(pathname)) {
+    // Check for Better Auth session cookie (optimistic check)
+    const sessionCookie = getSessionCookie(req)
+
+    // Handle partial auth routes (like 2FA verification)
+    if (isPartialAuthRoute(pathname)) {
+      // Check for two-factor cookie using Better Auth's default prefix
+      const twoFactorCookie = req.cookies.get('better-auth.two_factor')
+
+      if (!twoFactorCookie && !sessionCookie) {
+        // No partial authentication, redirect to sign-in
+        return NextResponse.redirect(new URL('/sign-in', req.url))
+      }
+
+      // Allow access to 2FA route with partial auth
+      return response
+    }
+
+    if (!sessionCookie) {
+      // Redirect to sign-in for protected routes
+      return NextResponse.redirect(new URL('/sign-in', req.url))
+    }
   }
 
   return response
-})
+}
 
 export const config = {
   matcher: [

@@ -3,7 +3,6 @@ import { db } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
-import { bulkUploadRateLimit } from '@/lib/rate-limit'
 import { requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody } from '@/lib/validation'
 import { bulkUploadRequestSchema, type BulkTransaction } from '@/lib/validation/bulk-upload'
@@ -20,10 +19,6 @@ export async function POST(request: NextRequest) {
   let body: unknown
 
   try {
-    // Apply general bulk upload rate limiting
-    const rateLimitResult = await bulkUploadRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     // Parse and validate body
     body = await request.json()
     const validation = validateRequestBody(bulkUploadRequestSchema, body)

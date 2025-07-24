@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { authClient } from '@/lib/auth-client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -47,7 +47,7 @@ interface HouseholdInvitationsListProps {
 }
 
 export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsListProps) {
-  const { user } = useUser()
+  const { data: session } = authClient.useSession()
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -71,7 +71,7 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
   }, [householdId])
 
   const fetchCurrentUserRole = useCallback(async () => {
-    if (!user?.primaryEmailAddress?.emailAddress) return
+    if (!session?.user?.email) return
 
     try {
       const response = await fetch(`/api/households/${householdId}/members`)
@@ -79,7 +79,7 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
         const members = await response.json()
         const currentMember = members.find(
           (member: { user: { email: string }; role: string }) =>
-            member.user.email === user.primaryEmailAddress?.emailAddress
+            member.user.email === session.user.email
         )
         if (currentMember) {
           setCurrentUserRole(currentMember.role)
@@ -88,7 +88,7 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
     } catch {
       // Silently fail - user role check is not critical
     }
-  }, [householdId, user?.primaryEmailAddress?.emailAddress])
+  }, [householdId, session?.user?.email])
 
   useEffect(() => {
     fetchInvitations()

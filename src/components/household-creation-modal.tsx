@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Home } from 'lucide-react'
 import { useHousehold } from '@/contexts/household-context'
 import { toast } from 'sonner'
-import { useUser } from '@clerk/nextjs'
+import { authClient } from '@/lib/auth-client'
 
 interface HouseholdCreationModalProps {
   open: boolean
@@ -17,7 +17,7 @@ interface HouseholdCreationModalProps {
 
 export function HouseholdCreationModal({ open, isFirstTime = false }: HouseholdCreationModalProps) {
   const { completeHouseholdCreation } = useHousehold()
-  const { user } = useUser()
+  const { data: session } = authClient.useSession()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
@@ -25,9 +25,10 @@ export function HouseholdCreationModal({ open, isFirstTime = false }: HouseholdC
   })
 
   const getDisplayName = () => {
-    if (!user) return 'User'
+    if (!session?.user) return 'User'
+    const user = session.user
     return (
-      user.fullName ||
+      user.name ||
       `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
       user.firstName ||
       'User'

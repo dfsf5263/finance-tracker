@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { ensureUser } from '@/lib/ensure-user'
 import { logApiError } from '@/lib/error-logger'
-import { apiRateLimit } from '@/lib/rate-limit'
 import { requireHouseholdAccess } from '@/lib/auth-middleware'
 import { canInviteMembers } from '@/lib/role-utils'
 import { sendInvitationEmail } from '@/lib/email'
@@ -10,10 +9,6 @@ import { sendInvitationEmail } from '@/lib/email'
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let user
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { id } = await params
 
     // Ensure user exists in database
@@ -75,10 +70,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   let user
   let data
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { id } = await params
 
     // Verify user has access to this household

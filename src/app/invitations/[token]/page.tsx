@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useUser } from '@clerk/nextjs'
+import { authClient } from '@/lib/auth-client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -32,7 +32,7 @@ interface InvitationData {
 export default function InvitationPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, isLoaded } = useUser()
+  const { data: session } = authClient.useSession()
   const token = params.token as string
 
   const [invitation, setInvitation] = useState<InvitationData | null>(null)
@@ -64,7 +64,7 @@ export default function InvitationPage() {
   }, [token, fetchInvitation])
 
   const handleAcceptInvitation = async () => {
-    if (!user || !invitation) {
+    if (!session?.user || !invitation) {
       router.push('/sign-in')
       return
     }
@@ -168,21 +168,7 @@ export default function InvitationPage() {
     )
   }
 
-  if (!isLoaded) {
-    return (
-      <div className="@container/main flex flex-1 flex-col gap-2">
-        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-          <div className="px-4 lg:px-6">
-            <div className="flex items-center justify-center min-h-[50vh]">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!user) {
+  if (!session?.user) {
     return (
       <div className="@container/main flex flex-1 flex-col gap-2">
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">

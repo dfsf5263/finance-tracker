@@ -3,15 +3,10 @@ import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
 import { requireCategoryAccess, requireCategoryWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody, categoryUpdateSchema } from '@/lib/validation'
-import { apiRateLimit } from '@/lib/rate-limit'
 import { z } from 'zod'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { id } = await params
 
     // Verify user has access to this category
@@ -36,10 +31,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let data
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { id } = await params
 
     // Verify user has write access to this category
@@ -108,10 +99,6 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { id } = await params
 
     // Verify user has write access to this category

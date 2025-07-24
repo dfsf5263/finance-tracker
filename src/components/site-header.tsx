@@ -1,13 +1,41 @@
+'use client'
+
+import { useState } from 'react'
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
+import { Button } from '@/components/ui/button'
 import { ModeToggle } from '@/components/mode-toggle'
+import { TransactionForm } from '@/components/transaction-form'
 import { useHousehold } from '@/contexts/household-context'
-import { Home } from 'lucide-react'
+import { Home, Plus } from 'lucide-react'
+import { toast } from 'sonner'
+import { apiFetch } from '@/lib/http-utils'
+import { invalidateActiveMonthCache } from '@/hooks/use-active-month'
+import { canManageData } from '@/lib/role-utils'
+
+interface Transaction {
+  id: string
+  accountId: string
+  userId: string | null
+  transactionDate: string
+  postDate: string
+  description: string
+  categoryId: string
+  typeId: string
+  amount: number
+  memo?: string
+  householdId: string
+  createdAt: string
+  updatedAt: string
+}
 
 export function SiteHeader({ title }: { title: string }) {
   const { state } = useSidebar()
-  const { selectedHousehold, isLoading } = useHousehold()
+  const { selectedHousehold, isLoading, getUserRole } = useHousehold()
+  const userRole = getUserRole()
+  const canEdit = canManageData(userRole)
   const isCollapsed = state === 'collapsed'
+  const [showTransactionForm, setShowTransactionForm] = useState(false)
 
   const renderHouseholdInfo = () => {
     if (!isCollapsed) return null
@@ -55,9 +83,54 @@ export function SiteHeader({ title }: { title: string }) {
         <h1 className="text-base font-medium">{title}</h1>
         {renderHouseholdInfo()}
         <div className="ml-auto flex items-center gap-2">
+          {canEdit && (
+            <Button variant="outline" size="icon" onClick={() => setShowTransactionForm(true)}>
+              <Plus className="h-4 w-4" />
+              <span className="sr-only">Add transaction</span>
+            </Button>
+          )}
           <ModeToggle />
         </div>
       </div>
+
+      <TransactionForm
+        open={showTransactionForm}
+        onClose={() => setShowTransactionForm(false)}
+        onSubmit={handleTransactionSubmit}
+      />
     </header>
   )
+
+  async function handleTransactionSubmit(
+    transactionData: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'> & { amount: number }
+  ) {
+    const { data, error } = await apiFetch<Transaction>('/api/transactions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(transactionData),
+      showErrorToast: false, // Handle success/error toasts manually
+      showRateLimitToast: true, // Show rate limit toasts
+    })
+
+    if (data) {
+      // Success case
+      setShowTransactionForm(false)
+
+      // Invalidate active month cache to refresh dashboard components
+      if (selectedHousehold?.id) {
+        invalidateActiveMonthCache(selectedHousehold.id)
+      }
+
+      // Show success toast
+      toast.success('Transaction created successfully')
+    } else if (error) {
+      console.error('Error saving transaction:', error)
+      // Only show toast if it's not a rate limit error (already handled by apiFetch)
+      if (!error.includes('Rate limit exceeded')) {
+        toast.error(error || 'Failed to save transaction')
+      }
+    }
+  }
 }

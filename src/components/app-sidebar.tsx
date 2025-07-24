@@ -11,6 +11,7 @@ import {
   List,
   Mail,
   PieChart,
+  Shield,
   Tag,
   Target,
   TrendingUp,
@@ -119,6 +120,11 @@ const data = {
       name: 'Profile',
       url: '/dashboard/settings/profile',
       icon: User,
+    },
+    {
+      name: 'Security',
+      url: '/dashboard/settings/security',
+      icon: Shield,
     },
     {
       name: 'Household',

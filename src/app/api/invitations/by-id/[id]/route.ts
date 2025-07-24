@@ -1,29 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { authCompat } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
-import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { id } = await params
 
     // Get the authenticated user
-    const { userId } = await auth()
+    const { userId } = await authCompat()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Find the user in our database
     const user = await db.user.findUnique({
-      where: { clerkUserId: userId },
+      where: { id: userId },
     })
 
     if (!user) {

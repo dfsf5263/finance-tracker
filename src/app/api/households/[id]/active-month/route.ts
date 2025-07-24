@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { authCompat } from '@/lib/auth-helpers'
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { getMonthName, getCurrentMonth, getCurrentYear } from '@/lib/utils'
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   try {
     // Step 1: Authentication
-    const { userId } = await auth()
+    const { userId } = await authCompat()
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         members: {
           some: {
             user: {
-              clerkUserId: userId,
+              id: userId,
             },
           },
         },

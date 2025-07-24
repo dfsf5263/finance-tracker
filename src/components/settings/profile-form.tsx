@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { authClient } from '@/lib/auth-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
 export function ProfileForm() {
-  const { user, isLoaded } = useUser()
+  const { data: session } = authClient.useSession()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     firstName: '',
@@ -17,22 +17,22 @@ export function ProfileForm() {
   })
 
   useEffect(() => {
-    if (user) {
+    if (session?.user) {
       setFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
+        firstName: session.user.firstName || '',
+        lastName: session.user.lastName || '',
       })
     }
-  }, [user])
+  }, [session?.user])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) return
+    if (!session?.user) return
 
     setLoading(true)
     try {
-      // Update Clerk user
-      await user.update({
+      // Update user profile using Better Auth
+      await authClient.updateUser({
         firstName: formData.firstName || undefined,
         lastName: formData.lastName || undefined,
       })
@@ -46,7 +46,7 @@ export function ProfileForm() {
     }
   }
 
-  if (!isLoaded) {
+  if (!session) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin" />
@@ -54,7 +54,7 @@ export function ProfileForm() {
     )
   }
 
-  if (!user) {
+  if (!session.user) {
     return <div>No user found</div>
   }
 
@@ -67,7 +67,7 @@ export function ProfileForm() {
             <Input
               id="email"
               type="email"
-              value={user.primaryEmailAddress?.emailAddress || ''}
+              value={session.user.email || ''}
               disabled
               className="bg-muted"
             />

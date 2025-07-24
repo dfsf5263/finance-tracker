@@ -1,25 +1,30 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { authClient } from '@/lib/auth-client'
 
 interface DbUser {
   id: string
-  clerkUserId: string
   email: string
   firstName?: string
   lastName?: string
+  emailVerified: boolean
+  twoFactorEnabled?: boolean
 }
 
 export function useDbUser() {
-  const { user: clerkUser, isLoaded } = useUser()
+  const { data: session, isPending } = authClient.useSession()
   const [dbUser, setDbUser] = useState<DbUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchDbUser() {
-      if (!isLoaded || !clerkUser) {
+      if (isPending) {
+        return
+      }
+
+      if (!session?.user) {
         setLoading(false)
         return
       }
@@ -45,12 +50,12 @@ export function useDbUser() {
     }
 
     fetchDbUser()
-  }, [clerkUser, isLoaded])
+  }, [session, isPending])
 
   return {
     dbUser,
     loading,
     error,
-    isLoaded: isLoaded && !loading,
+    isLoaded: !isPending && !loading,
   }
 }

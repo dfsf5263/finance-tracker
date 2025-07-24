@@ -32,6 +32,7 @@ This is a **Personal Finance Tracker** application built with Next.js 15 using t
 - **PostgreSQL 17** database with native UUID support
 - **Prisma ORM** for type-safe database operations and migrations
 - **Next.js API Routes** for RESTful backend services
+- **Better Auth** for email/password authentication with server-side sessions reference **docs/BETTER-AUTH.md** for documentation
 
 **Development Tools:**
 - **Biome** for fast formatting and linting (replaces ESLint + Prettier)

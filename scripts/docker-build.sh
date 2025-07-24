@@ -13,7 +13,6 @@ FULL_IMAGE_NAME="${DOCKER_REGISTRY}/${IMAGE_NAME}"
 PUSH=false
 TAG="latest"
 VERSION=""
-CLERK_PUBLIC_KEY=""
 PLATFORM="linux/amd64"
 
 # Colors for output
@@ -48,21 +47,15 @@ show_usage() {
     echo "  -p, --push                     Push image to Docker Hub after building"
     echo "  -t, --tag TAG                  Tag for the image (default: latest)"
     echo "  -v, --version VER              Version tag (will create additional tag)"
-    echo "  -k, --clerk-key KEY            Clerk publishable key (required)"
     echo "      --platform PLATFORM       Target platform (default: linux/amd64)"
     echo "  -h, --help                     Show this help message"
     echo ""
-    echo "Environment Variables:"
-    echo "  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY   Clerk publishable key (alternative to --clerk-key)"
-    echo ""
     echo "Examples:"
-    echo "  $0 --clerk-key pk_live_...                              # Build with explicit key"
-    echo "  $0 --push --clerk-key pk_live_...                       # Build and push"
-    echo "  $0 --tag dev --clerk-key pk_live_...                    # Build with dev tag"
-    echo "  $0 --platform linux/arm64 --clerk-key pk_live_...       # Build for ARM64"
-    echo "  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_... $0 --push # Build with env var"
-    echo ""
-    echo "Note: Clerk publishable key must be explicitly provided (no .env.local fallback)"
+    echo "  $0                                                       # Basic build"
+    echo "  $0 --push                                                # Build and push"
+    echo "  $0 --tag dev                                             # Build with dev tag"
+    echo "  $0 --platform linux/arm64                               # Build for ARM64"
+    echo "  $0 --push --version v1.0.0                              # Build and push with version"
 }
 
 # Parse command line arguments
@@ -78,10 +71,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         -v|--version)
             VERSION="$2"
-            shift 2
-            ;;
-        -k|--clerk-key)
-            CLERK_PUBLIC_KEY="$2"
             shift 2
             ;;
         --platform)
@@ -126,36 +115,10 @@ log "Push to registry: ${PUSH}"
 log "Building Docker image..."
 PRIMARY_TAG="${FULL_IMAGE_NAME}:${TAG}"
 
-# Determine Clerk public key (from command line or environment)
-if [ -n "$CLERK_PUBLIC_KEY" ]; then
-    # Use key provided via command line
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="$CLERK_PUBLIC_KEY"
-elif [ -z "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" ]; then
-    # No key provided via command line or environment
-    error "Missing required Clerk public key"
-    echo ""
-    echo "Provide the Clerk publishable key using one of these methods:"
-    echo "  1. Command line: $0 --clerk-key pk_live_..."
-    echo "  2. Environment:  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_... $0"
-    echo ""
-    echo "Note: .env.local is not used to prevent accidental environment mixing"
-    echo "Note: CLERK_SECRET_KEY is only needed at runtime, not during build"
-    exit 1
-fi
-
-# Validate the key format
-if [[ ! "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" =~ ^pk_(test_|live_) ]]; then
-    error "Invalid Clerk publishable key format"
-    echo "Expected format: pk_test_... or pk_live_..."
-    echo "Provided: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:0:10}..."
-    exit 1
-fi
-
-log "Building with Clerk public key (secret keys provided at runtime only)"
+log "Building with Better Auth (all configuration provided at runtime)"
 
 if docker build \
     --platform "${PLATFORM}" \
-    --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}" \
     -t "${PRIMARY_TAG}" .; then
     success "Docker image built successfully: ${PRIMARY_TAG}"
 else
@@ -236,7 +199,8 @@ echo "  docker run -d \\"
 echo "    --name finance-tracker \\"
 echo "    -p 3000:3000 \\"
 echo "    -e DATABASE_URL=\"postgresql://user:pass@host:5432/db\" \\"
-echo "    -e NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=\"${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}\" \\"
-echo "    -e CLERK_SECRET_KEY=\"sk_live_...\" \\"
-echo "    -e CLERK_WEBHOOK_SECRET=\"whsec_...\" \\"
+echo "    -e BETTER_AUTH_SECRET=\"your-secret-key\" \\"
+echo "    -e BETTER_AUTH_URL=\"http://localhost:3000\" \\"
+echo "    -e RESEND_API_KEY=\"re_...\" \\"
+echo "    -e EMAIL_FROM_ADDRESS=\"noreply@yourdomain.com\" \\"
 echo "    ${PRIMARY_TAG}"

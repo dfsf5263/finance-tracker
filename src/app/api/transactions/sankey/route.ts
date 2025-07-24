@@ -3,7 +3,6 @@ import { db } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess } from '@/lib/auth-middleware'
-import { strictRateLimit } from '@/lib/rate-limit'
 
 interface SankeyNode {
   name: string
@@ -19,10 +18,6 @@ interface SankeyLink {
 
 export async function GET(request: NextRequest) {
   try {
-    // Apply strict rate limiting for expensive sankey diagram queries
-    const rateLimitResult = await strictRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')

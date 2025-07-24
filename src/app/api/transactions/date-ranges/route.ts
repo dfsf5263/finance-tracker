@@ -3,14 +3,9 @@ import { db } from '@/lib/db'
 import { getCurrentYear, getCurrentMonth } from '@/lib/utils'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess } from '@/lib/auth-middleware'
-import { apiRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
   try {
-    // Apply rate limiting
-    const rateLimitResult = await apiRateLimit(request)
-    if (rateLimitResult) return rateLimitResult
-
     const { searchParams } = new URL(request.url)
     const householdId = searchParams.get('householdId')
 

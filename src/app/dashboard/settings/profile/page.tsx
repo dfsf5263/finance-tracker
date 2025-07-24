@@ -1,6 +1,7 @@
 'use client'
 
 import { ProfileForm } from '@/components/settings/profile-form'
+import { PasswordForm } from '@/components/settings/password-form'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function SettingsPage() {
@@ -16,6 +17,16 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="p-6">
                 <ProfileForm />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="p-6">
+                <CardTitle>Change Password</CardTitle>
+                <CardDescription>Update your account password for security</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <PasswordForm />
               </CardContent>
             </Card>
           </div>
