@@ -3,8 +3,10 @@ import { db } from '@/lib/db'
 import { sendWeeklySummaryEmail } from '@/lib/email'
 import { generateHouseholdSummary } from '@/lib/weekly-summary'
 import { logApiError } from '@/lib/error-logger'
+import logger from '@/lib/logger'
+import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
-export async function POST(request: NextRequest) {
+export const POST = withApiLogging(async (request: NextRequest) => {
   try {
     // Verify cron secret
     const authHeader = request.headers.get('authorization')
@@ -40,7 +42,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    console.log(`Found ${usersWithHouseholds.length} users with weekly summaries enabled`)
+    logger.info({ count: usersWithHouseholds.length }, 'found users with weekly summaries enabled')
 
     const emailResults = []
 
@@ -61,17 +63,18 @@ export async function POST(request: NextRequest) {
               summaries.push(summary)
             }
           } catch (error) {
-            console.error(
-              `Error generating summary for household ${userHousehold.household.id}:`,
-              error
+            logger.error(
+              { err: error, householdId: userHousehold.household.id },
+              'error generating summary for household'
             )
             // Continue processing other households
           }
         }
 
         if (summaries.length > 0) {
-          console.log(
-            `Sending weekly summary to ${user.email} with ${summaries.length} household(s)`
+          logger.info(
+            { email: user.email, householdCount: summaries.length },
+            'sending weekly summary'
           )
           // Send email with all household summaries
           const emailResult = await sendWeeklySummaryEmail({
@@ -88,12 +91,13 @@ export async function POST(request: NextRequest) {
             error: emailResult.error,
           })
         } else {
-          console.log(
-            `Skipping email for ${user.email} - no households with transactions for the reporting period`
+          logger.info(
+            { email: user.email },
+            'skipping email - no households with transactions for the reporting period'
           )
         }
       } catch (error) {
-        console.error(`Error processing user ${user.id}:`, error)
+        logger.error({ err: error, userId: user.id }, 'error processing user for weekly summary')
         emailResults.push({
           userId: user.id,
           email: user.email,
@@ -106,7 +110,7 @@ export async function POST(request: NextRequest) {
     const successCount = emailResults.filter((r) => r.success).length
     const failureCount = emailResults.filter((r) => !r.success).length
 
-    console.log(`Weekly summary emails sent: ${successCount} successful, ${failureCount} failed`)
+    logger.info({ successful: successCount, failed: failureCount }, 'weekly summary emails sent')
 
     return NextResponse.json({
       message: 'Weekly summaries processed',
@@ -123,7 +127,6 @@ export async function POST(request: NextRequest) {
       error,
       operation: 'send weekly summaries',
     })
-    console.error('Error in weekly summary cron job:', error)
     return NextResponse.json({ error: 'Failed to process weekly summaries' }, { status: 500 })
   }
-}
+})

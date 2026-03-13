@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logApiError } from '@/lib/error-logger'
 import { getTransactionAnalytics } from '@/lib/analytics'
+import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
-export async function GET(request: NextRequest) {
+export const GET = withApiLogging(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('startDate')
@@ -35,4 +36,4 @@ export async function GET(request: NextRequest) {
     })
     return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 })
   }
-}
+})

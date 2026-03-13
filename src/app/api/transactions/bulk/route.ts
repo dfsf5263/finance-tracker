@@ -6,6 +6,7 @@ import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody } from '@/lib/validation'
 import { bulkUploadRequestSchema, type BulkTransaction } from '@/lib/validation/bulk-upload'
+import { withApiLogging } from '@/lib/middleware/with-api-logging'
 // parseMMDDYYYY is no longer needed - dates are now in ISO format from validation
 
 interface ValidationError {
@@ -15,7 +16,7 @@ interface ValidationError {
   message: string
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withApiLogging(async (request: NextRequest) => {
   let body: unknown
 
   try {
@@ -276,7 +277,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
 // Helper function to parse Zod validation errors into our format
 function parseValidationErrors(errorString: string): ValidationError[] {

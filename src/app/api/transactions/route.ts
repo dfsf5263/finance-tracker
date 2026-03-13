@@ -5,8 +5,9 @@ import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess, requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody, transactionCreateSchema } from '@/lib/validation'
+import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
-export async function GET(request: NextRequest) {
+export const GET = withApiLogging(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -103,9 +104,9 @@ export async function GET(request: NextRequest) {
     })
     return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withApiLogging(async (request: NextRequest) => {
   let body
   try {
     // Parse and validate request body
@@ -192,4 +193,4 @@ export async function POST(request: NextRequest) {
     })
     return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
   }
-}
+})

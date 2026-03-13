@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { ensureUser } from '@/lib/ensure-user'
 import { logApiError } from '@/lib/error-logger'
+import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
-export async function GET() {
+export const GET = withApiLogging(async (_request: NextRequest) => {
   let user: { id: string } | undefined
   try {
     // Ensure user exists in database
@@ -47,18 +48,16 @@ export async function GET() {
     return NextResponse.json(subscriptions)
   } catch (error) {
     await logApiError({
-      request: new Request('http://localhost/api/users/email-subscriptions', {
-        method: 'GET',
-      }) as NextRequest,
+      request: _request,
       error,
       operation: 'fetch email subscriptions',
       context: { userId: user?.id },
     })
     return NextResponse.json({ error: 'Failed to fetch email subscriptions' }, { status: 500 })
   }
-}
+})
 
-export async function PUT(request: NextRequest) {
+export const PUT = withApiLogging(async (request: NextRequest) => {
   let user: { id: string } | undefined
   let data: { householdId?: string; weeklySummary?: boolean } | undefined
   try {
@@ -117,4 +116,4 @@ export async function PUT(request: NextRequest) {
     })
     return NextResponse.json({ error: 'Failed to update email subscription' }, { status: 500 })
   }
-}
+})

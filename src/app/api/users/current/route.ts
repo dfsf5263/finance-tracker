@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
+import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
-export async function GET() {
+export const GET = withApiLogging(async (_request: NextRequest) => {
   let userId: string | undefined
   try {
     // Require authentication
@@ -36,11 +37,11 @@ export async function GET() {
     return NextResponse.json(userRecord)
   } catch (error) {
     await logApiError({
-      request: new Request('http://localhost/api/users/current', { method: 'GET' }) as NextRequest,
+      request: _request,
       error,
       operation: 'fetch current user',
       context: { userId },
     })
     return NextResponse.json({ error: 'Failed to fetch current user' }, { status: 500 })
   }
-}
+})

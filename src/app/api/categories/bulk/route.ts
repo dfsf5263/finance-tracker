@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
-export async function POST(request: NextRequest) {
+export const POST = withApiLogging(async (request: NextRequest) => {
   let requestData
   try {
     requestData = await request.json()
@@ -85,4 +86,4 @@ export async function POST(request: NextRequest) {
     })
     return NextResponse.json({ error: 'Failed to create categories' }, { status: 500 })
   }
-}
+})

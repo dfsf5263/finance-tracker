@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { ensureUser } from '@/lib/ensure-user'
 import { logApiError } from '@/lib/error-logger'
+import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
-export async function GET() {
+export const GET = withApiLogging(async (_request: NextRequest) => {
   let user: { id: string } | undefined
   try {
     // Ensure user exists in database
@@ -51,16 +52,16 @@ export async function GET() {
     return NextResponse.json(households)
   } catch (error) {
     await logApiError({
-      request: new Request('http://localhost/api/households', { method: 'GET' }) as NextRequest,
+      request: _request,
       error,
       operation: 'fetch households',
       context: { userId: user?.id },
     })
     return NextResponse.json({ error: 'Failed to fetch households' }, { status: 500 })
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withApiLogging(async (request: NextRequest) => {
   let user: { id: string } | undefined
   let data: { name?: string; annualBudget?: string | number } | undefined
   try {
@@ -127,4 +128,4 @@ export async function POST(request: NextRequest) {
     })
     return NextResponse.json({ error: 'Failed to create household' }, { status: 500 })
   }
-}
+})

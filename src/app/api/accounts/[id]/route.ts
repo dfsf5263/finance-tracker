@@ -3,117 +3,121 @@ import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
 import { requireAccountAccess, requireAccountWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody, accountUpdateSchema } from '@/lib/validation'
+import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
+export const GET = withApiLogging(
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+    try {
+      const { id } = await params
 
-    // Verify user has access to this account
-    const result = await requireAccountAccess(request, id)
-    if (result instanceof NextResponse) {
-      return result
+      // Verify user has access to this account
+      const result = await requireAccountAccess(request, id)
+      if (result instanceof NextResponse) {
+        return result
+      }
+
+      const { account } = result
+      return NextResponse.json(account)
+    } catch (error) {
+      await logApiError({
+        request,
+        error,
+        operation: 'fetch account',
+        context: { id: (await params).id },
+      })
+      return NextResponse.json({ error: 'Failed to fetch account' }, { status: 500 })
     }
-
-    const { account } = result
-    return NextResponse.json(account)
-  } catch (error) {
-    await logApiError({
-      request,
-      error,
-      operation: 'fetch account',
-      context: { id: (await params).id },
-    })
-    return NextResponse.json({ error: 'Failed to fetch account' }, { status: 500 })
   }
-}
+)
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  let requestData
-  try {
-    const { id } = await params
+export const PUT = withApiLogging(
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+    let requestData
+    try {
+      const { id } = await params
 
-    // Verify user has write access to this account
-    const result = await requireAccountWriteAccess(request, id)
-    if (result instanceof NextResponse) {
-      return result
-    }
+      // Verify user has write access to this account
+      const result = await requireAccountWriteAccess(request, id)
+      if (result instanceof NextResponse) {
+        return result
+      }
 
-    // Parse and validate request body
-    requestData = await request.json()
-    const validation = validateRequestBody(accountUpdateSchema, requestData)
+      // Parse and validate request body
+      requestData = await request.json()
+      const validation = validateRequestBody(accountUpdateSchema, requestData)
 
-    if (!validation.success) {
-      return NextResponse.json({ error: validation.error }, { status: 400 })
-    }
+      if (!validation.success) {
+        return NextResponse.json({ error: validation.error }, { status: 400 })
+      }
 
-    const { name } = validation.data
-    const updateData: { name?: string } = {}
+      const { name } = validation.data
+      const updateData: { name?: string } = {}
 
-    if (name) updateData.name = name
+      if (name) updateData.name = name
 
-    const account = await db.householdAccount.update({
-      where: { id },
-      data: updateData,
-      include: { household: true },
-    })
+      const account = await db.householdAccount.update({
+        where: { id },
+        data: updateData,
+        include: { household: true },
+      })
 
-    return NextResponse.json(account)
-  } catch (error) {
-    await logApiError({
-      request,
-      error,
-      operation: 'update account',
-      context: {
-        id: (await params).id,
-        updateData: requestData,
-      },
-    })
-    return NextResponse.json({ error: 'Failed to update account' }, { status: 500 })
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
-
-    // Verify user has write access to this account
-    const result = await requireAccountWriteAccess(request, id)
-    if (result instanceof NextResponse) {
-      return result
-    }
-
-    await db.householdAccount.delete({
-      where: { id },
-    })
-
-    return NextResponse.json({ message: 'Account deleted successfully' })
-  } catch (error) {
-    await logApiError({
-      request,
-      error,
-      operation: 'delete account',
-      context: { id: (await params).id },
-    })
-
-    // Check if it's a foreign key constraint error
-    if (
-      error instanceof Error &&
-      (('code' in error && error.code === 'P2003') ||
-        error.message?.includes('foreign key constraint'))
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            'Cannot delete this account because it is used by existing transactions. Please delete or update all transactions using this account first.',
-          errorType: 'FOREIGN_KEY_CONSTRAINT',
+      return NextResponse.json(account)
+    } catch (error) {
+      await logApiError({
+        request,
+        error,
+        operation: 'update account',
+        context: {
+          id: (await params).id,
+          updateData: requestData,
         },
-        { status: 409 }
-      )
+      })
+      return NextResponse.json({ error: 'Failed to update account' }, { status: 500 })
     }
-
-    return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 })
   }
-}
+)
+
+export const DELETE = withApiLogging(
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+    try {
+      const { id } = await params
+
+      // Verify user has write access to this account
+      const result = await requireAccountWriteAccess(request, id)
+      if (result instanceof NextResponse) {
+        return result
+      }
+
+      await db.householdAccount.delete({
+        where: { id },
+      })
+
+      return NextResponse.json({ message: 'Account deleted successfully' })
+    } catch (error) {
+      await logApiError({
+        request,
+        error,
+        operation: 'delete account',
+        context: { id: (await params).id },
+      })
+
+      // Check if it's a foreign key constraint error
+      if (
+        error instanceof Error &&
+        (('code' in error && error.code === 'P2003') ||
+          error.message?.includes('foreign key constraint'))
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              'Cannot delete this account because it is used by existing transactions. Please delete or update all transactions using this account first.',
+            errorType: 'FOREIGN_KEY_CONSTRAINT',
+          },
+          { status: 409 }
+        )
+      }
+
+      return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 })
+    }
+  }
+)

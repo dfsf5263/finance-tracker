@@ -3,8 +3,9 @@ import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess, requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody, typeCreateSchema } from '@/lib/validation'
+import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
-export async function GET(request: NextRequest) {
+export const GET = withApiLogging(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
     const householdId = searchParams.get('householdId')
@@ -36,9 +37,9 @@ export async function GET(request: NextRequest) {
     })
     return NextResponse.json({ error: 'Failed to fetch types' }, { status: 500 })
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withApiLogging(async (request: NextRequest) => {
   let requestData
   try {
     // Parse and validate request body
@@ -80,4 +81,4 @@ export async function POST(request: NextRequest) {
     })
     return NextResponse.json({ error: 'Failed to create type' }, { status: 500 })
   }
-}
+})

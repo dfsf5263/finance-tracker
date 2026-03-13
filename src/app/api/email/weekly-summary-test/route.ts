@@ -5,8 +5,10 @@ import { ensureUser } from '@/lib/ensure-user'
 import { sendWeeklySummaryEmail } from '@/lib/email'
 import { generateHouseholdSummary } from '@/lib/weekly-summary'
 import { logApiError } from '@/lib/error-logger'
+import logger from '@/lib/logger'
+import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
-export async function POST(request: NextRequest) {
+export const POST = withApiLogging(async (request: NextRequest) => {
   let user: { id: string; firstName: string | null; email: string } | undefined
 
   try {
@@ -22,7 +24,7 @@ export async function POST(request: NextRequest) {
     if (asOfDate) {
       // This would require modifying the generateHouseholdSummary function to accept a date parameter
       // For now, we'll just log it
-      console.log(`Test running as of date: ${asOfDate}`)
+      logger.info({ asOfDate }, 'test running as of date')
     }
 
     // Get user's households with weekly summaries enabled
@@ -71,9 +73,9 @@ export async function POST(request: NextRequest) {
           summaries.push(summary)
         }
       } catch (error) {
-        console.error(
-          `Error generating test summary for household ${userHousehold.household.id}:`,
-          error
+        logger.error(
+          { err: error, householdId: userHousehold.household.id },
+          'error generating test summary for household'
         )
         return NextResponse.json(
           {
@@ -128,4 +130,4 @@ export async function POST(request: NextRequest) {
     })
     return NextResponse.json({ error: 'Failed to send test weekly summary' }, { status: 500 })
   }
-}
+})

@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import logger from '@/lib/logger'
 
 interface LogApiErrorOptions {
   request: NextRequest
@@ -7,65 +8,27 @@ interface LogApiErrorOptions {
   operation?: string
 }
 
-/**
- * Logs API errors with detailed request context, following the pattern established
- * in the webhook API for consistent error logging across all API routes.
- */
 export async function logApiError({ request, error, context, operation }: LogApiErrorOptions) {
-  try {
-    console.error('=== API Error ===')
-    console.error('Timestamp:', new Date().toISOString())
-    console.error('Method:', request.method)
-    console.error('URL:', request.url)
-
-    if (operation) {
-      console.error('Operation:', operation)
-    }
-
-    // Log request headers (sanitized)
-    const headers = Object.fromEntries(request.headers.entries())
-    const sanitizedHeaders = sanitizeHeaders(headers)
-    console.error('Headers:', JSON.stringify(sanitizedHeaders, null, 2))
-
-    // Log request body if present (sanitized)
-    try {
-      const body = await getRequestBody(request)
-      if (body) {
-        const sanitizedBody = sanitizeRequestData(body)
-        console.error('Request Body:', JSON.stringify(sanitizedBody, null, 2))
-      }
-    } catch (bodyError) {
-      console.error('Could not read request body:', bodyError)
-    }
-
-    // Log additional context if provided
-    if (context) {
-      const sanitizedContext = sanitizeRequestData(context)
-      console.error('Context:', JSON.stringify(sanitizedContext, null, 2))
-    }
-
-    // Log error details
-    console.error('Error:', error)
-
-    // Log error code if available (Prisma errors)
-    if (error && typeof error === 'object' && 'code' in error) {
-      console.error('Error Code:', error.code)
-    }
-
-    // Log error meta if available (Prisma errors)
-    if (error && typeof error === 'object' && 'meta' in error) {
-      console.error('Error Meta:', error.meta)
-    }
-
-    // Log stack trace if available
-    if (error instanceof Error && error.stack) {
-      console.error('Stack Trace:', error.stack)
-    }
-  } catch (loggingError) {
-    // Fallback logging if the detailed logging fails
-    console.error('Error logging failed:', loggingError)
-    console.error('Original error:', error)
-  }
+  const err = error instanceof Error ? error : new Error(String(error))
+  const body = await getRequestBody(request)
+  logger.error(
+    {
+      err,
+      method: request.method,
+      url: request.url,
+      operation,
+      headers: sanitizeHeaders(Object.fromEntries(request.headers.entries())),
+      ...(body !== null && { body: sanitizeRequestData(body) }),
+      ...(context !== undefined && { context: sanitizeRequestData(context) }),
+      ...(error !== null &&
+        typeof error === 'object' &&
+        'code' in error && { dbErrorCode: (error as { code: unknown }).code }),
+      ...(error !== null &&
+        typeof error === 'object' &&
+        'meta' in error && { dbErrorMeta: (error as { meta: unknown }).meta }),
+    },
+    'api error'
+  )
 }
 
 /**

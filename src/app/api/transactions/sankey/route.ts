@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
 interface SankeyNode {
   name: string
@@ -16,7 +17,7 @@ interface SankeyLink {
   type: 'income' | 'expense'
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withApiLogging(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('startDate')
@@ -159,4 +160,4 @@ export async function GET(request: NextRequest) {
     })
     return NextResponse.json({ error: 'Failed to fetch sankey data' }, { status: 500 })
   }
-}
+})
