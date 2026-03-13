@@ -27,7 +27,7 @@ const isPartialAuthRoute = (pathname: string) => {
   return partialAuthPaths.includes(pathname)
 }
 
-export default async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const response = NextResponse.next()
   const pathname = req.nextUrl.pathname
 
