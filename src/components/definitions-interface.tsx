@@ -38,12 +38,6 @@ export function DefinitionsInterface() {
   const [editingCategory, setEditingCategory] = useState<TransactionCategory | undefined>()
   const [editingType, setEditingType] = useState<TransactionType | undefined>()
 
-  useEffect(() => {
-    fetchUsers()
-    fetchCategories()
-    fetchTypes()
-  }, [])
-
   const fetchUsers = async () => {
     try {
       const response = await fetch('/api/users')
@@ -79,6 +73,12 @@ export function DefinitionsInterface() {
       console.error('Failed to fetch types:', error)
     }
   }
+
+  useEffect(() => {
+    fetchUsers()
+    fetchCategories()
+    fetchTypes()
+  }, [])
 
   const handleCreateUser = async (userData: Omit<TransactionUser, 'id'>) => {
     try {
