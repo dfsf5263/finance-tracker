@@ -34,4 +34,4 @@ export const GET = withApiLogging(async () => {
       { status: 503 }
     )
   }
-})
+}, 'debug')
