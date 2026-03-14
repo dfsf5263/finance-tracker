@@ -2,12 +2,20 @@
 set -e
 
 # Finance Tracker Docker Push Script
-# Pushes existing Docker images to Docker Hub
+# Pushes existing Docker images to GitHub Container Registry
 
 # Configuration
-DOCKER_REGISTRY="dfsf5263"
+DOCKER_REGISTRY="ghcr.io"
+GITHUB_USERNAME="dfsf5263"
 IMAGE_NAME="finance-tracker"
-FULL_IMAGE_NAME="${DOCKER_REGISTRY}/${IMAGE_NAME}"
+FULL_IMAGE_NAME="${DOCKER_REGISTRY}/${GITHUB_USERNAME}/${IMAGE_NAME}"
+
+# Load GHCR_PAT from .env in the project root if present
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${SCRIPT_DIR}/../.env"
+if [ -f "${ENV_FILE}" ]; then
+    GHCR_PAT=$(grep -E '^GHCR_PAT=' "${ENV_FILE}" | cut -d '=' -f2- | tr -d '"\r')
+fi
 
 # Default values
 TAG="latest"
@@ -88,16 +96,24 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Check if logged in to Docker Hub
-if ! docker info | grep -q "Username:"; then
-    warning "Not logged in to Docker Hub. Attempting to login..."
-    if ! docker login; then
-        error "Docker Hub login failed"
-        exit 1
+# Check if logged in to GHCR
+if ! docker info | grep -q "ghcr.io"; then
+    warning "Not logged in to GHCR. Attempting to login..."
+    if [ -n "${GHCR_PAT}" ]; then
+        if ! echo "${GHCR_PAT}" | docker login ghcr.io -u "${GITHUB_USERNAME}" --password-stdin; then
+            error "GHCR login failed"
+            exit 1
+        fi
+    else
+        warning "GHCR_PAT not found in .env — falling back to interactive login"
+        if ! docker login ghcr.io -u "${GITHUB_USERNAME}"; then
+            error "GHCR login failed"
+            exit 1
+        fi
     fi
 fi
 
-log "Starting Docker push to Docker Hub"
+log "Starting Docker push to GHCR"
 log "Registry: ${DOCKER_REGISTRY}"
 log "Image: ${IMAGE_NAME}"
 
@@ -173,9 +189,9 @@ fi
 
 success "All pushes completed successfully!"
 
-# Show available images on Docker Hub
+# Show available images on GHCR
 echo ""
-echo "Images are now available on Docker Hub:"
+echo "Images are now available on GHCR:"
 if [ "$PUSH_ALL" = true ]; then
     while IFS= read -r tag; do
         echo "  docker pull ${FULL_IMAGE_NAME}:${tag}"
@@ -188,4 +204,4 @@ else
 fi
 
 echo ""
-echo "View on Docker Hub: https://hub.docker.com/r/${DOCKER_REGISTRY}/${IMAGE_NAME}"
+echo "View on GHCR: https://ghcr.io/${GITHUB_USERNAME}/${IMAGE_NAME}"
