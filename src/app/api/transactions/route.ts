@@ -4,14 +4,23 @@ import { Decimal } from '@prisma/client/runtime/client'
 import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess, requireHouseholdWriteAccess } from '@/lib/auth-middleware'
-import { validateRequestBody, transactionCreateSchema } from '@/lib/validation'
+import {
+  validateRequestBody,
+  validateQueryParams,
+  paginationSchema,
+  transactionCreateSchema,
+} from '@/lib/validation'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
 export const GET = withApiLogging(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
+    const paginationResult = validateQueryParams(paginationSchema, Object.fromEntries(searchParams))
+    if (!paginationResult.success) {
+      return NextResponse.json({ error: paginationResult.error }, { status: 400 })
+    }
+    const page = Number(paginationResult.data.page ?? '1')
+    const limit = Number(paginationResult.data.limit ?? '10')
     const householdId = searchParams.get('householdId')
     const category = searchParams.get('category')
     const type = searchParams.get('type')
