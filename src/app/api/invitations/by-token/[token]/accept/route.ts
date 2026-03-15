@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { ensureUser } from '@/lib/ensure-user'
+import { requireAuth } from '@/lib/auth-middleware'
 import { logApiError } from '@/lib/error-logger'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
 export const POST = withApiLogging(
   async (request: NextRequest, { params }: { params: Promise<{ token: string }> }) => {
-    let user: { id: string } | undefined
+    let userId: string | undefined
     try {
       const { token } = await params
 
       // Ensure user exists in database
-      const userResult = await ensureUser()
-      user = userResult.user
+      const authContext = await requireAuth()
+      if (authContext instanceof NextResponse) return authContext
+      userId = authContext.userId
 
       // Find the invitation
       const invitation = await db.householdInvitation.findUnique({
@@ -51,7 +52,7 @@ export const POST = withApiLogging(
       const existingMembership = await db.userHousehold.findUnique({
         where: {
           userId_householdId: {
-            userId: user.id,
+            userId: userId,
             householdId: invitation.householdId,
           },
         },
@@ -72,7 +73,7 @@ export const POST = withApiLogging(
         // Create user-household relationship
         const userHousehold = await tx.userHousehold.create({
           data: {
-            userId: user!.id,
+            userId: userId!,
             householdId: invitation.householdId,
             role: role,
             invitedBy: invitation.inviterUserId,
@@ -85,7 +86,7 @@ export const POST = withApiLogging(
           where: { id: invitation.id },
           data: {
             status: 'ACCEPTED',
-            inviteeUserId: user!.id,
+            inviteeUserId: userId!,
           },
         })
 
@@ -107,7 +108,7 @@ export const POST = withApiLogging(
         operation: 'accept invitation',
         context: {
           tokenProvided: !!(await params).token,
-          userId: user?.id,
+          userId,
         },
       })
       return NextResponse.json({ error: 'Failed to accept invitation' }, { status: 500 })

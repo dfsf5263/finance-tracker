@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authCompat } from '@/lib/auth-helpers'
+import { requireAuth } from '@/lib/auth-middleware'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
@@ -10,24 +10,10 @@ export const DELETE = withApiLogging(
       const { id } = await params
 
       // Get the authenticated user
-      const { userId } = await authCompat()
-      if (!userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
+      const authContext = await requireAuth()
+      if (authContext instanceof NextResponse) return authContext
 
-      // Find the user in our database
-      const user = await db.user.findUnique({
-        where: { id: userId },
-      })
-
-      if (!user) {
-        return NextResponse.json(
-          {
-            error: 'User not found in database. Please try logging out and back in.',
-          },
-          { status: 404 }
-        )
-      }
+      const userId = authContext.userId
 
       // Find the invitation
       const invitation = await db.householdInvitation.findUnique({
@@ -42,7 +28,7 @@ export const DELETE = withApiLogging(
       const userHousehold = await db.userHousehold.findUnique({
         where: {
           userId_householdId: {
-            userId: user.id,
+            userId,
             householdId: invitation.householdId,
           },
         },
@@ -50,7 +36,7 @@ export const DELETE = withApiLogging(
 
       if (
         !userHousehold ||
-        (userHousehold.role !== 'OWNER' && invitation.inviterUserId !== user.id)
+        (userHousehold.role !== 'OWNER' && invitation.inviterUserId !== userId)
       ) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }

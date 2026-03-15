@@ -1,41 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authCompat } from '@/lib/auth-helpers'
+import { requireAuth } from '@/lib/auth-middleware'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
 export const PATCH = withApiLogging(
   async (request: NextRequest, { params }: { params: Promise<{ id: string; userId: string }> }) => {
-    let currentUser
+    let currentUserId: string | undefined
     let data
     try {
       const { id, userId } = await params
 
       // Get the authenticated user
-      const { userId: currentUserId } = await authCompat()
-      if (!currentUserId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-
-      // Find the current user in our database
-      currentUser = await db.user.findUnique({
-        where: { id: currentUserId },
-      })
-
-      if (!currentUser) {
-        return NextResponse.json(
-          {
-            error: 'User not found in database. Please try logging out and back in.',
-          },
-          { status: 404 }
-        )
-      }
+      const authContext = await requireAuth()
+      if (authContext instanceof NextResponse) return authContext
+      currentUserId = authContext.userId
 
       // Check if current user is owner of this household
       const currentUserHousehold = await db.userHousehold.findUnique({
         where: {
           userId_householdId: {
-            userId: currentUser.id,
+            userId: currentUserId,
             householdId: id,
           },
         },
@@ -68,7 +53,7 @@ export const PATCH = withApiLogging(
       }
 
       // Prevent user from changing their own role
-      if (currentUser.id === userId) {
+      if (currentUserId === userId) {
         return NextResponse.json({ error: 'Cannot change your own role' }, { status: 400 })
       }
 
@@ -102,7 +87,7 @@ export const PATCH = withApiLogging(
         context: {
           householdId: (await params).id,
           targetUserId: (await params).userId,
-          currentUserId: currentUser?.id,
+          currentUserId,
           newRole: data?.role,
         },
       })
@@ -113,35 +98,20 @@ export const PATCH = withApiLogging(
 
 export const DELETE = withApiLogging(
   async (request: NextRequest, { params }: { params: Promise<{ id: string; userId: string }> }) => {
-    let currentUser
+    let currentUserId: string | undefined
     try {
       const { id, userId } = await params
 
       // Get the authenticated user
-      const { userId: currentUserId } = await authCompat()
-      if (!currentUserId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-
-      // Find the current user in our database
-      currentUser = await db.user.findUnique({
-        where: { id: currentUserId },
-      })
-
-      if (!currentUser) {
-        return NextResponse.json(
-          {
-            error: 'User not found in database. Please try logging out and back in.',
-          },
-          { status: 404 }
-        )
-      }
+      const authContext = await requireAuth()
+      if (authContext instanceof NextResponse) return authContext
+      currentUserId = authContext.userId
 
       // Check if current user is owner of this household or removing themselves
       const currentUserHousehold = await db.userHousehold.findUnique({
         where: {
           userId_householdId: {
-            userId: currentUser.id,
+            userId: currentUserId,
             householdId: id,
           },
         },
@@ -152,7 +122,7 @@ export const DELETE = withApiLogging(
       }
 
       const isOwner = currentUserHousehold.role === 'OWNER'
-      const isRemovingSelf = currentUser.id === userId
+      const isRemovingSelf = currentUserId === userId
 
       if (!isOwner && !isRemovingSelf) {
         return NextResponse.json({ error: 'Only owners can remove members' }, { status: 403 })
@@ -205,7 +175,7 @@ export const DELETE = withApiLogging(
         context: {
           householdId: (await params).id,
           targetUserId: (await params).userId,
-          currentUserId: currentUser?.id,
+          currentUserId,
         },
       })
       return NextResponse.json({ error: 'Failed to remove member' }, { status: 500 })

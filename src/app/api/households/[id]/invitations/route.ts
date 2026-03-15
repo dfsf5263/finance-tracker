@@ -1,27 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { ensureUser } from '@/lib/ensure-user'
+import { requireAuth, requireHouseholdAccess } from '@/lib/auth-middleware'
 import { logApiError } from '@/lib/error-logger'
-import { requireHouseholdAccess } from '@/lib/auth-middleware'
 import { canInviteMembers } from '@/lib/role-utils'
 import { sendInvitationEmail } from '@/lib/email'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
 export const GET = withApiLogging(
   async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
-    let user
+    let userId: string | undefined
     try {
       const { id } = await params
 
-      // Ensure user exists in database
-      const result = await ensureUser()
-      user = result.user
+      // Require authentication and household access
+      const authContext = await requireAuth()
+      if (authContext instanceof NextResponse) return authContext
+      userId = authContext.userId
 
       // Check if user has access to this household
       const userHousehold = await db.userHousehold.findUnique({
         where: {
           userId_householdId: {
-            userId: user.id,
+            userId,
             householdId: id,
           },
         },
@@ -61,7 +61,7 @@ export const GET = withApiLogging(
         operation: 'fetch household invitations',
         context: {
           householdId: (await params).id,
-          userId: user?.id,
+          userId,
         },
       })
       return NextResponse.json({ error: 'Failed to fetch invitations' }, { status: 500 })
@@ -71,7 +71,7 @@ export const GET = withApiLogging(
 
 export const POST = withApiLogging(
   async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
-    let user
+    let userId: string | undefined
     let data
     try {
       const { id } = await params
@@ -82,7 +82,7 @@ export const POST = withApiLogging(
         return accessResult
       }
 
-      user = accessResult.authContext.user
+      userId = accessResult.authContext.userId
 
       // Check if user has permission to invite members
       if (!canInviteMembers(accessResult.userRole)) {
@@ -112,7 +112,7 @@ export const POST = withApiLogging(
       const invitation = await db.householdInvitation.create({
         data: {
           householdId: id,
-          inviterUserId: user.id,
+          inviterUserId: userId,
           inviteeEmail: inviteeEmail || '',
           role: role as 'OWNER' | 'MEMBER' | 'VIEWER',
           status: 'PENDING',
@@ -165,7 +165,7 @@ export const POST = withApiLogging(
         operation: 'create household invitation',
         context: {
           householdId: (await params).id,
-          inviterUserId: user?.id,
+          inviterUserId: userId,
           role: data?.role,
           expiresInDays: data?.expiresInDays,
           inviteeEmail: data?.inviteeEmail,

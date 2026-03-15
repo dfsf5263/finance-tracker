@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 // Test endpoint for weekly summary emails
 import { db } from '@/lib/db'
-import { ensureUser } from '@/lib/ensure-user'
+import { requireAuth } from '@/lib/auth-middleware'
 import { sendWeeklySummaryEmail } from '@/lib/email'
 import { generateHouseholdSummary } from '@/lib/weekly-summary'
 import { logApiError } from '@/lib/error-logger'
@@ -9,12 +9,14 @@ import logger from '@/lib/logger'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
 export const POST = withApiLogging(async (request: NextRequest) => {
-  let user: { id: string; firstName: string | null; email: string } | undefined
+  let userId: string | undefined
 
   try {
     // Ensure user exists in database
-    const userResult = await ensureUser()
-    user = userResult.user
+    const authContext = await requireAuth()
+    if (authContext instanceof NextResponse) return authContext
+    userId = authContext.userId
+    const user = authContext.user
 
     const { searchParams } = new URL(request.url)
     const testHouseholdId = searchParams.get('householdId')
@@ -29,7 +31,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
 
     // Get user's households with weekly summaries enabled
     const userWithHouseholds = await db.user.findUnique({
-      where: { id: user.id },
+      where: { id: userId },
       include: {
         households: {
           where: {
@@ -126,7 +128,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       request,
       error,
       operation: 'send test weekly summary',
-      context: { userId: user?.id },
+      context: { userId },
     })
     return NextResponse.json({ error: 'Failed to send test weekly summary' }, { status: 500 })
   }

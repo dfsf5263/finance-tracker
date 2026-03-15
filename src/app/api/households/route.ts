@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { ensureUser } from '@/lib/ensure-user'
+import { requireAuth } from '@/lib/auth-middleware'
 import { logApiError } from '@/lib/error-logger'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
 export const GET = withApiLogging(async (_request: NextRequest) => {
-  let user: { id: string } | undefined
+  let userId: string | undefined
   try {
     // Ensure user exists in database
-    const userResult = await ensureUser()
-    user = userResult.user
+    const authContext = await requireAuth()
+    if (authContext instanceof NextResponse) return authContext
+    userId = authContext.userId
 
     // Get user with households
     const userWithHouseholds = await db.user.findUnique({
-      where: { id: user.id },
+      where: { id: userId },
       include: {
         households: {
           include: {
@@ -55,19 +56,20 @@ export const GET = withApiLogging(async (_request: NextRequest) => {
       request: _request,
       error,
       operation: 'fetch households',
-      context: { userId: user?.id },
+      context: { userId },
     })
     return NextResponse.json({ error: 'Failed to fetch households' }, { status: 500 })
   }
 })
 
 export const POST = withApiLogging(async (request: NextRequest) => {
-  let user: { id: string } | undefined
+  let userId: string | undefined
   let data: { name?: string; annualBudget?: string | number } | undefined
   try {
     // Ensure user exists in database
-    const userResult = await ensureUser()
-    user = userResult.user
+    const authContext = await requireAuth()
+    if (authContext instanceof NextResponse) return authContext
+    userId = authContext.userId
 
     data = await request.json()
     const { name, annualBudget } = data || {}
@@ -92,7 +94,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       // Create the user-household relationship with OWNER role
       await tx.userHousehold.create({
         data: {
-          userId: user!.id,
+          userId: userId!,
           householdId: household.id,
           role: 'OWNER',
           weeklySummary: true,
@@ -122,7 +124,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       error,
       operation: 'create household',
       context: {
-        userId: user?.id,
+        userId,
         householdData: data,
       },
     })

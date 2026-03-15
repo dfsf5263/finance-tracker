@@ -1,6 +1,6 @@
-import { authCompat } from '@/lib/auth-helpers'
+import { requireHouseholdAccess } from '@/lib/auth-middleware'
 import { NextRequest, NextResponse } from 'next/server'
-import { db as prisma } from '@/lib/db'
+import { db } from '@/lib/db'
 import { getMonthName, getCurrentMonth, getCurrentYear } from '@/lib/utils'
 import { logApiError } from '@/lib/error-logger'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
@@ -11,42 +11,17 @@ export const GET = withApiLogging(
     const { id: householdId } = await params
 
     try {
-      // Step 1: Authentication
-      const { userId } = await authCompat()
+      // Step 1: Authentication and household access check
+      const accessResult = await requireHouseholdAccess(request, householdId)
+      if (accessResult instanceof NextResponse) return accessResult
 
-      if (!userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
+      const userId = accessResult.authContext.userId
 
-      // Validate household ID format
-      if (!householdId || typeof householdId !== 'string') {
-        return NextResponse.json({ error: 'Invalid household ID' }, { status: 400 })
-      }
-
-      // Step 2: Verify user has access to this household
-
-      const household = await prisma.household.findFirst({
-        where: {
-          id: householdId,
-          members: {
-            some: {
-              user: {
-                id: userId,
-              },
-            },
-          },
-        },
-      })
-
-      if (!household) {
-        return NextResponse.json({ error: 'Household not found or access denied' }, { status: 404 })
-      }
-
-      // Step 3: Get months with transaction activity using parameterized query
+      // Step 2: Get months with transaction activity using parameterized query
       let transactionMonths: Array<{ year: number; month: number; unique_days: bigint }> = []
 
       try {
-        transactionMonths = await prisma.transaction
+        transactionMonths = await db.transaction
           .groupBy({
             by: ['transactionDate'],
             where: {
@@ -104,7 +79,7 @@ export const GET = withApiLogging(
         transactionMonths = []
       }
 
-      // Step 4: Determine the active month
+      // Step 3: Determine the active month
       const currentMonth = getCurrentMonth()
       const currentYear = getCurrentYear()
 

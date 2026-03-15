@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { ensureUser } from '@/lib/ensure-user'
+import { requireAuth } from '@/lib/auth-middleware'
 import { logApiError } from '@/lib/error-logger'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
 export const GET = withApiLogging(async (_request: NextRequest) => {
-  let user: { id: string } | undefined
+  let userId: string | undefined
   try {
     // Ensure user exists in database
-    const userResult = await ensureUser()
-    user = userResult.user
+    const authContext = await requireAuth()
+    if (authContext instanceof NextResponse) return authContext
+    userId = authContext.userId
 
     // Get user's household subscriptions
     const userWithHouseholds = await db.user.findUnique({
-      where: { id: user.id },
+      where: { id: userId },
       include: {
         households: {
           include: {
@@ -51,19 +52,20 @@ export const GET = withApiLogging(async (_request: NextRequest) => {
       request: _request,
       error,
       operation: 'fetch email subscriptions',
-      context: { userId: user?.id },
+      context: { userId },
     })
     return NextResponse.json({ error: 'Failed to fetch email subscriptions' }, { status: 500 })
   }
 })
 
 export const PUT = withApiLogging(async (request: NextRequest) => {
-  let user: { id: string } | undefined
+  let userId: string | undefined
   let data: { householdId?: string; weeklySummary?: boolean } | undefined
   try {
     // Ensure user exists in database
-    const userResult = await ensureUser()
-    user = userResult.user
+    const authContext = await requireAuth()
+    if (authContext instanceof NextResponse) return authContext
+    userId = authContext.userId
 
     data = await request.json()
     const { householdId, weeklySummary } = data || {}
@@ -80,7 +82,7 @@ export const PUT = withApiLogging(async (request: NextRequest) => {
     const userHousehold = await db.userHousehold.findUnique({
       where: {
         userId_householdId: {
-          userId: user.id,
+          userId: userId,
           householdId: householdId,
         },
       },
@@ -94,7 +96,7 @@ export const PUT = withApiLogging(async (request: NextRequest) => {
     await db.userHousehold.update({
       where: {
         userId_householdId: {
-          userId: user.id,
+          userId: userId,
           householdId: householdId,
         },
       },
@@ -110,7 +112,7 @@ export const PUT = withApiLogging(async (request: NextRequest) => {
       error,
       operation: 'update email subscription',
       context: {
-        userId: user?.id,
+        userId,
         requestData: data,
       },
     })

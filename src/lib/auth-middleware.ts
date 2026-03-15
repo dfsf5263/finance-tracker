@@ -1,4 +1,4 @@
-import { authCompat } from '@/lib/auth-helpers'
+import { getSession } from '@/lib/auth-helpers'
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { HouseholdRole } from '@prisma/client'
@@ -19,7 +19,8 @@ export interface AuthContext {
  * Returns the authenticated user context or an error response
  */
 export async function requireAuth(): Promise<AuthContext | NextResponse> {
-  const { userId } = await authCompat()
+  const session = await getSession()
+  const userId = session?.user?.id
 
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -56,9 +57,7 @@ export async function requireAuth(): Promise<AuthContext | NextResponse> {
 export async function requireHouseholdAccess(
   request: NextRequest,
   householdId: string
-): Promise<
-  { household: unknown; authContext: AuthContext; userRole: HouseholdRole } | NextResponse
-> {
+): Promise<{ authContext: AuthContext; userRole: HouseholdRole } | NextResponse> {
   const authResult = await requireAuth()
 
   if (authResult instanceof NextResponse) {
@@ -99,7 +98,6 @@ export async function requireHouseholdAccess(
   }
 
   return {
-    household: userHousehold.household,
     authContext: authResult,
     userRole: userHousehold.role,
   }
@@ -112,9 +110,7 @@ export async function requireHouseholdAccess(
 export async function requireHouseholdWriteAccess(
   request: NextRequest,
   householdId: string
-): Promise<
-  { household: unknown; authContext: AuthContext; userRole: HouseholdRole } | NextResponse
-> {
+): Promise<{ authContext: AuthContext; userRole: HouseholdRole } | NextResponse> {
   const accessResult = await requireHouseholdAccess(request, householdId)
 
   if (accessResult instanceof NextResponse) {
@@ -464,58 +460,13 @@ export async function requireTypeWriteAccess(
   request: NextRequest,
   typeId: string
 ): Promise<{ type: unknown; authContext: AuthContext; userRole: HouseholdRole } | NextResponse> {
-  const authResult = await requireAuth()
+  const accessResult = await requireTypeAccess(request, typeId)
 
-  if (authResult instanceof NextResponse) {
-    return authResult
+  if (accessResult instanceof NextResponse) {
+    return accessResult
   }
 
-  // Validate type ID format
-  if (!typeId || typeof typeId !== 'string') {
-    return NextResponse.json({ error: 'Invalid type ID' }, { status: 400 })
-  }
-
-  // Find type and verify user has access via household membership
-  const type = await db.householdType.findFirst({
-    where: {
-      id: typeId,
-      household: {
-        members: {
-          some: {
-            user: {
-              id: authResult.userId,
-            },
-          },
-        },
-      },
-    },
-    include: {
-      household: {
-        include: {
-          members: {
-            where: {
-              user: {
-                id: authResult.userId,
-              },
-            },
-            include: {
-              user: true,
-            },
-          },
-        },
-      },
-    },
-  })
-
-  if (!type) {
-    return NextResponse.json(
-      { error: 'Access denied. You do not have permission to access this type.' },
-      { status: 403 }
-    )
-  }
-
-  // Get user's role for this household
-  const typeWithMembers = type as {
+  const typeWithMembers = accessResult.type as {
     household: { members: Array<{ role: HouseholdRole }> }
   }
   const userMembership = typeWithMembers.household.members[0]
@@ -523,7 +474,6 @@ export async function requireTypeWriteAccess(
     return NextResponse.json({ error: 'User role not found' }, { status: 500 })
   }
 
-  // Check if user has write permissions
   if (!canManageData(userMembership.role)) {
     return NextResponse.json(
       { error: 'You do not have permission to modify types in this household' },
@@ -532,8 +482,8 @@ export async function requireTypeWriteAccess(
   }
 
   return {
-    type,
-    authContext: authResult,
+    type: accessResult.type,
+    authContext: accessResult.authContext,
     userRole: userMembership.role,
   }
 }
@@ -548,58 +498,13 @@ export async function requireCategoryWriteAccess(
 ): Promise<
   { category: unknown; authContext: AuthContext; userRole: HouseholdRole } | NextResponse
 > {
-  const authResult = await requireAuth()
+  const accessResult = await requireCategoryAccess(request, categoryId)
 
-  if (authResult instanceof NextResponse) {
-    return authResult
+  if (accessResult instanceof NextResponse) {
+    return accessResult
   }
 
-  // Validate category ID format
-  if (!categoryId || typeof categoryId !== 'string') {
-    return NextResponse.json({ error: 'Invalid category ID' }, { status: 400 })
-  }
-
-  // Find category and verify user has access via household membership
-  const category = await db.householdCategory.findFirst({
-    where: {
-      id: categoryId,
-      household: {
-        members: {
-          some: {
-            user: {
-              id: authResult.userId,
-            },
-          },
-        },
-      },
-    },
-    include: {
-      household: {
-        include: {
-          members: {
-            where: {
-              user: {
-                id: authResult.userId,
-              },
-            },
-            include: {
-              user: true,
-            },
-          },
-        },
-      },
-    },
-  })
-
-  if (!category) {
-    return NextResponse.json(
-      { error: 'Access denied. You do not have permission to access this category.' },
-      { status: 403 }
-    )
-  }
-
-  // Get user's role for this household
-  const categoryWithMembers = category as {
+  const categoryWithMembers = accessResult.category as {
     household: { members: Array<{ role: HouseholdRole }> }
   }
   const userMembership = categoryWithMembers.household.members[0]
@@ -607,7 +512,6 @@ export async function requireCategoryWriteAccess(
     return NextResponse.json({ error: 'User role not found' }, { status: 500 })
   }
 
-  // Check if user has write permissions
   if (!canManageData(userMembership.role)) {
     return NextResponse.json(
       { error: 'You do not have permission to modify categories in this household' },
@@ -616,8 +520,8 @@ export async function requireCategoryWriteAccess(
   }
 
   return {
-    category,
-    authContext: authResult,
+    category: accessResult.category,
+    authContext: accessResult.authContext,
     userRole: userMembership.role,
   }
 }

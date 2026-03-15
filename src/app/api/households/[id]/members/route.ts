@@ -1,24 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { ensureUser } from '@/lib/ensure-user'
+import { requireAuth } from '@/lib/auth-middleware'
 import { logApiError } from '@/lib/error-logger'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
 export const GET = withApiLogging(
   async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
-    let user
+    let userId: string | undefined
     try {
       const { id } = await params
 
       // Ensure user exists in database
-      const result = await ensureUser()
-      user = result.user
+      const authContext = await requireAuth()
+      if (authContext instanceof NextResponse) return authContext
+      userId = authContext.userId
 
       // Check if user has access to this household
       const userHousehold = await db.userHousehold.findUnique({
         where: {
           userId_householdId: {
-            userId: user.id,
+            userId,
             householdId: id,
           },
         },
@@ -55,7 +56,7 @@ export const GET = withApiLogging(
         operation: 'fetch household members',
         context: {
           householdId: (await params).id,
-          userId: user?.id,
+          userId,
         },
       })
       return NextResponse.json({ error: 'Failed to fetch members' }, { status: 500 })
