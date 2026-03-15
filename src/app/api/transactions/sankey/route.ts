@@ -35,13 +35,44 @@ export const GET = withApiLogging(async (request: NextRequest) => {
       return result
     }
 
+    // Parse and validate date range — max 1 year
+    const MAX_RANGE_MS = 366 * 24 * 60 * 60 * 1000
+    let parsedStart: Date | undefined
+    let parsedEnd: Date | undefined
+
+    if (startDate) {
+      parsedStart = new Date(startDate)
+      if (isNaN(parsedStart.getTime())) {
+        return NextResponse.json({ error: 'Invalid startDate' }, { status: 400 })
+      }
+    }
+    if (endDate) {
+      parsedEnd = new Date(endDate)
+      if (isNaN(parsedEnd.getTime())) {
+        return NextResponse.json({ error: 'Invalid endDate' }, { status: 400 })
+      }
+    }
+
+    // If both bounds provided, check the range does not exceed 1 year
+    if (parsedStart && parsedEnd) {
+      if (parsedEnd.getTime() - parsedStart.getTime() > MAX_RANGE_MS) {
+        return NextResponse.json({ error: 'Date range cannot exceed 1 year' }, { status: 400 })
+      }
+    } else if (parsedStart && !parsedEnd) {
+      // Clamp open end to startDate + 1 year
+      parsedEnd = new Date(parsedStart.getTime() + MAX_RANGE_MS)
+    } else if (parsedEnd && !parsedStart) {
+      // Clamp open start to endDate - 1 year
+      parsedStart = new Date(parsedEnd.getTime() - MAX_RANGE_MS)
+    }
+
     const where: Prisma.TransactionWhereInput = {
       householdId: householdId,
     }
-    if (startDate || endDate) {
+    if (parsedStart || parsedEnd) {
       where.transactionDate = {}
-      if (startDate) where.transactionDate.gte = new Date(startDate)
-      if (endDate) where.transactionDate.lte = new Date(endDate)
+      if (parsedStart) where.transactionDate.gte = parsedStart
+      if (parsedEnd) where.transactionDate.lte = parsedEnd
     }
     if (typeId) {
       where.typeId = typeId

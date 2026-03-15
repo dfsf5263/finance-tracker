@@ -81,7 +81,7 @@ export function DeDupePage() {
       } else if (error) {
         console.error('Failed to analyze duplicates:', error)
         if (!error.includes('Rate limit exceeded')) {
-          toast.error('Failed to analyze duplicates')
+          toast.error(error)
         }
       }
     } catch (error) {

@@ -5,6 +5,8 @@ import { requireHouseholdAccess } from '@/lib/auth-middleware'
 import { findDuplicates, getDuplicateStats } from '@/lib/duplicate-detector'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
+const DUPLICATE_TRANSACTION_LIMIT = 4000
+
 export const GET = withApiLogging(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
@@ -31,14 +33,29 @@ export const GET = withApiLogging(async (request: NextRequest) => {
       dateFilter.lte = new Date(endDate)
     }
 
+    const whereClause = {
+      householdId,
+      ...(Object.keys(dateFilter).length > 0 && {
+        transactionDate: dateFilter,
+      }),
+    }
+
+    // Count first — cheap index scan, avoids loading rows when over the limit
+    const transactionCount = await db.transaction.count({ where: whereClause })
+    if (transactionCount > DUPLICATE_TRANSACTION_LIMIT) {
+      return NextResponse.json(
+        {
+          error: `Your selection contains ${transactionCount.toLocaleString()} transactions, which exceeds the ${DUPLICATE_TRANSACTION_LIMIT.toLocaleString()} transaction limit. Please narrow your date range and try again.`,
+          transactionCount,
+          limit: DUPLICATE_TRANSACTION_LIMIT,
+        },
+        { status: 422 }
+      )
+    }
+
     // Fetch transactions for the household within the date range
     const transactions = await db.transaction.findMany({
-      where: {
-        householdId,
-        ...(Object.keys(dateFilter).length > 0 && {
-          transactionDate: dateFilter,
-        }),
-      },
+      where: whereClause,
       include: {
         account: {
           select: { name: true },
