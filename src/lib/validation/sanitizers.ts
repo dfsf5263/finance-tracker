@@ -24,7 +24,9 @@ export function validateISODate(isoString: string): boolean {
   const date = new Date(isoString)
   const [year, month, day] = isoString.split('-').map(Number)
 
-  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  )
 }
 
 // Parse MM/DD/YYYY date string to Date object
@@ -76,7 +78,7 @@ export function reasonableDate(dateStr: string): boolean {
 
 export function reasonableDateISO(isoString: string): boolean {
   const date = new Date(isoString)
-  return date >= new Date(1900, 0, 1)
+  return date >= new Date(Date.UTC(1900, 0, 1))
 }
 
 // Validate amounts
