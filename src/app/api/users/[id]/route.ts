@@ -10,7 +10,6 @@ export const GET = withApiLogging(
       const { id } = await params
       const user = await db.householdUser.findUnique({
         where: { id },
-        include: { household: true },
       })
 
       if (!user) {
@@ -66,7 +65,6 @@ export const PUT = withApiLogging(
       const user = await db.householdUser.update({
         where: { id },
         data: updateData,
-        include: { household: true },
       })
 
       return NextResponse.json(user)

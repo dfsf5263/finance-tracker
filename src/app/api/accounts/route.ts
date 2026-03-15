@@ -23,7 +23,6 @@ export const GET = withApiLogging(async (request: NextRequest) => {
     const accounts = await db.householdAccount.findMany({
       where: { householdId },
       orderBy: { name: 'asc' },
-      include: { household: true },
     })
     return NextResponse.json(accounts)
   } catch (error) {
@@ -63,7 +62,6 @@ export const POST = withApiLogging(async (request: NextRequest) => {
         name,
         householdId,
       },
-      include: { household: true },
     })
 
     return NextResponse.json(account, { status: 201 })

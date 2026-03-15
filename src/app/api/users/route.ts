@@ -22,7 +22,6 @@ export const GET = withApiLogging(async (request: NextRequest) => {
     const users = await db.householdUser.findMany({
       where: { householdId },
       orderBy: { name: 'asc' },
-      include: { household: true },
     })
     return NextResponse.json(users)
   } catch (error) {
@@ -69,7 +68,6 @@ export const POST = withApiLogging(async (request: NextRequest) => {
 
     const user = await db.householdUser.create({
       data: userData,
-      include: { household: true },
     })
 
     return NextResponse.json(user, { status: 201 })

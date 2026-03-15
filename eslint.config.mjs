@@ -9,6 +9,8 @@ const eslintConfig = [
       // Downgraded from error: flagging async data-fetching in useEffect as well as
       // common form-reset patterns that require larger architectural changes to fix.
       "react-hooks/set-state-in-effect": "warn",
+      // Allow intentionally-unused variables when prefixed with _ (common TS convention).
+      "@typescript-eslint/no-unused-vars": ["warn", { "varsIgnorePattern": "^_" }],
     },
   },
 ];

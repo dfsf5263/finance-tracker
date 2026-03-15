@@ -17,8 +17,8 @@ export const GET = withApiLogging(
         return result
       }
 
-      const { category } = result
-      return NextResponse.json(category)
+      const { household: _household, ...categoryData } = result.category as Record<string, unknown>
+      return NextResponse.json(categoryData)
     } catch (error) {
       await logApiError({
         request,
@@ -80,7 +80,6 @@ export const PUT = withApiLogging(
       const category = await db.householdCategory.update({
         where: { id },
         data: updateData,
-        include: { household: true },
       })
 
       return NextResponse.json(category)

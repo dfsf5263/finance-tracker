@@ -23,7 +23,6 @@ export const GET = withApiLogging(async (request: NextRequest) => {
     const types = await db.householdType.findMany({
       where: { householdId },
       orderBy: { name: 'asc' },
-      include: { household: true },
     })
     return NextResponse.json(types)
   } catch (error) {
@@ -64,7 +63,6 @@ export const POST = withApiLogging(async (request: NextRequest) => {
         householdId,
         isOutflow: isOutflow ?? true,
       },
-      include: { household: true },
     })
 
     return NextResponse.json(type, { status: 201 })
