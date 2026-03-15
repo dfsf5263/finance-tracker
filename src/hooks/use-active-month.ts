@@ -21,8 +21,10 @@ interface UseActiveMonthReturn {
   refetch: () => void
 }
 
+const CACHE_TTL_MS = 5 * 60 * 1000
+
 // Cache for active month data per household
-const activeMonthCache = new Map<string, ActiveMonthData>()
+const activeMonthCache = new Map<string, { data: ActiveMonthData; expiresAt: number }>()
 
 export function useActiveMonth(householdId: string | null): UseActiveMonthReturn {
   const [data, setData] = useState<ActiveMonthData | null>(null)
@@ -37,8 +39,8 @@ export function useActiveMonth(householdId: string | null): UseActiveMonthReturn
 
     // Check cache first
     const cached = activeMonthCache.get(householdId)
-    if (cached) {
-      setData(cached)
+    if (cached && Date.now() < cached.expiresAt) {
+      setData(cached.data)
       setLoading(false)
       return
     }
@@ -56,7 +58,7 @@ export function useActiveMonth(householdId: string | null): UseActiveMonthReturn
 
     if (result) {
       // Cache the result
-      activeMonthCache.set(householdId, result)
+      activeMonthCache.set(householdId, { data: result, expiresAt: Date.now() + CACHE_TTL_MS })
       setData(result)
     } else if (error) {
       console.error('Error fetching active month:', error)
@@ -74,7 +76,10 @@ export function useActiveMonth(householdId: string | null): UseActiveMonthReturn
       setData(fallbackData)
 
       // Cache the fallback for this session
-      activeMonthCache.set(householdId, fallbackData)
+      activeMonthCache.set(householdId, {
+        data: fallbackData,
+        expiresAt: Date.now() + CACHE_TTL_MS,
+      })
     }
 
     setLoading(false)
