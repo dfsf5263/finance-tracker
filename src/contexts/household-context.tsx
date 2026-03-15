@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 
 interface Household {
   id: string
@@ -36,61 +36,54 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [requiresHouseholdCreation, setRequiresHouseholdCreation] = useState(false)
 
-  const fetchHouseholds = async (retryCount = 0) => {
+  const fetchHouseholds = useCallback(async (retryCount = 0) => {
     try {
       const response = await fetch('/api/households')
       if (response.ok) {
-        const data = await response.json()
-        const previousHouseholds = households
-        setHouseholds(data)
+        const data: Household[] = await response.json()
 
-        // Handle household selection logic
-        if (data.length === 0) {
-          // No households exist - force creation
-          setSelectedHousehold(null)
-          setRequiresHouseholdCreation(true)
-        } else {
-          // Check if currently selected household still exists
-          const currentStillExists =
-            selectedHousehold && data.find((h: Household) => h.id === selectedHousehold.id)
+        // Capture current households via functional updater so we don't read stale closure state
+        let prevHouseholdsSnapshot: Household[] = []
+        setHouseholds((prev) => {
+          prevHouseholdsSnapshot = prev
+          return data
+        })
 
+        setSelectedHousehold((prevSelected) => {
+          if (data.length === 0) {
+            return null
+          }
+          const currentStillExists = prevSelected && data.find((h) => h.id === prevSelected.id)
           if (currentStillExists) {
             // Update selected household with fresh data
-            setSelectedHousehold(currentStillExists)
-            setRequiresHouseholdCreation(false)
-          } else if (selectedHousehold && previousHouseholds.length > 0) {
+            return currentStillExists
+          } else if (prevSelected && prevHouseholdsSnapshot.length > 0) {
             // Previously selected household was deleted - smart selection
-            const deletedIndex = previousHouseholds.findIndex((h) => h.id === selectedHousehold.id)
+            const deletedIndex = prevHouseholdsSnapshot.findIndex((h) => h.id === prevSelected.id)
             let newSelection: Household
-
             if (deletedIndex >= 0) {
-              // Try household at same index
+              // Try household at same index, then previous, then first
               if (data[deletedIndex]) {
                 newSelection = data[deletedIndex]
-              }
-              // Try previous household (index - 1)
-              else if (data[deletedIndex - 1]) {
+              } else if (data[deletedIndex - 1]) {
                 newSelection = data[deletedIndex - 1]
-              }
-              // Fallback to first household
-              else {
+              } else {
                 newSelection = data[0]
               }
             } else {
-              // Fallback to first household
               newSelection = data[0]
             }
-
-            setSelectedHousehold(newSelection)
-            setRequiresHouseholdCreation(false)
             // Update localStorage with new selection
             localStorage.setItem('selectedHouseholdId', newSelection.id)
-          } else if (!selectedHousehold) {
+            return newSelection
+          } else if (!prevSelected) {
             // No household selected yet - select first
-            setSelectedHousehold(data[0])
-            setRequiresHouseholdCreation(false)
+            return data[0] ?? null
           }
-        }
+          return prevSelected
+        })
+
+        setRequiresHouseholdCreation(data.length === 0)
       } else {
         // Handle different error responses
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
@@ -128,7 +121,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   const refreshHouseholds = async () => {
     setIsLoading(true)
@@ -161,8 +154,7 @@ export function HouseholdProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetchHouseholds()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [fetchHouseholds])
 
   // Restore selected household from localStorage
   useEffect(() => {
