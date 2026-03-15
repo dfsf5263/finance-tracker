@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+export DOCKER_BUILDKIT=1
+
 # Finance Tracker Docker Build Script
 # Builds and optionally pushes the Docker image to GitHub Container Registry
 
@@ -126,6 +128,7 @@ PRIMARY_TAG="${FULL_IMAGE_NAME}:${TAG}"
 log "Building with Better Auth (all configuration provided at runtime)"
 
 if docker build \
+    --progress=plain \
     --platform "${PLATFORM}" \
     -t "${PRIMARY_TAG}" .; then
     success "Docker image built successfully: ${PRIMARY_TAG}"

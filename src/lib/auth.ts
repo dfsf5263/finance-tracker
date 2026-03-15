@@ -2,10 +2,12 @@ import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { twoFactor } from 'better-auth/plugins'
 import { PrismaClient } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
 import { sendEmailVerification } from '@/lib/email/send-verification-email'
 import { sendPasswordResetEmail } from '@/lib/email/send-password-reset-email'
 
-const prisma = new PrismaClient()
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
+const prisma = new PrismaClient({ adapter })
 
 export const auth = betterAuth({
   baseURL: process.env.NEXT_PUBLIC_APP_URL!,

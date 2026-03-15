@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { Decimal } from '@prisma/client/runtime/library'
+import { Decimal } from '@prisma/client/runtime/client'
 import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
 import { requireTransactionAccess, requireTransactionWriteAccess } from '@/lib/auth-middleware'

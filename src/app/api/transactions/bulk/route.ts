@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { Decimal } from '@prisma/client/runtime/library'
+import { Decimal } from '@prisma/client/runtime/client'
 import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody } from '@/lib/validation'
 import { bulkUploadRequestSchema, type BulkTransaction } from '@/lib/validation/bulk-upload'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
+import logger from '@/lib/logger'
 // parseMMDDYYYY is no longer needed - dates are now in ISO format from validation
 
 interface ValidationError {
@@ -17,6 +18,8 @@ interface ValidationError {
 }
 
 export const POST = withApiLogging(async (request: NextRequest) => {
+  const correlationId = request.headers.get('x-correlation-id')
+  const log = logger.child({ correlationId })
   let body: unknown
 
   try {
@@ -26,6 +29,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
 
     if (!validation.success) {
       const parsedErrors = parseValidationErrors(validation.error)
+      log.warn({ errorCount: parsedErrors.length }, 'bulk upload: schema validation failed')
 
       return NextResponse.json(
         {
@@ -38,6 +42,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     }
 
     const { transactions, householdId } = validation.data
+    log.info({ transactionCount: transactions.length, householdId }, 'bulk upload: starting')
 
     // Verify user has write access to household
     const authResult = await requireHouseholdWriteAccess(request, householdId)
@@ -45,9 +50,18 @@ export const POST = withApiLogging(async (request: NextRequest) => {
 
     // Check for intra-file duplicates first
     const intraFileDuplicates = checkIntraFileDuplicates(transactions)
+    log.info(
+      { intraFileDuplicateCount: intraFileDuplicates.length },
+      'bulk upload: intra-file duplicate check complete'
+    )
 
-    // Check for duplicates against database
+    // Check for duplicates against database (single batched query)
+    const dbDupStart = Date.now()
     const dbDuplicates = await checkDuplicateTransactions(transactions, householdId)
+    log.info(
+      { dbDuplicateCount: dbDuplicates.length, durationMs: Date.now() - dbDupStart },
+      'bulk upload: db duplicate check complete'
+    )
 
     // Combine all duplicate row numbers
     const duplicateRows = new Set([
@@ -58,6 +72,10 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     // Separate valid from duplicate transactions
     const validTransactions = transactions.filter(
       (_, index) => !duplicateRows.has(index + 2) // +2 for header row and 0-index
+    )
+    log.info(
+      { validCount: validTransactions.length, duplicateCount: duplicateRows.size },
+      'bulk upload: deduplication complete'
     )
 
     const failures: Array<{
@@ -108,15 +126,26 @@ export const POST = withApiLogging(async (request: NextRequest) => {
 
     // Process valid transactions if any exist
     if (validTransactions.length > 0) {
+      const txStart = Date.now()
+      log.info({ validCount: validTransactions.length }, 'bulk upload: beginning db transaction')
       try {
         const result = await db.$transaction(async (tx) => {
           // Validate all entities exist
+          const entityValStart = Date.now()
           const entityValidation = await validateEntities(tx, validTransactions, householdId)
+          log.info(
+            { valid: entityValidation.valid, durationMs: Date.now() - entityValStart },
+            'bulk upload: entity validation complete'
+          )
 
           if (!entityValidation.valid) {
             // Add entity validation failures
             const entityFailures = getEntityValidationFailures(validTransactions, entityValidation)
             failures.push(...entityFailures)
+            log.warn(
+              { entityFailureCount: entityFailures.length },
+              'bulk upload: entity validation failures found'
+            )
 
             // Filter out transactions with entity failures
             const finalValidTransactions = filterOutEntityFailures(
@@ -125,6 +154,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
             )
 
             if (finalValidTransactions.length === 0) {
+              log.warn('bulk upload: no valid transactions remain after entity validation')
               return { count: 0 }
             }
 
@@ -142,9 +172,15 @@ export const POST = withApiLogging(async (request: NextRequest) => {
               memo: t.memo || '',
             }))
 
-            return await tx.transaction.createMany({
+            const insertStart = Date.now()
+            const insertResult = await tx.transaction.createMany({
               data: preparedTransactions,
             })
+            log.info(
+              { inserted: insertResult.count, durationMs: Date.now() - insertStart },
+              'bulk upload: createMany complete (partial — entity failures excluded)'
+            )
+            return insertResult
           }
 
           // All transactions are valid, prepare them
@@ -161,18 +197,28 @@ export const POST = withApiLogging(async (request: NextRequest) => {
             memo: t.memo || '',
           }))
 
-          return await tx.transaction.createMany({
+          const insertStart = Date.now()
+          const insertResult = await tx.transaction.createMany({
             data: preparedTransactions,
           })
+          log.info(
+            { inserted: insertResult.count, durationMs: Date.now() - insertStart },
+            'bulk upload: createMany complete'
+          )
+          return insertResult
         })
 
         successfulCount = result.count
+        log.info(
+          { successfulCount, durationMs: Date.now() - txStart },
+          'bulk upload: db transaction complete'
+        )
       } catch (error: unknown) {
         // Check if it's a unique constraint violation (P2002)
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
           // This means some transactions were duplicates that we missed
           // The error doesn't tell us which ones, so we need to handle this differently
-          console.warn('Unique constraint violation during bulk insert:', error.message)
+          log.warn({ err: error }, 'bulk upload: unique constraint violation during insert')
 
           // Since we can't identify which specific transactions failed in a bulk operation,
           // we'll mark all as potentially having constraint violations
@@ -189,7 +235,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
           successfulCount = 0
         } else {
           // Other database errors
-          console.error('Transaction processing failed:', error)
+          log.error({ err: error }, 'bulk upload: db transaction failed')
           validTransactions.forEach((t) => {
             const originalIndex = transactions.findIndex((orig) => orig === t)
             failures.push({
@@ -218,6 +264,10 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       },
     }))
 
+    log.info(
+      { total: transactions.length, successful: successfulCount, failed: failures.length },
+      'bulk upload: finished'
+    )
     return NextResponse.json({
       success: true,
       message:
@@ -358,7 +408,8 @@ function checkIntraFileDuplicates(transactions: BulkTransaction[]): Array<{
   return duplicates
 }
 
-// Helper function to check for duplicate transactions against database
+// Helper function to check for duplicate transactions against database.
+// Uses a single batched OR query instead of one query per row to avoid N+1 performance issues.
 async function checkDuplicateTransactions(
   transactions: BulkTransaction[],
   householdId: string
@@ -375,32 +426,65 @@ async function checkDuplicateTransactions(
     }
   }>
 > {
-  const duplicates = []
+  if (transactions.length === 0) return []
 
-  for (let i = 0; i < transactions.length; i++) {
-    const t = transactions[i]
-    const date = new Date(t.transactionDate) // t.transactionDate is now in ISO DateTime format
+  // Build a deduplicated set of conditions to keep the OR query compact.
+  // The key mirrors the unique constraint: date + amount + description.
+  type ConditionEntry = { transactionDate: Date; amount: Decimal; description: string }
+  const uniqueConditions = new Map<string, ConditionEntry>()
 
-    const existing = await db.transaction.findFirst({
-      where: {
-        householdId,
-        transactionDate: date,
+  for (const t of transactions) {
+    const dateKey = t.transactionDate.split('T')[0]
+    const amountKey = parseFloat(t.amount).toFixed(2)
+    const key = `${dateKey}|${amountKey}|${t.description}`
+    if (!uniqueConditions.has(key)) {
+      uniqueConditions.set(key, {
+        transactionDate: new Date(t.transactionDate),
         amount: new Decimal(parseFloat(t.amount)),
         description: t.description,
-      },
-      select: {
-        createdAt: true,
-        amount: true,
-        description: true,
-        transactionDate: true,
-        account: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    })
+      })
+    }
+  }
 
+  // Single DB query for all candidate duplicates
+  const orConditions = [...uniqueConditions.values()].map((c) => ({
+    householdId,
+    transactionDate: c.transactionDate,
+    amount: c.amount,
+    description: c.description,
+  }))
+
+  const existingRows = await db.transaction.findMany({
+    where: { OR: orConditions },
+    select: {
+      createdAt: true,
+      amount: true,
+      description: true,
+      transactionDate: true,
+      account: {
+        select: { name: true },
+      },
+    },
+  })
+
+  // Build an in-memory lookup from the results
+  type ExistingRow = (typeof existingRows)[0]
+  const existingMap = new Map<string, ExistingRow>()
+  for (const ex of existingRows) {
+    const dateKey = ex.transactionDate.toISOString().split('T')[0]
+    const amountKey = parseFloat(ex.amount.toString()).toFixed(2)
+    const key = `${dateKey}|${amountKey}|${ex.description}`
+    existingMap.set(key, ex)
+  }
+
+  // Match each incoming transaction against the lookup
+  const duplicates = []
+  for (let i = 0; i < transactions.length; i++) {
+    const t = transactions[i]
+    const dateKey = t.transactionDate.split('T')[0]
+    const amountKey = parseFloat(t.amount).toFixed(2)
+    const key = `${dateKey}|${amountKey}|${t.description}`
+    const existing = existingMap.get(key)
     if (existing) {
       duplicates.push({
         row: i + 2, // +2 for header row and 0-index
