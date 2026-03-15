@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 import { formatCurrency } from '@/lib/utils'
 import type { HouseholdSummaryData } from '@/lib/weekly-summary'
+import logger from '@/lib/logger'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -22,7 +23,7 @@ export async function sendInvitationEmail({
   expiresAt,
 }: SendInvitationEmailParams) {
   if (!resend) {
-    console.warn('Resend API key not configured - skipping email send')
+    logger.warn('Resend API key not configured - skipping email send')
     return { success: false, error: 'Email service not configured' }
   }
 
@@ -127,13 +128,13 @@ export async function sendInvitationEmail({
     })
 
     if (error) {
-      console.error('Failed to send invitation email:', error)
+      logger.error({ err: error }, 'Failed to send invitation email')
       return { success: false, error }
     }
 
     return { success: true, data }
   } catch (error) {
-    console.error('Error sending invitation email:', error)
+    logger.error({ err: error }, 'Error sending invitation email')
     return { success: false, error }
   }
 }
@@ -163,7 +164,7 @@ export async function sendWeeklySummaryEmail({
   summaries,
 }: SendWeeklySummaryEmailParams) {
   if (!resend) {
-    console.warn('Resend API key not configured - skipping email send')
+    logger.warn('Resend API key not configured - skipping email send')
     return { success: false, error: 'Email service not configured' }
   }
 
@@ -203,13 +204,13 @@ export async function sendWeeklySummaryEmail({
     })
 
     if (error) {
-      console.error('Failed to send weekly summary email:', error)
+      logger.error({ err: error }, 'Failed to send weekly summary email')
       return { success: false, error }
     }
 
     return { success: true, data }
   } catch (error) {
-    console.error('Error sending weekly summary email:', error)
+    logger.error({ err: error }, 'Error sending weekly summary email')
     return { success: false, error }
   }
 }

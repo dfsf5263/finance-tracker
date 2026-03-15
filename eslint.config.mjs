@@ -11,6 +11,8 @@ const eslintConfig = [
       "react-hooks/set-state-in-effect": "warn",
       // Allow intentionally-unused variables when prefixed with _ (common TS convention).
       "@typescript-eslint/no-unused-vars": ["warn", { "varsIgnorePattern": "^_" }],
+      // Enforce pino logger on server; prevent debug console.* calls reaching production.
+      "no-console": "error",
     },
   },
 ];

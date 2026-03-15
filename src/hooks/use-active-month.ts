@@ -46,8 +46,6 @@ export function useActiveMonth(householdId: string | null): UseActiveMonthReturn
     setLoading(true)
     setError(null)
 
-    console.log('Fetching active month for household:', householdId)
-
     const { data: result, error } = await apiFetch<ActiveMonthData>(
       `/api/households/${householdId}/active-month`,
       {
@@ -57,8 +55,6 @@ export function useActiveMonth(householdId: string | null): UseActiveMonthReturn
     )
 
     if (result) {
-      console.log('Active month API result:', result)
-
       // Cache the result
       activeMonthCache.set(householdId, result)
       setData(result)
@@ -75,7 +71,6 @@ export function useActiveMonth(householdId: string | null): UseActiveMonthReturn
         message: 'Using current month (API failed)',
       }
 
-      console.log('Using fallback data:', fallbackData)
       setData(fallbackData)
 
       // Cache the fallback for this session

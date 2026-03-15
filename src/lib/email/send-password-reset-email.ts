@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import logger from '@/lib/logger'
 
 // Lazy-initialized Resend client to avoid build-time errors
 let resendClient: Resend | null = null
@@ -50,17 +51,17 @@ export async function sendPasswordResetEmail({
     })
 
     if (error) {
-      console.error('Failed to send password reset email:', error)
+      logger.error({ err: error }, 'Failed to send password reset email')
       return {
         success: false,
         error: error.message || 'Failed to send email',
       }
     }
 
-    console.log('Password reset email sent successfully:', data?.id)
+    logger.info({ id: data?.id }, 'Password reset email sent successfully')
     return { success: true }
   } catch (error) {
-    console.error('Error sending password reset email:', error)
+    logger.error({ err: error }, 'Error sending password reset email')
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',

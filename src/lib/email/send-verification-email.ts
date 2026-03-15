@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import logger from '@/lib/logger'
 
 // Lazy-initialized Resend client to avoid build-time errors
 let resendClient: Resend | null = null
@@ -50,17 +51,17 @@ export async function sendEmailVerification({
     })
 
     if (error) {
-      console.error('Failed to send email verification:', error)
+      logger.error({ err: error }, 'Failed to send email verification')
       return {
         success: false,
         error: error.message || 'Failed to send email',
       }
     }
 
-    console.log('Email verification sent successfully:', data?.id)
+    logger.info({ id: data?.id }, 'Email verification sent successfully')
     return { success: true }
   } catch (error) {
-    console.error('Error sending email verification:', error)
+    logger.error({ err: error }, 'Error sending email verification')
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',

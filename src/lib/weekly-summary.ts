@@ -5,6 +5,7 @@ import {
   getUserBudgetPerformance,
 } from '@/lib/budget-analytics'
 import { getHouseholdUsers } from '@/lib/user-analytics'
+import logger from '@/lib/logger'
 
 interface MonthlySpendingData {
   currentTotal: number
@@ -105,8 +106,9 @@ export async function generateHouseholdSummary(
   // Check if household has any transactions in the reporting period
   const hasTransactions = await hasTransactionsInPeriod(householdId, startDateStr, endDateStr)
   if (!hasTransactions) {
-    console.log(
-      `Skipping household ${householdId} (${householdName}) - no transactions for period ${startDateStr} to ${endDateStr}`
+    logger.info(
+      { householdId, householdName, startDate: startDateStr, endDate: endDateStr },
+      'Skipping household - no transactions for period'
     )
     return null
   }
@@ -341,7 +343,7 @@ export async function generateHouseholdSummary(
       budgetAlerts,
     }
   } catch (error) {
-    console.error(`Error generating summary for household ${householdId}:`, error)
+    logger.error({ err: error, householdId }, 'Error generating summary for household')
     throw error
   }
 }
