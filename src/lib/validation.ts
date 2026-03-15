@@ -29,6 +29,7 @@ export const transactionCreateSchema = transactionUpdateSchema.extend({
 export const householdCreateSchema = z.object({
   name: z.string().min(1, 'Household name is required').max(100, 'Household name too long'),
   description: z.string().max(500, 'Description too long').optional(),
+  annualBudget: z.union([z.string(), z.number()]).optional(),
 })
 
 export const householdUpdateSchema = z.object({

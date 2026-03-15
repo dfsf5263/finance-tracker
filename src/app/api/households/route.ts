@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logApiError } from '@/lib/error-logger'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
+import { validateRequestBody, householdCreateSchema } from '@/lib/validation'
 
 export const GET = withApiLogging(async (_request: NextRequest) => {
   let userId: string | undefined
@@ -64,7 +65,7 @@ export const GET = withApiLogging(async (_request: NextRequest) => {
 
 export const POST = withApiLogging(async (request: NextRequest) => {
   let userId: string | undefined
-  let data: { name?: string; annualBudget?: string | number } | undefined
+  let data: unknown
   try {
     // Ensure user exists in database
     const authContext = await requireAuth()
@@ -72,12 +73,12 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     userId = authContext.userId
 
     data = await request.json()
-    const { name, annualBudget } = data || {}
-
-    if (!name) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    const validation = validateRequestBody(householdCreateSchema, data)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
+    const { name, annualBudget } = validation.data
     const householdData: { name: string; annualBudget?: string | number } = { name }
 
     if (annualBudget !== undefined && annualBudget !== null && annualBudget !== '') {

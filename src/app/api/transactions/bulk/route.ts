@@ -505,8 +505,7 @@ async function checkDuplicateTransactions(
 
 // Helper function to validate entities exist
 async function validateEntities(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tx: any,
+  tx: Prisma.TransactionClient,
   transactions: BulkTransaction[],
   householdId: string
 ): Promise<{
