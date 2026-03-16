@@ -69,7 +69,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://test:test@localhost:5432/finance_tracker_test
       BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      APP_URL: http://localhost:3000
       RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
       RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
       RESEND_REPLY_TO_EMAIL: ${{ secrets.RESEND_REPLY_TO_EMAIL }}

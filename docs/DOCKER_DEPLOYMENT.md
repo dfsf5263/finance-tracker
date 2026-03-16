@@ -29,7 +29,7 @@ docker pull ghcr.io/dfsf5263/finance-tracker:latest
 |---|---|---|
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/finance_db` |
 | `BETTER_AUTH_SECRET` | Session signing secret (32+ characters) | `your-random-secret-32-chars-min` |
-| `NEXT_PUBLIC_APP_URL` | Public application URL | `https://finance.example.com` |
+| `APP_URL` | Public application URL | `https://finance.example.com` |
 | `RESEND_API_KEY` | [Resend](https://resend.com) API key | `re_abc123...` |
 | `RESEND_FROM_EMAIL` | Sender email address | `noreply@yourdomain.com` |
 
@@ -56,7 +56,7 @@ docker run -d \
   -p 3000:3000 \
   -e DATABASE_URL="postgresql://user:password@host:5432/finance_db" \
   -e BETTER_AUTH_SECRET="your-secret-key-32-characters-or-more" \
-  -e NEXT_PUBLIC_APP_URL="http://localhost:3000" \
+  -e APP_URL="http://localhost:3000" \
   -e RESEND_API_KEY="re_your_api_key" \
   -e RESEND_FROM_EMAIL="noreply@yourdomain.com" \
   --restart unless-stopped \
@@ -70,7 +70,7 @@ Create `.env.production`:
 ```bash
 DATABASE_URL=postgresql://user:password@host:5432/finance_db
 BETTER_AUTH_SECRET=your-secret-key-32-characters-or-more
-NEXT_PUBLIC_APP_URL=https://finance.example.com
+APP_URL=https://finance.example.com
 RESEND_API_KEY=re_your_api_key
 RESEND_FROM_EMAIL=noreply@yourdomain.com
 RESEND_REPLY_TO_EMAIL=support@yourdomain.com

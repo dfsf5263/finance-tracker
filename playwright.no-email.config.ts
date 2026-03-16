@@ -44,7 +44,7 @@ export default defineConfig({
     timeout: 180_000,
     env: {
       DATABASE_URL: process.env.DATABASE_URL_E2E ?? process.env.DATABASE_URL ?? '',
-      NEXT_PUBLIC_APP_URL: 'http://localhost:3001',
+      APP_URL: 'http://localhost:3001',
       RESEND_API_KEY: '',
     },
   },

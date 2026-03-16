@@ -141,7 +141,7 @@ export const POST = withApiLogging(
             ? `${invitation.inviter.firstName} ${invitation.inviter.lastName}`
             : invitation.inviter.email
 
-        const invitationLink = `${process.env.NEXT_PUBLIC_APP_URL || ''}/invitations/${invitation.token}`
+        const invitationLink = `${process.env.APP_URL || ''}/invitations/${invitation.token}`
 
         // Send email asynchronously - don't block the response
         sendInvitationEmail({
