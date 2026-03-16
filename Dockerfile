@@ -28,6 +28,9 @@ COPY . .
 RUN npx prisma generate
 
 # No build arguments needed for Better Auth (all config at runtime)
+# NEXT_PUBLIC_APP_URL is required at build time because Next.js evaluates API routes
+# during "Collecting page data". The value is overridden at runtime via environment variables.
+ENV NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
