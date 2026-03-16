@@ -9,7 +9,8 @@ This guide covers deploying the Finance Tracker application using Docker. The ap
 Official images are published to **GitHub Container Registry (GHCR)**:
 
 - **Registry**: `ghcr.io/dfsf5263/finance-tracker`
-- **Tags**: `latest`, `main`, `sha-<commit>`, semver (e.g., `v1.0.0`)
+- **Tags**: `latest`, `<version>` (from `package.json`), `sha-<commit>`, `main`
+- **Immutability**: Version tags (e.g., `0.1.0`) are immutable — once published, they cannot be overwritten
 
 ```bash
 docker pull ghcr.io/dfsf5263/finance-tracker:latest
@@ -41,6 +42,7 @@ docker pull ghcr.io/dfsf5263/finance-tracker:latest
 | `PORT` | `3000` | Application port |
 | `SKIP_MIGRATIONS` | `false` | Skip automatic database migrations on startup |
 | `ENABLE_SEEDING` | `false` | Run database seeding on startup |
+| `CRON_SECRET` | | Secret token used by the internal weekly summary cron job; if unset, the in-container cron is disabled and no weekly summaries are generated |
 | `CRON_SCHEDULE` | `0 8 * * MON` | Cron expression for the weekly summary job schedule |
 | `TZ` | `UTC` | Timezone used for the weekly summary cron schedule |
 

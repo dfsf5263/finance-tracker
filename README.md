@@ -219,7 +219,8 @@ The project uses GitHub Actions with two workflows:
 **Release** (`release.yml`) — Runs on push to `main` and version tags (`v*`):
 
 - Builds the Docker image and pushes to [GitHub Container Registry](https://github.com/dfsf5263/finance-tracker/pkgs/container/finance-tracker)
-- Tags: `latest`, `sha-<commit>`, `main`, and semver (e.g., `v1.0.0`)
+- Tags: `latest`, `<version>` (from `package.json`), `sha-<commit>`, `main`
+- Version tags are **immutable** — the build fails if the version already exists in GHCR
 
 ## Project Structure
 
