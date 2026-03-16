@@ -41,6 +41,8 @@ docker pull ghcr.io/dfsf5263/finance-tracker:latest
 | `PORT` | `3000` | Application port |
 | `SKIP_MIGRATIONS` | `false` | Skip automatic database migrations on startup |
 | `ENABLE_SEEDING` | `false` | Run database seeding on startup |
+| `CRON_SCHEDULE` | `0 8 * * MON` | Cron expression for the weekly summary job schedule |
+| `TZ` | `UTC` | Timezone used for the weekly summary cron schedule |
 
 ## Quick Start
 
