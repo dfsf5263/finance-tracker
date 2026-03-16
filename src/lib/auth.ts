@@ -5,30 +5,24 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { sendEmailVerification } from '@/lib/email/send-verification-email'
 import { sendPasswordResetEmail } from '@/lib/email/send-password-reset-email'
+import logger from '@/lib/logger'
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
 const prisma = new PrismaClient({ adapter })
-const appUrl =
-  process.env.NEXT_PUBLIC_APP_URL ||
-  (process.env.NODE_ENV !== 'production' ? 'http://localhost:3000' : undefined)
 
-const trustedOrigins = Array.from(
-  new Set(
-    [appUrl, process.env.NODE_ENV !== 'production' ? 'http://localhost:3000' : undefined].flatMap(
-      (value) => {
-        if (!value) {
-          return []
-        }
+if (!process.env.NEXT_PUBLIC_APP_URL) {
+  throw new Error('NEXT_PUBLIC_APP_URL environment variable is required')
+}
 
-        try {
-          return [new URL(value).origin]
-        } catch {
-          return []
-        }
-      }
-    )
-  )
-)
+if (!process.env.BETTER_AUTH_SECRET) {
+  throw new Error('BETTER_AUTH_SECRET environment variable is required')
+}
+
+const appUrl = process.env.NEXT_PUBLIC_APP_URL
+const trustedOrigins = [new URL(appUrl).origin]
+const emailEnabled = !!process.env.RESEND_API_KEY
+
+logger.info({ appUrl, trustedOrigins, emailEnabled }, 'Initializing Better Auth')
 
 export const auth = betterAuth({
   baseURL: appUrl,
@@ -60,7 +54,7 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24, // 1 day (update session if older than 1 day)
   },
   emailVerification: {
-    sendOnSignUp: true,
+    sendOnSignUp: emailEnabled,
     expiresIn: 60 * 60 * 24, // 24 hours
     sendVerificationEmail: async ({ user, url }) => {
       // Parse first name from the user's name field, or use a default
@@ -80,8 +74,8 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true,
-    autoSignIn: false, // Don't auto sign in until email is verified
+    requireEmailVerification: emailEnabled,
+    autoSignIn: !emailEnabled,
     sendResetPassword: async ({ user, url }) => {
       // Parse first name from user's name field
       const firstName = user.name?.split(' ')[0] || 'there'

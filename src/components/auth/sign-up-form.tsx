@@ -39,9 +39,14 @@ export function SignUpForm() {
 
       if (data) {
         toast.success('Account created successfully!')
-        // Redirect to verify email sent page with email parameter
-        const emailParam = encodeURIComponent(email)
-        router.push(`/verify-email-sent?email=${emailParam}`)
+        // If the user was auto signed-in (email verification disabled), go straight to dashboard
+        const { data: session } = await authClient.getSession()
+        if (session) {
+          router.push('/dashboard')
+        } else {
+          const emailParam = encodeURIComponent(email)
+          router.push(`/verify-email-sent?email=${emailParam}`)
+        }
       }
     } catch (error) {
       toast.error('An unexpected error occurred')

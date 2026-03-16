@@ -8,6 +8,25 @@ test.describe('auth flows', () => {
       await page.goto('/dashboard')
       await expect(page).toHaveURL(/\/sign-in/, { timeout: 15000 })
     })
+
+    test('sign up redirects to dashboard when email verification is disabled', async ({ page }) => {
+      // Skip if Resend is configured — email verification will be required in that environment
+      test.skip(!!process.env.RESEND_API_KEY, 'Email verification is enabled, sign-up requires email confirmation')
+
+      const uniqueEmail = `signup-test-${Date.now()}@test.local`
+
+      await page.goto('/sign-up')
+      await page.getByLabel('First name').fill('Test')
+      await page.getByLabel('Last name').fill('User')
+      await page.getByLabel('Email').fill(uniqueEmail)
+      await page.getByLabel('Password').fill('TestPassword123!')
+      await page.getByRole('button', { name: /sign up|create account/i }).click()
+
+      // Should go straight to dashboard, not /verify-email-sent
+      await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 })
+      // A new user has no household — the creation dialog is the expected post-signup state
+      await expect(page.getByRole('dialog', { name: /create your first household/i })).toBeVisible({ timeout: 10000 })
+    })
   })
 
   test('can sign out and sign back in', async ({ page, context }) => {
