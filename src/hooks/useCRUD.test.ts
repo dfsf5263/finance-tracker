@@ -56,11 +56,11 @@ describe('useCRUD', () => {
       )
     })
 
-    it('fetches without householdId when not provided', async () => {
+    it('does not fetch when householdId is not provided', async () => {
       renderHook(() => useCRUD<Item>('accounts', 'Account'))
 
       await waitFor(() => {
-        expect(mockApiFetch).toHaveBeenCalledWith('/api/accounts', expect.anything())
+        expect(mockApiFetch).not.toHaveBeenCalled()
       })
     })
   })
