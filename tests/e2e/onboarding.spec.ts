@@ -35,6 +35,6 @@ test.describe('onboarding', () => {
     await page.getByRole('button', { name: /create/i }).click()
 
     await expect(page.getByRole('dialog')).not.toBeVisible()
-    await expect(page.getByText('My New Household')).toBeVisible()
+    await expect(page.getByRole('combobox').getByText('My New Household')).toBeVisible()
   })
 })
