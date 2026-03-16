@@ -8,8 +8,27 @@ echo "Starting Finance Tracker..."
 # --- Database migrations ---
 if [ "$SKIP_MIGRATIONS" != "true" ]; then
   echo "Running database migrations..."
-  npx prisma migrate deploy
-  echo "Migrations complete."
+
+  DB_MIGRATION_MAX_RETRIES=${DB_MIGRATION_MAX_RETRIES:-10}
+  DB_MIGRATION_RETRY_DELAY=${DB_MIGRATION_RETRY_DELAY:-5}
+
+  attempt=1
+  while [ "$attempt" -le "$DB_MIGRATION_MAX_RETRIES" ]; do
+    echo "Migration attempt $attempt of $DB_MIGRATION_MAX_RETRIES..."
+    if npx prisma migrate deploy; then
+      echo "Migrations complete."
+      break
+    fi
+
+    if [ "$attempt" -eq "$DB_MIGRATION_MAX_RETRIES" ]; then
+      echo "Migrations failed after $DB_MIGRATION_MAX_RETRIES attempts. Giving up."
+      exit 1
+    fi
+
+    echo "Migrations failed (database may not be ready yet). Retrying in ${DB_MIGRATION_RETRY_DELAY}s..."
+    sleep "$DB_MIGRATION_RETRY_DELAY"
+    attempt=$((attempt + 1))
+  done
 else
   echo "Skipping database migrations (SKIP_MIGRATIONS=true)."
 fi
