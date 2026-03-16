@@ -20,23 +20,12 @@ RUN --mount=type=cache,target=/root/.npm \
 
 
 # Rebuild the source code only when needed
-FROM base AS builder
+FROM base AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma client on the build host's native platform to avoid
-# QEMU + WASM incompatibility during cross-platform builds.
-# The generated client is pure JS and works on all architectures.
-FROM --platform=$BUILDPLATFORM base AS prisma-generate
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY prisma ./prisma/
-COPY prisma.config.ts ./
 RUN npx prisma generate
-
-FROM builder AS build
-COPY --from=prisma-generate /app/node_modules/.prisma ./node_modules/.prisma
 
 # No build arguments needed for Better Auth (all config at runtime)
 
