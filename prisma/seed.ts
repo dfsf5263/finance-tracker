@@ -306,7 +306,7 @@ async function main() {
       [e2eHouseholdUser],
       e2eCategories,
       e2eTypes,
-      ['Entertainment']
+      ['Groceries', 'Bills & Utilities', 'Food & Drink', 'Entertainment']
     )
     console.log('E2E transactions created:', e2eTransactionCount)
   } else {
