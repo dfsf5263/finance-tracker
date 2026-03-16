@@ -14,20 +14,19 @@ const appUrl =
 
 const trustedOrigins = Array.from(
   new Set(
-    [
-      appUrl,
-      process.env.NODE_ENV !== 'production' ? 'http://localhost:3000' : undefined,
-    ].flatMap((value) => {
-      if (!value) {
-        return []
-      }
+    [appUrl, process.env.NODE_ENV !== 'production' ? 'http://localhost:3000' : undefined].flatMap(
+      (value) => {
+        if (!value) {
+          return []
+        }
 
-      try {
-        return [new URL(value).origin]
-      } catch {
-        return []
+        try {
+          return [new URL(value).origin]
+        } catch {
+          return []
+        }
       }
-    })
+    )
   )
 )
 
