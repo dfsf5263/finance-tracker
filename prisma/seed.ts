@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { hashPassword } from 'better-auth/crypto'
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
 const prisma = new PrismaClient({ adapter })
@@ -15,180 +16,464 @@ function getRandomAmount(min: number, max: number): number {
 }
 
 async function main() {
-  // Create households (removed unique constraint on name)
-  const smithHousehold = await prisma.household.create({
-    data: {
-      name: 'Smith Family',
-      annualBudget: 85000,
-    },
-  })
+  // =========================================================================
+  // Demo data — Smith & Johnson households
+  // Guarded so re-runs skip creation rather than duplicating rows.
+  // =========================================================================
+  const existingDemo = await prisma.household.findFirst({ where: { name: 'Smith Family' } })
 
-  const johnsonHousehold = await prisma.household.create({
-    data: {
-      name: 'Johnson Family',
-      annualBudget: 75000,
-    },
-  })
+  let households: Awaited<ReturnType<typeof prisma.household.create>>[] = []
+  let accounts: Awaited<ReturnType<typeof prisma.householdAccount.create>>[] = []
+  let users: Awaited<ReturnType<typeof prisma.householdUser.create>>[] = []
+  let categories: Awaited<ReturnType<typeof prisma.householdCategory.create>>[] = []
+  let types: Awaited<ReturnType<typeof prisma.householdType.create>>[] = []
 
-  const households = [smithHousehold, johnsonHousehold]
+  if (!existingDemo) {
+    // Create households (removed unique constraint on name)
+    const smithHousehold = await prisma.household.create({
+      data: {
+        name: 'Smith Family',
+        annualBudget: 85000,
+      },
+    })
 
-  // Create accounts for each household
-  const accounts = await Promise.all([
-    // Smith Family accounts
-    prisma.householdAccount.create({
+    const johnsonHousehold = await prisma.household.create({
       data: {
-        name: 'Chase Sapphire Preferred',
-        householdId: smithHousehold.id,
+        name: 'Johnson Family',
+        annualBudget: 75000,
       },
-    }),
-    prisma.householdAccount.create({
-      data: {
-        name: 'Wells Fargo Checking',
-        householdId: smithHousehold.id,
-      },
-    }),
-    // Johnson Family accounts
-    prisma.householdAccount.create({
-      data: {
-        name: 'Bank of America Rewards',
-        householdId: johnsonHousehold.id,
-      },
-    }),
-    prisma.householdAccount.create({
-      data: {
-        name: 'Credit Union Savings',
-        householdId: johnsonHousehold.id,
-      },
-    }),
-  ])
+    })
 
-  // Create users for each household
-  const users = await Promise.all([
-    // Smith Family users
-    prisma.householdUser.create({
-      data: {
-        name: 'Chris',
-        householdId: smithHousehold.id,
-        annualBudget: 25000,
-      },
-    }),
-    prisma.householdUser.create({
-      data: {
-        name: 'Steph',
-        householdId: smithHousehold.id,
-        annualBudget: 20000,
-      },
-    }),
-    // Johnson Family users
-    prisma.householdUser.create({
-      data: {
-        name: 'Mike',
-        householdId: johnsonHousehold.id,
-        annualBudget: 30000,
-      },
-    }),
-    prisma.householdUser.create({
-      data: {
-        name: 'Sarah',
-        householdId: johnsonHousehold.id,
-        annualBudget: 15000,
-      },
-    }),
-  ])
+    households = [smithHousehold, johnsonHousehold]
 
-  // Create categories for each household
-  const categoryData = [
-    { name: 'Groceries', annualBudget: 6000 },
-    { name: 'Travel', annualBudget: 3000 },
-    { name: 'Health & Wellness', annualBudget: 2400 },
-    { name: 'Shopping' },
-    { name: 'Food & Drink', annualBudget: 4800 },
-    { name: 'Gas', annualBudget: 1800 },
-    { name: 'Personal' },
-    { name: 'Other' },
-    { name: 'Bills & Utilities', annualBudget: 24000 },
-    { name: 'Entertainment', annualBudget: 1200 },
-    { name: 'Automotive' },
-    { name: 'Professional Services' },
-    { name: 'Dogs' },
-    { name: 'Refund' },
-    { name: 'Gift' },
-    { name: 'Home Maintenance' },
-    { name: 'Subscriptions' },
-    { name: 'Car Maintenance' },
-    { name: 'Work Lunch' },
-    { name: 'Business' },
-    { name: 'Paycheck' },
-  ]
-
-  const categories = []
-  for (const household of households) {
-    for (const categoryInfo of categoryData) {
-      const category = await prisma.householdCategory.create({
+    // Create accounts for each household
+    accounts = await Promise.all([
+      // Smith Family accounts
+      prisma.householdAccount.create({
         data: {
-          name: categoryInfo.name,
-          householdId: household.id,
-          annualBudget: categoryInfo.annualBudget,
+          name: 'Chase Sapphire Preferred',
+          householdId: smithHousehold.id,
         },
-      })
-      categories.push(category)
+      }),
+      prisma.householdAccount.create({
+        data: {
+          name: 'Wells Fargo Checking',
+          householdId: smithHousehold.id,
+        },
+      }),
+      // Johnson Family accounts
+      prisma.householdAccount.create({
+        data: {
+          name: 'Bank of America Rewards',
+          householdId: johnsonHousehold.id,
+        },
+      }),
+      prisma.householdAccount.create({
+        data: {
+          name: 'Credit Union Savings',
+          householdId: johnsonHousehold.id,
+        },
+      }),
+    ])
+
+    // Create users for each household
+    users = await Promise.all([
+      // Smith Family users
+      prisma.householdUser.create({
+        data: {
+          name: 'Chris',
+          householdId: smithHousehold.id,
+          annualBudget: 25000,
+        },
+      }),
+      prisma.householdUser.create({
+        data: {
+          name: 'Steph',
+          householdId: smithHousehold.id,
+          annualBudget: 20000,
+        },
+      }),
+      // Johnson Family users
+      prisma.householdUser.create({
+        data: {
+          name: 'Mike',
+          householdId: johnsonHousehold.id,
+          annualBudget: 30000,
+        },
+      }),
+      prisma.householdUser.create({
+        data: {
+          name: 'Sarah',
+          householdId: johnsonHousehold.id,
+          annualBudget: 15000,
+        },
+      }),
+    ])
+
+    // Create categories for each household
+    const categoryData: { name: string; annualBudget?: number }[] = [
+      { name: 'Groceries', annualBudget: 6000 },
+      { name: 'Travel', annualBudget: 3000 },
+      { name: 'Health & Wellness', annualBudget: 2400 },
+      { name: 'Shopping' },
+      { name: 'Food & Drink', annualBudget: 4800 },
+      { name: 'Gas', annualBudget: 1800 },
+      { name: 'Personal' },
+      { name: 'Other' },
+      { name: 'Bills & Utilities', annualBudget: 24000 },
+      { name: 'Entertainment', annualBudget: 1200 },
+      { name: 'Automotive' },
+      { name: 'Professional Services' },
+      { name: 'Dogs' },
+      { name: 'Refund' },
+      { name: 'Gift' },
+      { name: 'Home Maintenance' },
+      { name: 'Subscriptions' },
+      { name: 'Car Maintenance' },
+      { name: 'Work Lunch' },
+      { name: 'Business' },
+      { name: 'Paycheck' },
+    ]
+
+    const categories: Awaited<ReturnType<typeof prisma.householdCategory.create>>[] = []
+    for (const household of households) {
+      for (const categoryInfo of categoryData) {
+        const category = await prisma.householdCategory.create({
+          data: {
+            name: categoryInfo.name,
+            householdId: household.id,
+            annualBudget: categoryInfo.annualBudget,
+          },
+        })
+        categories.push(category)
+      }
     }
+
+    // Create transaction types for each household
+    const typeData: { name: string; isOutflow: boolean }[] = [
+      { name: 'Sale', isOutflow: true },
+      { name: 'Income', isOutflow: false },
+      { name: 'Return', isOutflow: false },
+    ]
+
+    const types: Awaited<ReturnType<typeof prisma.householdType.create>>[] = []
+    for (const household of households) {
+      for (const typeInfo of typeData) {
+        const type = await prisma.householdType.create({
+          data: {
+            name: typeInfo.name,
+            householdId: household.id,
+            isOutflow: typeInfo.isOutflow,
+          },
+        })
+        types.push(type)
+      }
+    }
+
+    // Generate comprehensive test transactions
+    console.log('Generating demo transactions...')
+    const transactionCount = await generateTestTransactions(
+      households,
+      accounts,
+      users,
+      categories,
+      types
+    )
+
+    console.log('Demo seed data created successfully!')
+    console.log('Households:', households.length)
+    console.log('Accounts:', accounts.length)
+    console.log('Users:', users.length)
+    console.log('Categories:', categories.length)
+    console.log('Transaction Types:', types.length)
+    console.log('Transactions:', transactionCount)
+  } else {
+    console.log('Demo data already exists — skipping Smith & Johnson households.')
   }
 
-  // Create transaction types for each household
-  const typeData = [
+  // =========================================================================
+  // E2E test user + household
+  // All operations are upsert-safe — safe to re-run at any time.
+  // =========================================================================
+  console.log('Seeding E2E test user...')
+
+  const e2eEmail = process.env.E2E_EMAIL ?? 'e2e@test.local'
+  const e2ePassword = process.env.E2E_PASSWORD ?? 'E2eTestPassword1!'
+  const e2ePasswordHash = await hashPassword(e2ePassword)
+
+  const e2eUser = await prisma.user.upsert({
+    where: { email: e2eEmail },
+    create: {
+      email: e2eEmail,
+      name: 'E2E User',
+      firstName: 'E2E',
+      lastName: 'User',
+      emailVerified: true,
+      passwordHash: e2ePasswordHash,
+    },
+    update: {
+      emailVerified: true,
+      passwordHash: e2ePasswordHash,
+    },
+  })
+
+  // Better Auth requires a credential Account row for email/password login
+  await prisma.account.upsert({
+    where: { providerId_accountId: { providerId: 'credential', accountId: e2eUser.id } },
+    create: {
+      userId: e2eUser.id,
+      providerId: 'credential',
+      accountId: e2eUser.id,
+      password: e2ePasswordHash,
+    },
+    update: {
+      password: e2ePasswordHash,
+    },
+  })
+
+  // Find or create the E2E household scoped to this user
+  const existingMembership = await prisma.userHousehold.findFirst({
+    where: { userId: e2eUser.id, household: { name: 'E2E Test Household' } },
+    include: { household: true },
+  })
+
+  const e2eHousehold =
+    existingMembership?.household ??
+    (await prisma.household.create({
+      data: { name: 'E2E Test Household', annualBudget: 60000 },
+    }))
+
+  // Link user to household (upsert on composite PK)
+  await prisma.userHousehold.upsert({
+    where: { userId_householdId: { userId: e2eUser.id, householdId: e2eHousehold.id } },
+    create: { userId: e2eUser.id, householdId: e2eHousehold.id, role: 'OWNER' },
+    update: { role: 'OWNER' },
+  })
+
+  // Definitions — all use @@unique([name, householdId]) so upsert works
+  const e2eAccount = await prisma.householdAccount.upsert({
+    where: { name_householdId: { name: 'E2E Checking', householdId: e2eHousehold.id } },
+    create: { name: 'E2E Checking', householdId: e2eHousehold.id },
+    update: {},
+  })
+
+  const e2eHouseholdUser = await prisma.householdUser.upsert({
+    where: { name_householdId: { name: 'E2E User', householdId: e2eHousehold.id } },
+    create: { name: 'E2E User', householdId: e2eHousehold.id, annualBudget: 50000 },
+    update: {},
+  })
+
+  const e2eCategoryNames = [
+    { name: 'Groceries', annualBudget: 6000 },
+    { name: 'Bills & Utilities', annualBudget: 12000 },
+    { name: 'Food & Drink', annualBudget: 3600 },
+    { name: 'Shopping', annualBudget: undefined },
+    { name: 'Entertainment', annualBudget: 1200 },
+    { name: 'Paycheck', annualBudget: undefined },
+  ]
+  const e2eCategories = await Promise.all(
+    e2eCategoryNames.map((c) =>
+      prisma.householdCategory.upsert({
+        where: { name_householdId: { name: c.name, householdId: e2eHousehold.id } },
+        create: { name: c.name, householdId: e2eHousehold.id, annualBudget: c.annualBudget },
+        update: {},
+      })
+    )
+  )
+
+  const e2eTypeData = [
     { name: 'Sale', isOutflow: true },
     { name: 'Income', isOutflow: false },
     { name: 'Return', isOutflow: false },
   ]
-
-  const types = []
-  for (const household of households) {
-    for (const typeInfo of typeData) {
-      const type = await prisma.householdType.create({
-        data: {
-          name: typeInfo.name,
-          householdId: household.id,
-          isOutflow: typeInfo.isOutflow,
-        },
+  const e2eTypes = await Promise.all(
+    e2eTypeData.map((t) =>
+      prisma.householdType.upsert({
+        where: { name_householdId: { name: t.name, householdId: e2eHousehold.id } },
+        create: { name: t.name, householdId: e2eHousehold.id, isOutflow: t.isOutflow },
+        update: {},
       })
-      types.push(type)
-    }
-  }
-
-  // Generate comprehensive test transactions
-  console.log('Generating test transactions...')
-  const transactionCount = await generateTestTransactions(
-    households,
-    accounts,
-    users,
-    categories,
-    types
+    )
   )
 
-  console.log('Seed data created successfully!')
-  console.log('Households:', households.length)
-  console.log('Accounts:', accounts.length)
-  console.log('Users:', users.length)
-  console.log('Categories:', categories.length)
-  console.log('Transaction Types:', types.length)
-  console.log('Transactions:', transactionCount)
+  // Seed transactions only on first run (count check + unique constraint prevents duplication)
+  const e2eTxCount = await prisma.transaction.count({ where: { householdId: e2eHousehold.id } })
+  if (e2eTxCount === 0) {
+    console.log('Generating E2E transactions...')
+    const e2eTransactionCount = await generateTestTransactions(
+      [e2eHousehold],
+      [e2eAccount],
+      [e2eHouseholdUser],
+      e2eCategories,
+      e2eTypes
+    )
+    console.log('E2E transactions created:', e2eTransactionCount)
+  } else {
+    console.log(`E2E transactions already exist (${e2eTxCount}) — skipping.`)
+  }
+
+  // ── Deterministic budget-test transactions ──────────────────────────────
+  // These guarantee a known over-budget month (Jan 2024) and under-budget
+  // month (Feb 2024) so E2E tests can assert both flows reliably.
+  const entertainmentCat = e2eCategories.find((c) => c.name === 'Entertainment')!
+  const groceriesCat = e2eCategories.find((c) => c.name === 'Groceries')!
+  const saleType = e2eTypes.find((t) => t.name === 'Sale')!
+
+  const budgetTestTxs = [
+    // Jan 2024 — push Entertainment over its $100/month budget
+    {
+      description: 'Budget Test: Concert Jan',
+      categoryId: entertainmentCat.id,
+      typeId: saleType.id,
+      amount: -75,
+      transactionDate: new Date('2024-01-10'),
+    },
+    {
+      description: 'Budget Test: Theater Jan',
+      categoryId: entertainmentCat.id,
+      typeId: saleType.id,
+      amount: -60,
+      transactionDate: new Date('2024-01-20'),
+    },
+    // Jan 2024 — small grocery spend (well under $500 budget)
+    {
+      description: 'Budget Test: Grocery Jan',
+      categoryId: groceriesCat.id,
+      typeId: saleType.id,
+      amount: -30,
+      transactionDate: new Date('2024-01-15'),
+    },
+    // Feb 2024 — keep everything well under budget
+    {
+      description: 'Budget Test: Snack Feb',
+      categoryId: entertainmentCat.id,
+      typeId: saleType.id,
+      amount: -10,
+      transactionDate: new Date('2024-02-10'),
+    },
+    {
+      description: 'Budget Test: Grocery Feb',
+      categoryId: groceriesCat.id,
+      typeId: saleType.id,
+      amount: -15,
+      transactionDate: new Date('2024-02-15'),
+    },
+  ]
+
+  for (const tx of budgetTestTxs) {
+    await prisma.transaction.upsert({
+      where: {
+        householdId_transactionDate_description_amount: {
+          householdId: e2eHousehold.id,
+          transactionDate: tx.transactionDate,
+          description: tx.description,
+          amount: tx.amount,
+        },
+      },
+      create: {
+        householdId: e2eHousehold.id,
+        accountId: e2eAccount.id,
+        userId: e2eHouseholdUser.id,
+        transactionDate: tx.transactionDate,
+        postDate: tx.transactionDate,
+        description: tx.description,
+        categoryId: tx.categoryId,
+        typeId: tx.typeId,
+        amount: tx.amount,
+      },
+      update: {},
+    })
+  }
+  console.log('Budget-test transactions upserted:', budgetTestTxs.length)
+
+  // ── Deterministic duplicate-detection test transactions ─────────────────
+  // Two transactions with the same amount and very similar descriptions on
+  // consecutive days so the dedupe algorithm reliably flags them as a pair.
+  const groceryDupeTxs = [
+    {
+      description: 'Dedupe Test: Safeway Grocery',
+      categoryId: groceriesCat.id,
+      typeId: saleType.id,
+      amount: -67.89,
+      transactionDate: new Date('2026-01-15'),
+    },
+    {
+      description: 'Dedupe Test: Safeway Grocery',
+      categoryId: groceriesCat.id,
+      typeId: saleType.id,
+      amount: -67.89,
+      transactionDate: new Date('2026-01-16'),
+    },
+  ]
+
+  for (const tx of groceryDupeTxs) {
+    await prisma.transaction.upsert({
+      where: {
+        householdId_transactionDate_description_amount: {
+          householdId: e2eHousehold.id,
+          transactionDate: tx.transactionDate,
+          description: tx.description,
+          amount: tx.amount,
+        },
+      },
+      create: {
+        householdId: e2eHousehold.id,
+        accountId: e2eAccount.id,
+        userId: e2eHouseholdUser.id,
+        transactionDate: tx.transactionDate,
+        postDate: tx.transactionDate,
+        description: tx.description,
+        categoryId: tx.categoryId,
+        typeId: tx.typeId,
+        amount: tx.amount,
+      },
+      update: {},
+    })
+  }
+  console.log('Duplicate-detection test transactions upserted:', groceryDupeTxs.length)
+
+  console.log('E2E seed complete.')
+  console.log('  User:', e2eEmail)
+  console.log('  Household:', e2eHousehold.name)
 }
 
 // Generate realistic test transactions
+type HouseholdRecord = { id: string }
+type AccountRecord = { id: string; householdId: string }
+type UserRecord = { id: string; householdId: string }
+type CategoryRecord = { id: string; householdId: string; name: string }
+type TypeRecord = { id: string; householdId: string; name: string; isOutflow: boolean }
+
 async function generateTestTransactions(
-  households: any[],
-  accounts: any[],
-  users: any[],
-  categories: any[],
-  types: any[]
+  households: HouseholdRecord[],
+  accounts: AccountRecord[],
+  users: UserRecord[],
+  categories: CategoryRecord[],
+  types: TypeRecord[]
 ): Promise<number> {
-  const transactions = []
+  const transactions: {
+    householdId: string
+    accountId: string
+    userId: string | null
+    transactionDate: Date
+    postDate: Date
+    description: string
+    categoryId: string
+    typeId: string
+    amount: number
+    memo: string | null
+  }[] = []
   const startDate = new Date('2024-01-01')
   const endDate = new Date()
 
   // Transaction templates for realistic data
-  const transactionTemplates = [
+  const transactionTemplates: {
+    description: string
+    categoryName: string
+    minAmount: number
+    maxAmount: number
+    isOutflow: boolean
+  }[] = [
     // Groceries
     {
       description: 'Whole Foods Market',

@@ -15,9 +15,8 @@ export function useCRUD<T extends { id: string }>(
   const [editingItem, setEditingItem] = useState<T | undefined>()
 
   const fetchItems = useCallback(async () => {
-    const url = householdId
-      ? `/api/${apiEndpoint}?householdId=${householdId}`
-      : `/api/${apiEndpoint}`
+    if (!householdId) return
+    const url = `/api/${apiEndpoint}?householdId=${householdId}`
 
     const { data, error } = await apiFetch<T[]>(url, {
       showErrorToast: false, // Don't show toast for fetch errors, just log

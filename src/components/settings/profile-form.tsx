@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
 export function ProfileForm() {
-  const { data: session } = authClient.useSession()
+  const { data: session, refetch } = authClient.useSession()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     firstName: '',
@@ -32,11 +32,14 @@ export function ProfileForm() {
     setLoading(true)
     try {
       // Update user profile using Better Auth
+      const fullName = [formData.firstName, formData.lastName].filter(Boolean).join(' ')
       await authClient.updateUser({
+        name: fullName || undefined,
         firstName: formData.firstName || undefined,
         lastName: formData.lastName || undefined,
       })
 
+      await refetch()
       toast.success('Profile updated successfully')
     } catch (error) {
       console.error('Error updating profile:', error)

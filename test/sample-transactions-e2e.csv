@@ -1,0 +1,7 @@
+Account,User,Transaction Date,Post Date,Description,Category,Type,Amount,Memo
+E2E Checking,E2E User,01/15/2024,01/17/2024,Grocery Store Purchase,Groceries,Sale,125.50,Weekly shopping
+E2E Checking,E2E User,01/16/2024,01/18/2024,Coffee Shop Visit,Food & Drink,Sale,45.00,Morning coffee
+E2E Checking,E2E User,01/17/2024,01/17/2024,Salary Deposit,Paycheck,Income,3500.00,Monthly salary
+E2E Checking,E2E User,01/18/2024,01/20/2024,Restaurant Bill,Food & Drink,Sale,85.75,Dinner with friends
+E2E Checking,E2E User,01/19/2024,01/19/2024,Electric Bill,Bills & Utilities,Sale,120.00,Monthly electricity
+E2E Checking,E2E User,01/20/2024,01/22/2024,Movie Tickets,Entertainment,Sale,29.99,Weekend movie

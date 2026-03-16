@@ -12,7 +12,14 @@
     "check": "npm run lint && npm run format:check && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
+    "db:e2e:up": "docker compose up -d postgres-e2e",
+    "db:e2e:down": "docker compose down postgres-e2e",
+    "db:e2e:reset": "bash scripts/db-e2e-reset.sh"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -74,6 +81,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.7",
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4.2.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -83,6 +91,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.0",
+    "dotenv": "^17.3.1",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.1.6",
     "jsdom": "^29.0.0",

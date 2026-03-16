@@ -54,6 +54,11 @@ tsconfig.tsbuildinfo
 
 #Misc
 .DS_Store
+
+# Playwright
+tests/e2e/.auth/
+playwright-report/
+test-results/
 # Private dev notes (not for public repo)
 .dev-notes/
 # clerk configuration (can include secrets)
