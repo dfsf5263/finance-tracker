@@ -65,8 +65,8 @@ ENV LOG_LEVEL=info
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Install curl for health checks, node-cron for weekly summaries, and prisma CLI for runtime migrations
-RUN apk add --no-cache curl && npm install --no-save node-cron prisma
+# Install curl for health checks, node-cron for weekly summaries, prisma CLI for runtime migrations, and tsx for optional seeding
+RUN apk add --no-cache curl && npm install --no-save node-cron prisma tsx
 
 COPY --from=builder /app/public ./public
 
