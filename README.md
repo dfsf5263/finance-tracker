@@ -1,275 +1,279 @@
-# Finance Tracker
+<h1 align="center">Finance Tracker</h1>
 
-A modern, secure personal finance tracking application built with Next.js 15, TypeScript, and PostgreSQL. Features comprehensive transaction management, analytics, budgeting, and multi-household support with enterprise-grade security.
+<p align="center">
+  A modern, full-stack personal finance application for tracking transactions, analyzing spending, and managing household budgets.
+</p>
+
+<p align="center">
+  <a href="https://github.com/dfsf5263/finance-tracker/actions/workflows/ci.yml"><img src="https://github.com/dfsf5263/finance-tracker/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/dfsf5263/finance-tracker/blob/main/LICENSE"><img src="https://img.shields.io/github/license/dfsf5263/finance-tracker" alt="License" /></a>
+  <a href="https://github.com/dfsf5263/finance-tracker/pkgs/container/finance-tracker"><img src="https://img.shields.io/badge/GHCR-image-blue?logo=github" alt="GHCR" /></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js" alt="Next.js" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white" alt="React" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/PostgreSQL-17-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/Prisma-7-2D3748?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/shadcn/ui-black?style=for-the-badge&logo=shadcnui&logoColor=white" alt="shadcn/ui" />
+  <img src="https://img.shields.io/badge/Better_Auth-1.5-000000?style=for-the-badge" alt="Better Auth" />
+  <img src="https://img.shields.io/badge/Zod-4-3E67B1?style=for-the-badge&logo=zod&logoColor=white" alt="Zod" />
+  <img src="https://img.shields.io/badge/Vitest-4-6E9F18?style=for-the-badge&logo=vitest&logoColor=white" alt="Vitest" />
+  <img src="https://img.shields.io/badge/Playwright-1.58-2EAD33?style=for-the-badge&logo=playwright&logoColor=white" alt="Playwright" />
+</p>
+
+<p align="center">
+  <a href="https://railway.com/template/dfsf5263-finance-tracker"><img src="https://railway.com/button.svg" alt="Deploy on Railway" height="32" /></a>
+  &nbsp;&nbsp;
+  <a href="https://render.com/deploy?repo=https://github.com/dfsf5263/finance-tracker"><img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" height="32" /></a>
+</p>
+
+<p align="center">
+  <img src="screenshots/dashboard.png" alt="Finance Tracker Dashboard" width="800" />
+</p>
 
 ## Features
 
-- 🏠 **Multi-Household Support** - Manage multiple households with role-based access
-- 💰 **Transaction Management** - Track income, expenses, and transfers with detailed categorization
-- 📊 **Analytics & Reporting** - Visual breakdowns, money flow analysis, and spending insights
-- 💸 **Budget Management** - Set and track budgets for households and individual users
-- 📱 **Modern UI** - Clean, responsive interface with dark/light theme support
-- 🔐 **Enterprise Security** - Rate limiting, input validation, audit trails, and session management
-- 📈 **CSV Import/Export** - Bulk transaction import with intelligent duplicate detection
-- 🎯 **Smart Categories** - Customizable transaction categories and types
-- 👥 **User Management** - Invite and manage household members
-- 🔒 **Authentication** - Secure authentication with Clerk
+- 🏠 **Multi-Household Support** — Manage multiple households with role-based member access and invitations
+- 💰 **Transaction Management** — Track income, expenses, and transfers with detailed categorization
+- 📊 **Analytics & Reporting** — Visual category breakdowns, Sankey money-flow diagrams, and spending insights
+- 💸 **Budget Management** — Set and track budgets per household and per user with overage alerts
+- 📈 **CSV Import/Export** — Bulk transaction upload with intelligent duplicate detection and deduplication tools
+- 🔐 **Authentication & Security** — Email/password auth with 2FA, email verification, rate limiting, and input validation
+- 🎯 **Smart Definitions** — Customizable accounts, categories, transaction types, and users
+- 📱 **Responsive UI** — Clean dashboard with dark/light theme support built on shadcn/ui
+- 📧 **Email Notifications** — Weekly spending summaries and transactional emails via Resend
+
+<details>
+<summary><strong>📸 Screenshots</strong></summary>
+<br />
+
+| Analytics Breakdown | Money Flow |
+|---|---|
+| ![Breakdown](screenshots/breakdown.png) | ![Money Flow](screenshots/money-flow.png) |
+
+| Transaction Management | CSV Upload |
+|---|---|
+| ![Manage](screenshots/manage.png) | ![Upload](screenshots/upload.png) |
+
+| Household Budget | User Budget |
+|---|---|
+| ![Household Budget](screenshots/household-budget.png) | ![User Budget](screenshots/user-budget.png) |
+
+</details>
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15 (App Router), React 19, TypeScript
-- **Styling**: Tailwind CSS v4, shadcn/ui components
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: Clerk
-- **Security**: Comprehensive rate limiting, input validation, CORS protection
-- **Deployment**: Docker with production-ready containerization
+**Frontend** — Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS v4, shadcn/ui, Recharts, D3
 
-## Quick Start
+**Backend** — Next.js API Routes, Prisma ORM 7, PostgreSQL 17, Zod validation
 
-### Using Docker (Recommended for Production)
+**Auth** — Better Auth (email/password, 2FA, email verification, sessions)
 
-The easiest way to run Finance Tracker is using the pre-built Docker image:
+**Email** — Resend for transactional emails and weekly summaries
+
+**Testing** — Vitest + React Testing Library (unit), Playwright (E2E)
+
+**DevOps** — GitHub Actions CI/CD, Docker (GHCR), Biome (formatter/linter)
+
+## Getting Started
+
+### Prerequisites
+
+- **Node.js** 24+ and npm
+- **PostgreSQL** 12+ (or use Docker)
+
+### Quick Start with Docker
+
+The fastest way to run Finance Tracker. Database migrations run automatically on startup.
 
 ```bash
-# Pull and run the latest version
 docker run -d \
   --name finance-tracker \
   -p 3000:3000 \
-  -e DATABASE_URL="postgresql://user:password@host:5432/database" \
-  -e NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_live_..." \
-  -e CLERK_SECRET_KEY="sk_live_..." \
-  -e CLERK_WEBHOOK_SECRET="whsec_..." \
+  -e DATABASE_URL="postgresql://user:password@host:5432/finance_db" \
+  -e BETTER_AUTH_SECRET="your-secret-key-32-characters-or-more" \
+  -e NEXT_PUBLIC_APP_URL="http://localhost:3000" \
+  -e RESEND_API_KEY="re_your_api_key" \
+  -e RESEND_FROM_EMAIL="noreply@yourdomain.com" \
   --restart unless-stopped \
-  dfsf5263/finance-tracker:latest
+  ghcr.io/dfsf5263/finance-tracker:latest
 ```
 
-The application will be available at `http://localhost:3000`. Database migrations run automatically on startup.
+Open [http://localhost:3000](http://localhost:3000) to use the app.
 
-**📖 For complete deployment instructions, see [Docker Deployment Guide](docs/DOCKER_DEPLOYMENT.md)**
+> **📖 Full deployment guide:** [Docker Deployment Guide](docs/DOCKER_DEPLOYMENT.md)
 
 ### Local Development
 
-For development and testing:
+1. **Clone and install:**
 
-1. **Clone the repository**:
-```bash
-git clone https://github.com/your-username/finance-tracker.git
-cd finance-tracker
-```
+   ```bash
+   git clone https://github.com/dfsf5263/finance-tracker.git
+   cd finance-tracker
+   npm install
+   ```
 
-2. **Install dependencies**:
-```bash
-npm install
-```
+2. **Configure environment:**
 
-3. **Set up environment variables**:
-```bash
-cp .env.example .env.local
-# Edit .env.local with your database and Clerk credentials
-```
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your database URL and secrets
+   ```
 
-4. **Set up the database**:
-```bash
-npx prisma migrate dev
-npx prisma db seed
-```
+3. **Set up the database:**
 
-5. **Start the development server**:
-```bash
-npm run dev
-```
+   ```bash
+   npx prisma migrate dev
+   npx prisma db seed
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the application.
+4. **Start the dev server:**
+
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000).
 
 ## Environment Variables
 
-### Required Variables
+| Variable | Required | Description |
+|---|---|---|
+| `DATABASE_URL` | ✅ | PostgreSQL connection string |
+| `BETTER_AUTH_SECRET` | ✅ | Session signing secret (32+ characters) |
+| `NEXT_PUBLIC_APP_URL` | ✅ | Application URL for auth callbacks and emails |
+| `RESEND_API_KEY` | ✅ | [Resend](https://resend.com) API key for transactional emails |
+| `RESEND_FROM_EMAIL` | ✅ | Sender email address (use `onboarding@resend.dev` for development) |
+| `RESEND_REPLY_TO_EMAIL` | | Reply-to email for support |
+| `SKIP_MIGRATIONS` | | Set to `true` to skip auto-migration on Docker startup |
+| `ENABLE_SEEDING` | | Set to `true` to seed default data on Docker startup |
+
+See [.env.example](.env.example) for a complete template.
+
+## Testing
+
+Finance Tracker has a comprehensive 3-tier testing strategy:
+
+### Unit Tests
 
 ```bash
-# Database
-DATABASE_URL="postgresql://username:password@host:port/database"
-
-# Clerk Authentication (get from https://clerk.com)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_live_..."  # Public key (safe to embed)
-CLERK_SECRET_KEY="sk_live_..."                   # Secret key (runtime only)
-CLERK_WEBHOOK_SECRET="whsec_..."                 # Webhook secret (runtime only)
+npm run test              # Run unit tests
+npm run test:watch        # Watch mode
+npm run test:coverage     # Run with coverage report
 ```
 
-### Optional Variables
+Powered by [Vitest](https://vitest.dev/) with [React Testing Library](https://testing-library.com/react) and [vitest-mock-extended](https://github.com/eratio08/vitest-mock-extended).
+
+### End-to-End Tests
 
 ```bash
-# Clerk URLs (defaults shown)
-NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"
-NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up"
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL="/dashboard"
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL="/dashboard"
+# Start the E2E database
+npm run db:e2e:up
 
-# Application
-NODE_ENV="production"
-PORT=3000
+# Reset and seed the E2E database
+npm run db:e2e:reset
+
+# Run E2E tests
+npm run test:e2e
+
+# Run with browser UI
+npm run test:e2e:ui
+
+# Shut down the E2E database
+npm run db:e2e:down
 ```
 
-## Database Setup
+Powered by [Playwright](https://playwright.dev/) running Chromium against a real PostgreSQL database.
 
-Finance Tracker uses PostgreSQL with Prisma ORM:
+## CI/CD Pipeline
 
-### PostgreSQL Requirements
-- PostgreSQL 12 or higher
-- UTF-8 encoding
-- User with CREATE, SELECT, INSERT, UPDATE, DELETE permissions
+The project uses GitHub Actions with two workflows:
 
-### Migration and Seeding
-```bash
-# Run migrations
-npx prisma migrate deploy
+**CI** (`ci.yml`) — Runs on every push and pull request to `main`:
 
-# Seed with default data (categories, transaction types)
-npx prisma db seed
+1. **Lint, Format & Typecheck** — `npm run check` (Biome + TypeScript)
+2. **Unit Tests** — `npm run test` (runs in parallel with step 1)
+3. **E2E Tests** — Playwright against a PostgreSQL service container (runs after steps 1 & 2 pass)
 
-# Generate Prisma client (if needed)
-npx prisma generate
+**Release** (`release.yml`) — Runs on push to `main` and version tags (`v*`):
+
+- Builds the Docker image and pushes to [GitHub Container Registry](https://github.com/dfsf5263/finance-tracker/pkgs/container/finance-tracker)
+- Tags: `latest`, `sha-<commit>`, `main`, and semver (e.g., `v1.0.0`)
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── (auth)/              # Auth pages (sign-in, sign-up, forgot-password, 2FA)
+│   ├── api/                 # API routes (transactions, budgets, analytics, auth)
+│   └── dashboard/
+│       ├── analytics/       # Breakdown charts, Sankey money-flow
+│       ├── transactions/    # Manage & CSV upload
+│       ├── budgeting/       # Household & user budgets
+│       ├── definitions/     # Accounts, categories, types, users, households
+│       ├── settings/        # Profile, security, household, email subscriptions
+│       └── utility/         # Duplicate detection & deduplication
+├── components/              # Reusable React components + shadcn/ui
+├── contexts/                # React contexts (household multi-tenancy)
+├── hooks/                   # Custom hooks (CRUD, active month, entity counts)
+├── lib/                     # Business logic, validation, auth, analytics, email
+└── types/                   # TypeScript type definitions
+prisma/
+├── schema.prisma            # Database schema
+├── seed.ts                  # Database seeding script
+└── migrations/              # Prisma migrations
+tests/
+└── e2e/                     # Playwright E2E test specs
 ```
 
-## Docker Deployment
+## Deployment
 
-### Pre-built Images
+### Docker (Self-Hosted)
 
-Official images are available on Docker Hub at `dfsf5263/finance-tracker`:
-
-- `latest` - Latest stable release
-- `v1.0.0` - Specific version tags
-
-### Building Locally
-
-Build your own Docker image:
-
-**Prerequisites for Building:**
-- Only Clerk public key needed during build (safe to embed)
-- Secret keys are provided at runtime only (never built into image)
-
-```bash
-# Build image with explicit Clerk key (builds for linux/amd64 by default)
-./scripts/docker-build.sh --clerk-key pk_live_your_key_here
-
-# Build and push to registry
-./scripts/docker-build.sh --push --version v1.0.0 --clerk-key pk_live_your_key_here
-
-# Build for specific platform (e.g., Apple Silicon)
-./scripts/docker-build.sh --platform linux/arm64 --clerk-key pk_live_your_key_here
-
-# Build with environment variable
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_live_..." ./scripts/docker-build.sh --tag development
-
-# Manual Docker build with build args
-docker build \
-  --platform linux/amd64 \
-  --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_live_..." \
-  -t dfsf5263/finance-tracker:latest .
-```
-
-**🔒 Security Notes:** 
-- `CLERK_SECRET_KEY` and other sensitive keys are never built into the Docker image
-- Clerk public key must be explicitly provided (no `.env.local` fallback)
-- This prevents accidental mixing of development/production keys
-- All secrets are provided securely at runtime via environment variables
-
-**🏗️ Platform Notes:**
-- Images are built for `linux/amd64` by default for maximum server compatibility
-- Use `--platform linux/arm64` for Apple Silicon/ARM-based systems
-- The Dockerfile includes platform specifications for consistent builds
-
-### Production Deployment
-
-The Docker container includes:
-- ✅ Automatic database migrations on startup
-- ✅ Health checks and monitoring endpoints
-- ✅ Non-root user security
-- ✅ Optimized Alpine Linux base
-- ✅ Graceful shutdown handling
-
-Example production deployment:
+Official images are published to GitHub Container Registry:
 
 ```bash
-docker run -d \
-  --name finance-tracker-prod \
-  -p 3000:3000 \
-  --env-file .env.production \
-  --restart unless-stopped \
-  --memory=512m \
-  --cpus=0.5 \
-  dfsf5263/finance-tracker:latest
+docker pull ghcr.io/dfsf5263/finance-tracker:latest
 ```
+
+The container automatically runs database migrations on startup (skip with `SKIP_MIGRATIONS=true`).
+
+See the [Docker Deployment Guide](docs/DOCKER_DEPLOYMENT.md) for production examples, reverse proxy setup, monitoring, backups, and troubleshooting.
+
+### Railway
+
+Click the **Deploy on Railway** button above, or use the included [`railway.json`](railway.json) template. Railway will provision a PostgreSQL database and deploy the app automatically.
+
+### Render
+
+Click the **Deploy to Render** button above, or use the included [`render.yaml`](render.yaml) blueprint. Render will create a web service and managed PostgreSQL database.
 
 ## Development Commands
 
 ```bash
-# Development
-npm run dev          # Start development server with Turbopack
-npm run build        # Build for production
-npm run start        # Start production server
-
-# Code Quality
-npm run check        # Run all checks (lint + format + typecheck)
-npm run lint         # ESLint checking
-npm run format       # Format code with Biome
-npm run format:check # Check code formatting
-
-# Database
-npx prisma studio    # Open Prisma Studio
-npx prisma migrate dev --name description  # Create new migration
-npx prisma db seed   # Seed database with default data
+npm run dev              # Start dev server (Turbopack)
+npm run build            # Production build
+npm run check            # Lint + format check + typecheck
+npm run format           # Format with Biome
+npm run test             # Unit tests
+npm run test:e2e         # E2E tests
+npx prisma studio        # Database GUI
+npx prisma migrate dev   # Create a new migration
 ```
-
-## Security Features
-
-Finance Tracker includes enterprise-grade security:
-
-- 🔐 **Authentication & Authorization** - Clerk-based auth with household-level permissions
-- 🚦 **Rate Limiting** - Configurable rate limits for all API endpoints
-- 🛡️ **Input Validation** - Comprehensive Zod-based validation
-- 🔒 **Security Headers** - CSP, HSTS, XSS protection, and more
-- 🕒 **Session Management** - Automatic timeout with user warnings
-- 📝 **Audit Logging** - Request/response sanitization and error tracking
-- 🚫 **CORS Protection** - Restricted cross-origin access
-- 🐳 **Container Security** - Secrets never built into images, runtime-only
-
-## Architecture
-
-- **Frontend**: Server-side rendered React with App Router
-- **Backend**: Next.js API routes with middleware protection
-- **Database**: PostgreSQL with Prisma for type-safe queries
-- **Authentication**: Clerk for user management and sessions
-- **Deployment**: Containerized with Docker for production
-
-## Documentation
-
-- 📚 [Docker Deployment Guide](docs/DOCKER_DEPLOYMENT.md) - Complete containerization guide
-- 🔒 [Session Configuration](docs/SESSION_CONFIGURATION.md) - Session timeout setup
-- 🛡️ [Security Documentation](SECURITY_TODO.md) - Security features and roadmap
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-Please ensure your code passes all checks:
-```bash
-npm run check
-```
+3. Make your changes
+4. Run checks: `npm run format && npm run check`
+5. Commit and push
+6. Open a Pull Request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-- 📖 Check the documentation in the `docs/` directory
-- 🐛 Report issues on GitHub
-- 💬 Start a discussion for questions and feature requests
-
----
-
-**Production Ready**: This application includes comprehensive security, monitoring, and deployment features suitable for production use.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

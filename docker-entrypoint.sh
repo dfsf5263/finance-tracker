@@ -3,7 +3,23 @@
 # Exit on any error
 set -e
 
-echo "Starting Finance Tracker with cron support..."
+echo "Starting Finance Tracker..."
+
+# --- Database migrations ---
+if [ "$SKIP_MIGRATIONS" != "true" ]; then
+  echo "Running database migrations..."
+  npx prisma migrate deploy
+  echo "Migrations complete."
+else
+  echo "Skipping database migrations (SKIP_MIGRATIONS=true)."
+fi
+
+# --- Optional database seeding ---
+if [ "$ENABLE_SEEDING" = "true" ]; then
+  echo "Running database seeding..."
+  npx prisma db seed
+  echo "Seeding complete."
+fi
 
 # Start the cron job in the background
 echo "Starting weekly summary cron job..."

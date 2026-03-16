@@ -55,6 +55,8 @@ RUN \
 FROM base AS runner
 WORKDIR /app
 
+LABEL org.opencontainers.image.source=https://github.com/dfsf5263/finance-tracker
+
 ENV NODE_ENV=production
 ENV LOG_LEVEL=info
 # Uncomment the following line in case you want to disable telemetry during runtime.
