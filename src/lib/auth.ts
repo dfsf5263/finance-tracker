@@ -8,12 +8,33 @@ import { sendPasswordResetEmail } from '@/lib/email/send-password-reset-email'
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
 const prisma = new PrismaClient({ adapter })
+const appUrl =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  (process.env.NODE_ENV !== 'production' ? 'http://localhost:3000' : undefined)
+
+const trustedOrigins = Array.from(
+  new Set(
+    [appUrl, process.env.NODE_ENV !== 'production' ? 'http://localhost:3000' : undefined].flatMap(
+      (value) => {
+        if (!value) {
+          return []
+        }
+
+        try {
+          return [new URL(value).origin]
+        } catch {
+          return []
+        }
+      }
+    )
+  )
+)
 
 export const auth = betterAuth({
-  baseURL: process.env.NEXT_PUBLIC_APP_URL!,
+  baseURL: appUrl,
   basePath: '/api/auth',
   secret: process.env.BETTER_AUTH_SECRET!,
-  trustedOrigins: ['https://finance.crowland.us', 'http://localhost:3000'],
+  trustedOrigins,
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),
