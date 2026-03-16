@@ -305,7 +305,8 @@ async function main() {
       [e2eAccount],
       [e2eHouseholdUser],
       e2eCategories,
-      e2eTypes
+      e2eTypes,
+      ['Groceries', 'Bills & Utilities', 'Food & Drink', 'Entertainment']
     )
     console.log('E2E transactions created:', e2eTransactionCount)
   } else {
@@ -449,7 +450,8 @@ async function generateTestTransactions(
   accounts: AccountRecord[],
   users: UserRecord[],
   categories: CategoryRecord[],
-  types: TypeRecord[]
+  types: TypeRecord[],
+  skipCategories: string[] = []
 ): Promise<number> {
   const transactions: {
     householdId: string
@@ -684,7 +686,7 @@ async function generateTestTransactions(
       const template = transactionTemplates[Math.floor(Math.random() * transactionTemplates.length)]
       const category = householdCategories.find((c) => c.name === template.categoryName)
 
-      if (!category) continue
+      if (!category || skipCategories.includes(template.categoryName)) continue
 
       const account = householdAccounts[Math.floor(Math.random() * householdAccounts.length)]
       const user =

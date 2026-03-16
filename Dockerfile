@@ -55,6 +55,8 @@ RUN \
 FROM base AS runner
 WORKDIR /app
 
+LABEL org.opencontainers.image.source=https://github.com/dfsf5263/finance-tracker
+
 ENV NODE_ENV=production
 ENV LOG_LEVEL=info
 # Uncomment the following line in case you want to disable telemetry during runtime.
@@ -63,8 +65,8 @@ ENV LOG_LEVEL=info
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Install curl for health checks and node-cron for the weekly summary cron script
-RUN apk add --no-cache curl && npm install node-cron
+# Install curl for health checks, node-cron for weekly summaries, and prisma CLI for runtime migrations
+RUN apk add --no-cache curl && npm install --no-save node-cron prisma
 
 COPY --from=builder /app/public ./public
 
@@ -73,8 +75,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy Prisma schema files
+# Copy Prisma schema, migrations, and generated client for runtime
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
 # Copy cron script and entrypoint
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts

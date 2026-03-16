@@ -5,14 +5,14 @@ import type { Locator } from '@playwright/test'
  * Wait for the invitation count in the h4 heading to stabilise across
  * two consecutive reads, surviving cache → fresh-data transitions.
  */
-async function waitForStableCount(heading: Locator): Promise<number> {
+async function waitForStableCount(heading: Locator, minCount = 1): Promise<number> {
   let prevCount = -1
   let currCount = -1
   await expect(async () => {
     prevCount = currCount
     const text = await heading.textContent()
     currCount = Number(text?.match(/\((\d+)\)/)?.[1] ?? -1)
-    expect(currCount).toBeGreaterThan(0)
+    expect(currCount).toBeGreaterThanOrEqual(minCount)
     expect(currCount).toBe(prevCount)
   }).toPass({ timeout: 10000, intervals: [500, 500, 1000, 1000] })
   return currCount
@@ -52,8 +52,8 @@ test.describe('settings — household invitations', () => {
     const tabpanel = page.getByRole('tabpanel')
     const countHeading = tabpanel.getByRole('heading', { level: 4 })
 
-    // Wait for heading count to stabilise
-    await waitForStableCount(countHeading)
+    // Wait for heading count to stabilise (may start at 0)
+    await waitForStableCount(countHeading, 0)
 
     // Create an invitation to cancel
     await page.getByRole('button', { name: /invite member/i }).click()
