@@ -31,8 +31,44 @@
 </p>
 
 <p align="center">
-  <img src="screenshots/dashboard.png" alt="Finance Tracker Dashboard" width="800" />
+  <picture>
+    <img src="screenshots/dashboard.png" alt="Finance Tracker Dashboard" width="800" />
+  </picture>
 </p>
+
+<details>
+<summary><strong>📸 Screenshots</strong></summary>
+
+<br />
+
+<table>
+  <tr>
+    <td align="center"><strong>Analytics Breakdown</strong></td>
+    <td align="center"><strong>Money Flow</strong></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/breakdown.png" alt="Analytics Breakdown" width="400" /></td>
+    <td><img src="screenshots/money-flow.png" alt="Money Flow" width="400" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Transaction Management</strong></td>
+    <td align="center"><strong>CSV Upload</strong></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/manage.png" alt="Transaction Management" width="400" /></td>
+    <td><img src="screenshots/upload.png" alt="CSV Upload" width="400" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Household Budget</strong></td>
+    <td align="center"><strong>User Budget</strong></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/household-budget.png" alt="Household Budget" width="400" /></td>
+    <td><img src="screenshots/user-budget.png" alt="User Budget" width="400" /></td>
+  </tr>
+</table>
+
+</details>
 
 ## Features
 
@@ -45,24 +81,6 @@
 - 🎯 **Smart Definitions** — Customizable accounts, categories, transaction types, and users
 - 📱 **Responsive UI** — Clean dashboard with dark/light theme support built on shadcn/ui
 - 📧 **Email Notifications** — Weekly spending summaries and transactional emails via Resend
-
-<details>
-<summary><strong>📸 Screenshots</strong></summary>
-<br />
-
-| Analytics Breakdown | Money Flow |
-|---|---|
-| ![Breakdown](screenshots/breakdown.png) | ![Money Flow](screenshots/money-flow.png) |
-
-| Transaction Management | CSV Upload |
-|---|---|
-| ![Manage](screenshots/manage.png) | ![Upload](screenshots/upload.png) |
-
-| Household Budget | User Budget |
-|---|---|
-| ![Household Budget](screenshots/household-budget.png) | ![User Budget](screenshots/user-budget.png) |
-
-</details>
 
 ## Tech Stack
 
