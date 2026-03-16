@@ -25,17 +25,18 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma client
-RUN echo "=== Prisma Generate Debug Info ===" && \
-    echo "Node version: $(node --version)" && \
-    echo "NPM version: $(npm --version)" && \
-    echo "Architecture: $(uname -m)" && \
-    echo "Platform: $(uname -s)" && \
-    echo "Working directory: $(pwd)" && \
-    echo "Prisma schema exists: $(ls -la prisma/schema.prisma)" && \
-    echo "Node modules exists: $(ls -la node_modules/ | head -5)" && \
-    echo "Running Prisma generate..." && \
-    npx prisma generate
+# Generate Prisma client on the build host's native platform to avoid
+# QEMU + WASM incompatibility during cross-platform builds.
+# The generated client is pure JS and works on all architectures.
+FROM --platform=$BUILDPLATFORM base AS prisma-generate
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY prisma ./prisma/
+COPY prisma.config.ts ./
+RUN npx prisma generate
+
+FROM builder AS build
+COPY --from=prisma-generate /app/node_modules/.prisma ./node_modules/.prisma
 
 # No build arguments needed for Better Auth (all config at runtime)
 
@@ -66,27 +67,27 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Install curl for health checks, node-cron for weekly summaries, prisma CLI (pinned to @prisma/client version), and tsx for optional seeding
-COPY --from=builder /app/node_modules/@prisma/client/package.json /tmp/prisma-client-pkg.json
+COPY --from=build /app/node_modules/@prisma/client/package.json /tmp/prisma-client-pkg.json
 RUN apk add --no-cache curl && \
     PRISMA_VERSION=$(node -p "require('/tmp/prisma-client-pkg.json').version") && \
     npm install --no-save node-cron "prisma@${PRISMA_VERSION}" tsx && \
     rm /tmp/prisma-client-pkg.json
 
-COPY --from=builder /app/public ./public
+COPY --from=build /app/public ./public
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy Prisma schema, migrations, config, and generated client for runtime
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=build --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
+COPY --from=build --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
 # Copy cron script and entrypoint
-COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
-COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
+COPY --from=build --chown=nextjs:nodejs /app/scripts ./scripts
+COPY --from=build --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
 
 # Make scripts executable
 RUN chmod +x ./docker-entrypoint.sh
