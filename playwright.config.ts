@@ -55,13 +55,12 @@ export default defineConfig({
   ],
 
   webServer: {
-    // CI: production build for stability. Local: turbopack dev server for speed.
-    command: process.env.CI ? 'npm run build && npm run start' : 'npm run dev',
+    command: process.env.CI ? 'npm run build && npm run start -- -p 3000' : 'npm run dev -- -p 3000',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
     env: {
-      // Point the dev server at the E2E database, not the dev/prod one
+      // Point the server at the E2E database, not the dev/prod one
       DATABASE_URL: process.env.DATABASE_URL_E2E ?? process.env.DATABASE_URL ?? '',
     },
   },
