@@ -276,7 +276,7 @@ function generateSummaryEmailHtml(
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td align="center" style="padding-bottom: 20px;">
-                          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">View Full Dashboard</a>
+                          <a href="${process.env.APP_URL || 'http://localhost:3000'}/dashboard" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">View Full Dashboard</a>
                         </td>
                       </tr>
                       <tr>
@@ -284,7 +284,7 @@ function generateSummaryEmailHtml(
                           <p style="margin: 0; font-size: 12px; color: #999;">
                             You're receiving this because you have weekly summaries enabled.
                             <br>
-                            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/settings/email-subscriptions" style="color: #2563eb;">Manage email preferences</a>
+                            <a href="${process.env.APP_URL || 'http://localhost:3000'}/dashboard/settings/email-subscriptions" style="color: #2563eb;">Manage email preferences</a>
                           </p>
                         </td>
                       </tr>

@@ -112,7 +112,7 @@ export function getAuth(): ReturnType<typeof createAuthInstance> {
     return authInstance
   }
 
-  const appUrl = requireEnv('NEXT_PUBLIC_APP_URL')
+  const appUrl = requireEnv('APP_URL')
   const betterAuthSecret = requireEnv('BETTER_AUTH_SECRET')
   const databaseUrl = requireEnv('DATABASE_URL')
   const emailEnabled = !!process.env.RESEND_API_KEY

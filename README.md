@@ -113,7 +113,7 @@ docker run -d \
   -p 3000:3000 \
   -e DATABASE_URL="postgresql://user:password@host:5432/finance_db" \
   -e BETTER_AUTH_SECRET="your-secret-key-32-characters-or-more" \
-  -e NEXT_PUBLIC_APP_URL="http://localhost:3000" \
+  -e APP_URL="http://localhost:3000" \
   -e RESEND_API_KEY="re_your_api_key" \
   -e RESEND_FROM_EMAIL="noreply@yourdomain.com" \
   --restart unless-stopped \
@@ -162,7 +162,7 @@ Open [http://localhost:3000](http://localhost:3000) to use the app.
 |---|---|---|
 | `DATABASE_URL` | ✅ | PostgreSQL connection string |
 | `BETTER_AUTH_SECRET` | ✅ | Session signing secret (32+ characters) |
-| `NEXT_PUBLIC_APP_URL` | ✅ | Application URL for auth callbacks and emails |
+| `APP_URL` | ✅ | Application URL for auth callbacks and emails |
 | `RESEND_API_KEY` | ✅ | [Resend](https://resend.com) API key for transactional emails |
 | `RESEND_FROM_EMAIL` | ✅ | Sender email address (use `onboarding@resend.dev` for development) |
 | `RESEND_REPLY_TO_EMAIL` | | Reply-to email for support |
