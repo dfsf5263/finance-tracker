@@ -9,6 +9,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts', './src/test/mocks/db.ts'],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    coverage: {
+      reporter: ['text', 'lcov'],
+    },
   },
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
