@@ -50,6 +50,24 @@ The tag push triggers the Release workflow, which will:
 
 Check the [Actions tab](https://github.com/dfsf5263/finance-tracker/actions/workflows/release.yml) to confirm the workflow succeeded.
 
+### Using the release script
+
+After merging develop into main via PR, run the release script to automate tagging and version bumping:
+
+```bash
+bash scripts/release-tag.sh            # normal run
+bash scripts/release-tag.sh --dry-run  # preview without executing
+```
+
+The script will:
+
+1. Verify branches are clean and in sync with origin
+2. Tag main with the version from `package.json` and push the tag
+3. Merge main back into develop
+4. Prompt for the next version bump (major / minor / patch)
+5. Run `npm audit` and `npm install`
+6. Commit and push the version bump to develop
+
 ## What Triggers What
 
 ```
