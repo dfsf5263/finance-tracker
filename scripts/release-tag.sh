@@ -41,7 +41,7 @@ if [[ -n "$(git status --porcelain)" ]]; then
 fi
 
 echo "Fetching latest from origin..."
-git fetch origin
+run git fetch origin
 
 # ── Verify branches are in sync ─────────────────────────────
 
@@ -71,8 +71,8 @@ echo "Version on main: ${VERSION}"
 echo "Tag to create:   ${TAG}"
 echo
 
-# Check if tag already exists
-if git rev-parse "$TAG" &>/dev/null; then
+# Check if tag already exists (locally or on origin)
+if git rev-parse "$TAG" &>/dev/null || git ls-remote --exit-code --tags origin "refs/tags/$TAG" &>/dev/null; then
   echo "Error: tag ${TAG} already exists." >&2
   exit 1
 fi
