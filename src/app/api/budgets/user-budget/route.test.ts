@@ -162,4 +162,71 @@ describe('GET /api/budgets/user-budget', () => {
     expect(body.overspendAmount).toBe(500)
     expect(body.spendingPercentage).toBe(150)
   })
+
+  it('returns category breakdown sorted by spending', async () => {
+    ;(mockDb.transaction.groupBy as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { categoryId: 'cat-1', _sum: { amount: new Decimal('-200') } },
+      { categoryId: 'cat-2', _sum: { amount: new Decimal('-500') } },
+    ] as never)
+    mockDb.householdCategory.findMany.mockResolvedValue([
+      { id: 'cat-1', name: 'Food' },
+      { id: 'cat-2', name: 'Rent' },
+    ] as never)
+    mockDb.transaction.aggregate.mockResolvedValue({
+      _sum: { amount: new Decimal('-700') },
+    } as never)
+
+    const response = await GET(makeRequest({ ...defaultParams, timePeriodType: 'month' }))
+    const body = await response.json()
+
+    expect(body.categoryBreakdown).toHaveLength(2)
+    expect(body.categoryBreakdown[0].categoryName).toBe('Rent') // 500 > 200
+    expect(body.categoryBreakdown[0].amount).toBe(500)
+    expect(body.categoryBreakdown[1].categoryName).toBe('Food')
+  })
+
+  it('returns top transactions with formatted output', async () => {
+    mockDb.transaction.findMany.mockResolvedValue([
+      {
+        id: 'tx-1',
+        transactionDate: new Date('2024-03-15'),
+        description: 'Groceries',
+        category: { name: 'Food' },
+        type: { name: 'Debit' },
+        amount: new Decimal(-150),
+      },
+    ] as never)
+
+    const response = await GET(makeRequest({ ...defaultParams, timePeriodType: 'month' }))
+    const body = await response.json()
+
+    expect(body.topTransactions).toHaveLength(1)
+    expect(body.topTransactions[0].description).toBe('Groceries')
+    expect(body.topTransactions[0].date).toBe('2024-03-15')
+    expect(body.topTransactions[0].category).toBe('Food')
+    expect(body.topTransactions[0].type).toBe('Debit')
+  })
+
+  it('applies date range to transaction filters', async () => {
+    const response = await GET(
+      makeRequest({ ...defaultParams, startDate: '2024-01-01', endDate: '2024-01-31' })
+    )
+    expect(response.status).toBe(200)
+  })
+
+  it('uses yearly budget divisor', async () => {
+    const response = await GET(makeRequest({ ...defaultParams, timePeriodType: 'year' }))
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.basePeriodBudget).toBe(12000) // 12000 / 1
+  })
+
+  it('returns 500 when database throws', async () => {
+    mockDb.householdUser.findUnique.mockRejectedValueOnce(new Error('DB error'))
+
+    const response = await GET(makeRequest(defaultParams))
+    expect(response.status).toBe(500)
+    const body = await response.json()
+    expect(body.error).toBe('Failed to fetch user budget data')
+  })
 })

@@ -153,5 +153,146 @@ describe('GET /api/budgets/household-budget', () => {
       expect(body[0].overspend).toBe(true)
       expect(body[0].overspendAmount).toBe(100)
     })
+
+    it('filters by specific categoryId', async () => {
+      mockDb.householdCategory.findMany.mockResolvedValue([
+        { id: 'cat-1', name: 'Food', annualBudget: new Decimal('1200') },
+      ] as never)
+      ;(mockDb.transaction.groupBy as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { categoryId: 'cat-1', _sum: { amount: new Decimal('-50') } },
+      ] as never)
+
+      const response = await GET(makeRequest({ categoryId: 'cat-1', timePeriodType: 'month' }))
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body).toHaveLength(1)
+    })
+
+    it('sorts overspend categories first, then by usage percentage', async () => {
+      mockDb.householdCategory.findMany.mockResolvedValue([
+        { id: 'cat-1', name: 'Food', annualBudget: new Decimal('1200') },
+        { id: 'cat-2', name: 'Entertainment', annualBudget: new Decimal('600') },
+      ] as never)
+      ;(mockDb.transaction.groupBy as ReturnType<typeof vi.fn>).mockResolvedValue([
+        // Food: $50 / $100 = 50%
+        { categoryId: 'cat-1', _sum: { amount: new Decimal('-50') } },
+        // Entertainment: $100 / $50 = 200% (overspend)
+        { categoryId: 'cat-2', _sum: { amount: new Decimal('-100') } },
+      ] as never)
+
+      const response = await GET(makeRequest({ timePeriodType: 'month' }))
+      const body = await response.json()
+      // Overspend category comes first
+      expect(body[0].categoryName).toBe('Entertainment')
+      expect(body[0].overspend).toBe(true)
+      expect(body[1].categoryName).toBe('Food')
+    })
+  })
+
+  describe('budgetType=household with spending data', () => {
+    it('returns spending overview with daily average and cumulative data', async () => {
+      mockDb.household.findUnique.mockResolvedValue({
+        annualBudget: new Decimal('12000'),
+      } as never)
+      mockDb.transaction.aggregate.mockResolvedValue({
+        _sum: { amount: new Decimal('-1500') },
+      } as never)
+      // First findMany: spending over time
+      mockDb.transaction.findMany
+        .mockResolvedValueOnce([
+          {
+            transactionDate: new Date('2024-01-10'),
+            amount: new Decimal('-500'),
+          },
+          {
+            transactionDate: new Date('2024-01-15'),
+            amount: new Decimal('-1000'),
+          },
+        ] as never)
+        // Second findMany: top transactions
+        .mockResolvedValueOnce([
+          {
+            id: 'tx-1',
+            transactionDate: new Date('2024-01-10'),
+            description: 'Rent',
+            category: { name: 'Housing' },
+            amount: new Decimal(-1000),
+          },
+        ] as never)
+
+      const response = await GET(makeRequest({ budgetType: 'household', timePeriodType: 'month' }))
+      expect(response.status).toBe(200)
+      const body = await response.json()
+
+      expect(body.householdBudget).toBe(12000)
+      expect(body.periodBudget).toBe(1000)
+      expect(body.totalSpending).toBe(1500)
+      expect(body.dailyAverage).toBe(750) // 1500 / 2 days
+      expect(body.spendingOverTime).toHaveLength(2)
+      expect(body.spendingOverTime[0].date).toBe('2024-01-10')
+      expect(body.spendingOverTime[1].cumulativeAmount).toBe(1500)
+    })
+
+    it('returns top transactions sorted by amount', async () => {
+      mockDb.household.findUnique.mockResolvedValue({
+        annualBudget: new Decimal('12000'),
+      } as never)
+      mockDb.transaction.aggregate.mockResolvedValue({
+        _sum: { amount: new Decimal('-200') },
+      } as never)
+      // First findMany for spending over time
+      mockDb.transaction.findMany
+        .mockResolvedValueOnce([
+          {
+            transactionDate: new Date('2024-01-10'),
+            amount: new Decimal('-200'),
+          },
+        ] as never)
+        // Second findMany for top transactions
+        .mockResolvedValueOnce([
+          {
+            id: 'tx-1',
+            transactionDate: new Date('2024-01-10'),
+            description: 'Big Purchase',
+            category: { name: 'Shopping' },
+            amount: new Decimal(-200),
+          },
+        ] as never)
+
+      const response = await GET(makeRequest({ budgetType: 'household', timePeriodType: 'month' }))
+      const body = await response.json()
+
+      expect(body.topTransactions).toHaveLength(1)
+      expect(body.topTransactions[0].description).toBe('Big Purchase')
+      expect(body.topTransactions[0].category).toBe('Shopping')
+    })
+
+    it('applies date range to household budget queries', async () => {
+      mockDb.household.findUnique.mockResolvedValue({
+        annualBudget: new Decimal('12000'),
+      } as never)
+      mockDb.transaction.aggregate.mockResolvedValue({
+        _sum: { amount: new Decimal('0') },
+      } as never)
+      mockDb.transaction.findMany.mockResolvedValue([] as never)
+
+      const response = await GET(
+        makeRequest({
+          budgetType: 'household',
+          startDate: '2024-01-01',
+          endDate: '2024-01-31',
+        })
+      )
+      expect(response.status).toBe(200)
+    })
+  })
+
+  it('returns 500 when database throws', async () => {
+    mockDb.household.findUnique.mockRejectedValueOnce(new Error('DB error'))
+
+    const response = await GET(makeRequest({ budgetType: 'household' }))
+    expect(response.status).toBe(500)
+    const body = await response.json()
+    expect(body.error).toBe('Failed to fetch household budget data')
   })
 })

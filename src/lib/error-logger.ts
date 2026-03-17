@@ -9,26 +9,32 @@ interface LogApiErrorOptions {
 }
 
 export async function logApiError({ request, error, context, operation }: LogApiErrorOptions) {
-  const err = error instanceof Error ? error : new Error(String(error))
-  const body = await getRequestBody(request)
-  logger.error(
-    {
-      err,
-      method: request.method,
-      url: request.url,
-      operation,
-      headers: sanitizeHeaders(Object.fromEntries(request.headers.entries())),
-      ...(body !== null && { body: sanitizeRequestData(body) }),
-      ...(context !== undefined && { context: sanitizeRequestData(context) }),
-      ...(error !== null &&
-        typeof error === 'object' &&
-        'code' in error && { dbErrorCode: (error as { code: unknown }).code }),
-      ...(error !== null &&
-        typeof error === 'object' &&
-        'meta' in error && { dbErrorMeta: (error as { meta: unknown }).meta }),
-    },
-    'api error'
-  )
+  try {
+    const err = error instanceof Error ? error : new Error(String(error))
+    const body = await getRequestBody(request)
+    const correlationId = request.headers.get('x-correlation-id')
+    logger.error(
+      {
+        err,
+        method: request.method,
+        url: request.url,
+        operation,
+        correlationId,
+        headers: sanitizeHeaders(Object.fromEntries(request.headers.entries())),
+        ...(body !== null && { body: sanitizeRequestData(body) }),
+        ...(context !== undefined && { context: sanitizeRequestData(context) }),
+        ...(error !== null &&
+          typeof error === 'object' &&
+          'code' in error && { dbErrorCode: (error as { code: unknown }).code }),
+        ...(error !== null &&
+          typeof error === 'object' &&
+          'meta' in error && { dbErrorMeta: (error as { meta: unknown }).meta }),
+      },
+      'api error'
+    )
+  } catch (loggingError) {
+    logger.error({ err: loggingError, originalError: error }, 'error logging failed')
+  }
 }
 
 /**

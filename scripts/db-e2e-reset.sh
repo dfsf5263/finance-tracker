@@ -13,8 +13,8 @@ if [[ -z "${DATABASE_URL_E2E:-}" ]]; then
   exit 1
 fi
 
-docker compose down -v postgres-e2e
-docker compose up -d postgres-e2e
+docker compose -f docker-compose.e2e.yml down -v postgres-e2e
+docker compose -f docker-compose.e2e.yml up -d postgres-e2e
 echo "Waiting for Postgres to be ready..."
 sleep 3
 

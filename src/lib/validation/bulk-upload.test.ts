@@ -166,6 +166,122 @@ describe('bulkTransactionSchema', () => {
     })
     expect(result.success).toBe(true)
   })
+
+  it('rejects user name over 100 characters', () => {
+    const result = bulkTransactionSchema.safeParse({
+      ...validTransaction,
+      user: 'A'.repeat(101),
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects user name with invalid characters', () => {
+    const result = bulkTransactionSchema.safeParse({
+      ...validTransaction,
+      user: 'User<script>',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts and transforms valid postDate', () => {
+    const result = bulkTransactionSchema.safeParse({
+      ...validTransaction,
+      postDate: '2024-01-16',
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.postDate).toContain('2024-01-16')
+    }
+  })
+
+  it('rejects postDate with invalid format', () => {
+    const result = bulkTransactionSchema.safeParse({
+      ...validTransaction,
+      postDate: '01/16/2024',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects postDate that is not a real date', () => {
+    const result = bulkTransactionSchema.safeParse({
+      ...validTransaction,
+      postDate: '2024-02-30',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects empty description', () => {
+    const result = bulkTransactionSchema.safeParse({ ...validTransaction, description: '' })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects description over 500 characters', () => {
+    const result = bulkTransactionSchema.safeParse({
+      ...validTransaction,
+      description: 'A'.repeat(501),
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects empty category', () => {
+    const result = bulkTransactionSchema.safeParse({ ...validTransaction, category: '' })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects category over 100 characters', () => {
+    const result = bulkTransactionSchema.safeParse({
+      ...validTransaction,
+      category: 'A'.repeat(101),
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects empty type', () => {
+    const result = bulkTransactionSchema.safeParse({ ...validTransaction, type: '' })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects type over 50 characters', () => {
+    const result = bulkTransactionSchema.safeParse({
+      ...validTransaction,
+      type: 'A'.repeat(51),
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects type with invalid characters', () => {
+    const result = bulkTransactionSchema.safeParse({
+      ...validTransaction,
+      type: 'Type<>!',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects memo over 1000 characters', () => {
+    const result = bulkTransactionSchema.safeParse({
+      ...validTransaction,
+      memo: 'A'.repeat(1001),
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects transactionDate that is not a real date', () => {
+    const result = bulkTransactionSchema.safeParse({
+      ...validTransaction,
+      transactionDate: '2024-02-30',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts amount at boundary -1000000', () => {
+    const result = bulkTransactionSchema.safeParse({ ...validTransaction, amount: '-1000000' })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects amount below -1000000', () => {
+    const result = bulkTransactionSchema.safeParse({ ...validTransaction, amount: '-1000001' })
+    expect(result.success).toBe(false)
+  })
 })
 
 describe('bulkUploadRequestSchema', () => {

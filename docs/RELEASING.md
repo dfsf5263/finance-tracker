@@ -1,0 +1,101 @@
+# Releasing
+
+This document describes the release process for Finance Tracker, including how Docker image tagging works and how to cut a new release.
+
+## Tag Strategy
+
+| Trigger | Docker Tags | GitHub Release |
+|---|---|---|
+| Push to `main` | `:nightly`, `:nightly-YYYYMMDD`, `:nightly-sha-<commit>` | No |
+| Push `v*` tag | `:latest`, `:<version>`, `:sha-<commit>` | Yes (auto-generated notes) |
+
+- **`:nightly`** — always points to the latest `main` build. Overwritten on every merge.
+- **`:nightly-YYYYMMDD`** — date-stamped nightly for traceability (e.g., `:nightly-20260317`).
+- **`:nightly-sha-<commit>`** — commit-pinned nightly for exact reproducibility.
+- **`:latest`** — always points to the most recent stable release. Only moves on tag pushes.
+- **`:<version>`** — immutable version tag matching `package.json` (e.g., `:0.2.0`). Cannot be overwritten.
+- **`:sha-<commit>`** — commit-pinned release image.
+
+## Cutting a Release
+
+### 1. Bump the version
+
+Update the version in `package.json`:
+
+```bash
+# Edit package.json, changing version from e.g. "0.1.0" to "0.2.0"
+```
+
+### 2. Merge to main
+
+Commit the version bump and merge to `main` (via PR or direct push). This triggers a nightly build — the new code is now available at `:nightly`.
+
+### 3. Create and push a Git tag
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+The tag name **must** match the pattern `v*` and the numeric portion must match the version in `package.json`.
+
+### 4. Verify
+
+The tag push triggers the Release workflow, which will:
+
+1. Verify the version tag doesn't already exist in GHCR (immutability check)
+2. Build multi-arch images (amd64 + arm64)
+3. Create the multi-arch manifest tagged as `:latest`, `:0.2.0`, and `:sha-<commit>`
+4. Create a GitHub Release at `github.com/dfsf5263/finance-tracker/releases/tag/v0.2.0` with auto-generated release notes
+
+Check the [Actions tab](https://github.com/dfsf5263/finance-tracker/actions/workflows/release.yml) to confirm the workflow succeeded.
+
+## What Triggers What
+
+```
+main branch push
+  └─ Release workflow (nightly)
+       ├─ Build amd64 image
+       ├─ Build arm64 image
+       └─ Publish manifest → :nightly, :nightly-YYYYMMDD, :nightly-sha-xxx
+
+v* tag push
+  └─ Release workflow (release)
+       ├─ Immutability check (fails if version tag exists)
+       ├─ Build amd64 image
+       ├─ Build arm64 image
+       ├─ Publish manifest → :latest, :X.Y.Z, :sha-xxx
+       └─ Create GitHub Release with auto-generated notes
+```
+
+## Version Immutability
+
+Once a version tag (e.g., `:0.2.0`) is published to GHCR, it cannot be overwritten. If you push a `v*` tag and the version in `package.json` already exists in the registry, the workflow will fail with:
+
+```
+::error::Image tag 0.2.0 already exists in GHCR. Bump the version in package.json before tagging.
+```
+
+To fix this, bump the version in `package.json`, merge, and push a new tag.
+
+## For Self-Hosters
+
+Users who deploy Finance Tracker should use **`:latest`** or a specific version tag (e.g., `:0.2.0`). These are stable, tested releases.
+
+```bash
+# Pin to a specific version (recommended)
+docker pull ghcr.io/dfsf5263/finance-tracker:0.2.0
+
+# Always get the latest stable release
+docker pull ghcr.io/dfsf5263/finance-tracker:latest
+
+# Use the nightly build (latest from main, may be unstable)
+docker pull ghcr.io/dfsf5263/finance-tracker:nightly
+```
+
+To update a running Docker Compose deployment:
+
+```bash
+docker compose pull
+docker compose up -d
+```

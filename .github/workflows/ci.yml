@@ -44,7 +44,12 @@ jobs:
 
       - run: npm ci
       - run: npx prisma generate
-      - run: npm run test
+      - run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   e2e-tests:
     name: E2E Tests

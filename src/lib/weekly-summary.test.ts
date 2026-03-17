@@ -186,4 +186,136 @@ describe('generateHouseholdSummary', () => {
     expect(result!.householdId).toBe('hh-abc')
     expect(result!.householdName).toBe('Smith Family')
   })
+
+  it('calculates negative cash flow correctly', async () => {
+    vi.setSystemTime(new Date('2024-03-15T12:00:00.000Z'))
+    mockGetAnalytics.mockResolvedValue([
+      { name: 'Salary', value: 500, count: 1 },
+      { name: 'Rent', value: -1000, count: 1 },
+    ])
+
+    const result = await generateHouseholdSummary('hh-1', 'My Home')
+    expect(result!.cashFlow.netFlow).toBe(-500)
+    expect(result!.cashFlow.isPositive).toBe(false)
+  })
+
+  it('generates user budget alerts', async () => {
+    vi.setSystemTime(new Date('2024-03-15T12:00:00.000Z'))
+    mockGetUsers.mockResolvedValue([{ id: 'user-1', name: 'Alice', annualBudget: 12000 }] as never)
+    mockGetUserBudget.mockResolvedValue({
+      noBudget: false,
+      totalBudget: 1000,
+      totalSpending: 1200,
+      spendingPercentage: 120,
+      isOverBudget: true,
+      overspendAmount: 200,
+    })
+
+    const result = await generateHouseholdSummary('hh-1', 'My Home')
+    const userAlert = result!.budgetAlerts.find((a) => a.type === 'user')
+    expect(userAlert).toBeDefined()
+    expect(userAlert!.severity).toBe('critical')
+    expect(userAlert!.name).toBe('Alice')
+    expect(userAlert!.overspendAmount).toBe(200)
+  })
+
+  it('generates user warning alert at 80-100%', async () => {
+    vi.setSystemTime(new Date('2024-03-15T12:00:00.000Z'))
+    mockGetUsers.mockResolvedValue([{ id: 'user-1', name: 'Bob', annualBudget: 12000 }] as never)
+    mockGetUserBudget.mockResolvedValue({
+      noBudget: false,
+      totalBudget: 1000,
+      totalSpending: 850,
+      spendingPercentage: 85,
+      isOverBudget: false,
+    })
+
+    const result = await generateHouseholdSummary('hh-1', 'My Home')
+    const userAlert = result!.budgetAlerts.find((a) => a.type === 'user')
+    expect(userAlert!.severity).toBe('warning')
+  })
+
+  it('generates user info alert at 50-80%', async () => {
+    vi.setSystemTime(new Date('2024-03-15T12:00:00.000Z'))
+    mockGetUsers.mockResolvedValue([{ id: 'user-1', name: 'Carol', annualBudget: 12000 }] as never)
+    mockGetUserBudget.mockResolvedValue({
+      noBudget: false,
+      totalBudget: 1000,
+      totalSpending: 600,
+      spendingPercentage: 60,
+      isOverBudget: false,
+    })
+
+    const result = await generateHouseholdSummary('hh-1', 'My Home')
+    const userAlert = result!.budgetAlerts.find((a) => a.type === 'user')
+    expect(userAlert!.severity).toBe('info')
+  })
+
+  it('generates category warning alert at 80-100%', async () => {
+    vi.setSystemTime(new Date('2024-03-15T12:00:00.000Z'))
+    mockGetCategoryBudget.mockResolvedValue([
+      {
+        categoryName: 'Dining',
+        periodBudget: 200,
+        actualSpending: 170,
+        budgetUsedPercentage: 85,
+        overspend: false,
+      },
+    ])
+
+    const result = await generateHouseholdSummary('hh-1', 'My Home')
+    const catAlert = result!.budgetAlerts.find((a) => a.type === 'category')
+    expect(catAlert!.severity).toBe('warning')
+    expect(catAlert!.name).toBe('Dining')
+  })
+
+  it('generates category info alert at 50-80%', async () => {
+    vi.setSystemTime(new Date('2024-03-15T12:00:00.000Z'))
+    mockGetCategoryBudget.mockResolvedValue([
+      {
+        categoryName: 'Gas',
+        periodBudget: 300,
+        actualSpending: 180,
+        budgetUsedPercentage: 60,
+        overspend: false,
+      },
+    ])
+
+    const result = await generateHouseholdSummary('hh-1', 'My Home')
+    const catAlert = result!.budgetAlerts.find((a) => a.type === 'category')
+    expect(catAlert!.severity).toBe('info')
+  })
+
+  it('throws and logs when an error occurs', async () => {
+    vi.setSystemTime(new Date('2024-03-15T12:00:00.000Z'))
+    mockGetAnalytics.mockRejectedValue(new Error('DB connection lost'))
+
+    await expect(generateHouseholdSummary('hh-1', 'My Home')).rejects.toThrow('DB connection lost')
+  })
+
+  it('calculates spending change vs previous period', async () => {
+    vi.setSystemTime(new Date('2024-03-15T12:00:00.000Z'))
+    // Current period: $500 in expenses
+    mockGetAnalytics
+      .mockResolvedValueOnce([{ name: 'Food', value: -500, count: 10 }])
+      // Previous period: $400 in expenses
+      .mockResolvedValueOnce([{ name: 'Food', value: -400, count: 8 }])
+
+    const result = await generateHouseholdSummary('hh-1', 'My Home')
+    expect(result!.spending.currentTotal).toBe(500)
+    expect(result!.spending.previousTotal).toBe(400)
+    expect(result!.spending.percentageChange).toBe(25) // |((500-400)/400)*100|
+    expect(result!.spending.trend).toBe('up')
+  })
+
+  it('skips users without annualBudget', async () => {
+    vi.setSystemTime(new Date('2024-03-15T12:00:00.000Z'))
+    mockGetUsers.mockResolvedValue([
+      { id: 'user-1', name: 'NoBudget', annualBudget: null },
+    ] as never)
+
+    const result = await generateHouseholdSummary('hh-1', 'My Home')
+    expect(mockGetUserBudget).not.toHaveBeenCalled()
+    expect(result!.budgetAlerts.filter((a) => a.type === 'user')).toHaveLength(0)
+  })
 })

@@ -1,11 +1,13 @@
 <h1 align="center">Finance Tracker</h1>
 
 <p align="center">
-  A modern, full-stack personal finance application for tracking transactions, analyzing spending, and managing household budgets.
+  A self-hosted personal finance application for tracking transactions, analyzing spending, and managing household budgets. Own your financial data.
 </p>
 
 <p align="center">
   <a href="https://github.com/dfsf5263/finance-tracker/actions/workflows/ci.yml"><img src="https://github.com/dfsf5263/finance-tracker/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/dfsf5263/finance-tracker/actions/workflows/codeql.yml"><img src="https://github.com/dfsf5263/finance-tracker/actions/workflows/codeql.yml/badge.svg" alt="CodeQL" /></a>
+  <a href="https://codecov.io/gh/dfsf5263/finance-tracker"><img src="https://codecov.io/gh/dfsf5263/finance-tracker/branch/main/graph/badge.svg" alt="Coverage" /></a>
   <a href="https://github.com/dfsf5263/finance-tracker/blob/main/LICENSE"><img src="https://img.shields.io/github/license/dfsf5263/finance-tracker" alt="License" /></a>
   <a href="https://github.com/dfsf5263/finance-tracker/pkgs/container/finance-tracker"><img src="https://img.shields.io/badge/GHCR-image-blue?logo=github" alt="GHCR" /></a>
 </p>
@@ -22,12 +24,6 @@
   <img src="https://img.shields.io/badge/Zod-4-3E67B1?style=for-the-badge&logo=zod&logoColor=white" alt="Zod" />
   <img src="https://img.shields.io/badge/Vitest-4-6E9F18?style=for-the-badge&logo=vitest&logoColor=white" alt="Vitest" />
   <img src="https://img.shields.io/badge/Playwright-1.58-2EAD33?style=for-the-badge&logo=playwright&logoColor=white" alt="Playwright" />
-</p>
-
-<p align="center">
-  <a href="https://railway.com/template/dfsf5263-finance-tracker"><img src="https://railway.com/button.svg" alt="Deploy on Railway" height="32" /></a>
-  &nbsp;&nbsp;
-  <a href="https://render.com/deploy?repo=https://github.com/dfsf5263/finance-tracker"><img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" height="32" /></a>
 </p>
 
 <p align="center">
@@ -70,6 +66,12 @@
 
 </details>
 
+## Why Self-Host?
+
+Your financial data is some of the most sensitive information you have. Finance Tracker is designed to run on your own hardware — a home server, a VPS, or anywhere you choose — so your transaction history, budgets, and spending patterns never leave your control. No third-party accounts, no data harvesting, no subscriptions. Just a Docker image you can deploy in minutes.
+
+> **See also:** [Health Tracker](https://github.com/dfsf5263/health-tracker) — a companion self-hosted app for tracking health data with the same privacy-first approach.
+
 ## Features
 
 - 🏠 **Multi-Household Support** — Manage multiple households with role-based member access and invitations
@@ -103,24 +105,18 @@
 - **Node.js** 24+ and npm
 - **PostgreSQL** 12+ (or use Docker)
 
-### Quick Start with Docker
+### Quick Start with Docker Compose
 
-The fastest way to run Finance Tracker. Database migrations run automatically on startup.
+The fastest way to run Finance Tracker. Includes PostgreSQL — no external database needed.
 
 ```bash
-docker run -d \
-  --name finance-tracker \
-  -p 3000:3000 \
-  -e DATABASE_URL="postgresql://user:password@host:5432/finance_db" \
-  -e BETTER_AUTH_SECRET="your-secret-key-32-characters-or-more" \
-  -e APP_URL="http://localhost:3000" \
-  -e RESEND_API_KEY="re_your_api_key" \
-  -e RESEND_FROM_EMAIL="noreply@yourdomain.com" \
-  --restart unless-stopped \
-  ghcr.io/dfsf5263/finance-tracker:latest
+cp .env.docker .env
+# Edit .env with your secrets and email config
+
+docker compose up -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to use the app.
+Open [http://localhost:3000](http://localhost:3000) to use the app. Database migrations run automatically on first startup.
 
 > **📖 Full deployment guide:** [Docker Deployment Guide](docs/DOCKER_DEPLOYMENT.md)
 
@@ -163,8 +159,8 @@ Open [http://localhost:3000](http://localhost:3000) to use the app.
 | `DATABASE_URL` | ✅ | PostgreSQL connection string |
 | `BETTER_AUTH_SECRET` | ✅ | Session signing secret (32+ characters) |
 | `APP_URL` | ✅ | Application URL for auth callbacks and emails |
-| `RESEND_API_KEY` | ✅ | [Resend](https://resend.com) API key for transactional emails |
-| `RESEND_FROM_EMAIL` | ✅ | Sender email address (use `onboarding@resend.dev` for development) |
+| `RESEND_API_KEY` | | [Resend](https://resend.com) API key — required for email features (verification, weekly summaries) |
+| `RESEND_FROM_EMAIL` | | Sender email address — required if `RESEND_API_KEY` is set |
 | `RESEND_REPLY_TO_EMAIL` | | Reply-to email for support |
 | `SKIP_MIGRATIONS` | | Set to `true` to skip auto-migration on Docker startup |
 | `ENABLE_SEEDING` | | Set to `true` to seed default data on Docker startup |
@@ -216,11 +212,13 @@ The project uses GitHub Actions with two workflows:
 2. **Unit Tests** — `npm run test` (runs in parallel with step 1)
 3. **E2E Tests** — Playwright against a PostgreSQL service container (runs after steps 1 & 2 pass)
 
-**Release** (`release.yml`) — Runs on push to `main` and version tags (`v*`):
+**Release** (`release.yml`) — Builds multi-arch Docker images (amd64 + arm64) and pushes to [GitHub Container Registry](https://github.com/dfsf5263/finance-tracker/pkgs/container/finance-tracker):
 
-- Builds the Docker image and pushes to [GitHub Container Registry](https://github.com/dfsf5263/finance-tracker/pkgs/container/finance-tracker)
-- Tags: `latest`, `<version>` (from `package.json`), `sha-<commit>`, `main`
+- **Push to `main`** → nightly build: `:nightly`, `:nightly-YYYYMMDD`, `:nightly-sha-<commit>`
+- **Tag push (`v*`)** → stable release: `:latest`, `:<version>`, `:sha-<commit>` + GitHub Release with auto-generated notes
 - Version tags are **immutable** — the build fails if the version already exists in GHCR
+
+See [Releasing](docs/RELEASING.md) for the full release process.
 
 ## Project Structure
 
@@ -253,7 +251,7 @@ tests/
 
 ### Docker (Self-Hosted)
 
-Official images are published to GitHub Container Registry:
+Multi-arch images (amd64 + arm64) are published to GitHub Container Registry:
 
 ```bash
 docker pull ghcr.io/dfsf5263/finance-tracker:latest
@@ -261,15 +259,7 @@ docker pull ghcr.io/dfsf5263/finance-tracker:latest
 
 The container automatically runs database migrations on startup (skip with `SKIP_MIGRATIONS=true`).
 
-See the [Docker Deployment Guide](docs/DOCKER_DEPLOYMENT.md) for production examples, reverse proxy setup, monitoring, backups, and troubleshooting.
-
-### Railway
-
-Click the **Deploy on Railway** button above, or use the included [`railway.json`](railway.json) template. Railway will provision a PostgreSQL database and deploy the app automatically.
-
-### Render
-
-Click the **Deploy to Render** button above, or use the included [`render.yaml`](render.yaml) blueprint. Render will create a web service and managed PostgreSQL database.
+See the [Docker Deployment Guide](docs/DOCKER_DEPLOYMENT.md) for Docker Compose quick deploy, reverse proxy setup, monitoring, backups, and troubleshooting.
 
 ## Development Commands
 

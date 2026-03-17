@@ -162,4 +162,38 @@ describe('logApiError', () => {
     const [loggedData] = vi.mocked(logger.error).mock.calls[0] as [Record<string, unknown>, string]
     expect(loggedData.url).toContain('/api/transactions')
   })
+
+  it('extracts correlationId from x-correlation-id header', async () => {
+    const request = makeRequest({
+      headers: { 'x-correlation-id': 'abc-123-def' },
+    })
+
+    await logApiError({ request, error: new Error('err'), operation: 'fetch data' })
+
+    const [loggedData] = vi.mocked(logger.error).mock.calls[0] as [Record<string, unknown>, string]
+    expect(loggedData.correlationId).toBe('abc-123-def')
+  })
+
+  it('logs null correlationId when header is absent', async () => {
+    const request = makeRequest()
+
+    await logApiError({ request, error: new Error('err') })
+
+    const [loggedData] = vi.mocked(logger.error).mock.calls[0] as [Record<string, unknown>, string]
+    expect(loggedData.correlationId).toBeNull()
+  })
+
+  it('handles logging failure gracefully', async () => {
+    vi.mocked(logger.error).mockImplementationOnce(() => {
+      throw new Error('logging broken')
+    })
+
+    const request = makeRequest()
+
+    await expect(
+      logApiError({ request, error: new Error('original error') })
+    ).resolves.toBeUndefined()
+
+    expect(logger.error).toHaveBeenCalledTimes(2)
+  })
 })
