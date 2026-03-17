@@ -10,7 +10,8 @@ Official images are published to **GitHub Container Registry (GHCR)**:
 
 - **Registry**: `ghcr.io/dfsf5263/finance-tracker`
 - **Architectures**: `linux/amd64`, `linux/arm64` (Apple Silicon / AWS Graviton)
-- **Tags**: `latest`, `<version>` (from `package.json`), `sha-<commit>`, `main`
+- **Stable tags**: `:latest`, `:<version>` (e.g., `0.2.0`), `:sha-<commit>` — published on version tag pushes
+- **Nightly tags**: `:nightly`, `:nightly-YYYYMMDD`, `:nightly-sha-<commit>` — published on every push to `main`
 - **Immutability**: Version tags (e.g., `0.1.0`) are immutable — once published, they cannot be overwritten
 
 ```bash
