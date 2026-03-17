@@ -1,6 +1,6 @@
 {
   "name": "finance-tracker",
-  "version": "1.0.7",
+  "version": "1.0.9",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -19,8 +19,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:report": "playwright show-report",
-    "db:e2e:up": "docker compose up -d postgres-e2e",
-    "db:e2e:down": "docker compose down postgres-e2e",
+    "db:e2e:up": "docker compose -f docker-compose.e2e.yml up -d postgres-e2e",
+    "db:e2e:down": "docker compose -f docker-compose.e2e.yml down postgres-e2e",
     "db:e2e:reset": "bash scripts/db-e2e-reset.sh",
     "lockfile-check": "npm install --package-lock-only --ignore-scripts 2>/dev/null && git diff --exit-code package-lock.json || (echo '\\n✗ package-lock.json is out of sync. Run: npm install' && exit 1)",
     "postinstall": "test -d .git && simple-git-hooks || true"

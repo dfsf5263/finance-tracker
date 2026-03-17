@@ -19,8 +19,7 @@ cron.schedule(schedule, async () => {
       return
     }
 
-    const baseUrl = process.env.APP_URL || 'http://localhost:3000'
-    const cronUrl = `${baseUrl}/api/cron/weekly-summary`
+    const cronUrl = `http://localhost:${process.env.PORT || 3000}/api/cron/weekly-summary`
 
     console.log(`Making request to: ${cronUrl}`)
 
