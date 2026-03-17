@@ -201,9 +201,7 @@ describe('generateHouseholdSummary', () => {
 
   it('generates user budget alerts', async () => {
     vi.setSystemTime(new Date('2024-03-15T12:00:00.000Z'))
-    mockGetUsers.mockResolvedValue([
-      { id: 'user-1', name: 'Alice', annualBudget: 12000 },
-    ] as never)
+    mockGetUsers.mockResolvedValue([{ id: 'user-1', name: 'Alice', annualBudget: 12000 }] as never)
     mockGetUserBudget.mockResolvedValue({
       noBudget: false,
       totalBudget: 1000,
@@ -223,9 +221,7 @@ describe('generateHouseholdSummary', () => {
 
   it('generates user warning alert at 80-100%', async () => {
     vi.setSystemTime(new Date('2024-03-15T12:00:00.000Z'))
-    mockGetUsers.mockResolvedValue([
-      { id: 'user-1', name: 'Bob', annualBudget: 12000 },
-    ] as never)
+    mockGetUsers.mockResolvedValue([{ id: 'user-1', name: 'Bob', annualBudget: 12000 }] as never)
     mockGetUserBudget.mockResolvedValue({
       noBudget: false,
       totalBudget: 1000,
@@ -241,9 +237,7 @@ describe('generateHouseholdSummary', () => {
 
   it('generates user info alert at 50-80%', async () => {
     vi.setSystemTime(new Date('2024-03-15T12:00:00.000Z'))
-    mockGetUsers.mockResolvedValue([
-      { id: 'user-1', name: 'Carol', annualBudget: 12000 },
-    ] as never)
+    mockGetUsers.mockResolvedValue([{ id: 'user-1', name: 'Carol', annualBudget: 12000 }] as never)
     mockGetUserBudget.mockResolvedValue({
       noBudget: false,
       totalBudget: 1000,

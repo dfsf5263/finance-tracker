@@ -61,7 +61,10 @@ describe('getHouseholdBudgetPerformance', () => {
     } as never)
 
     const result = await getHouseholdBudgetPerformance(
-      'hh-id', '2024-01-01', '2024-03-31', 'quarter'
+      'hh-id',
+      '2024-01-01',
+      '2024-03-31',
+      'quarter'
     )
 
     expect(result.periodBudget).toBe(3000)
@@ -75,9 +78,7 @@ describe('getHouseholdBudgetPerformance', () => {
       _sum: { amount: new Decimal('10000') },
     } as never)
 
-    const result = await getHouseholdBudgetPerformance(
-      'hh-id', '2024-01-01', '2024-12-31', 'year'
-    )
+    const result = await getHouseholdBudgetPerformance('hh-id', '2024-01-01', '2024-12-31', 'year')
 
     expect(result.periodBudget).toBe(12000)
     expect(result.totalSpending).toBe(10000)
@@ -148,7 +149,10 @@ describe('getCategoryBudgetPerformance', () => {
     } as never)
 
     const result = await getCategoryBudgetPerformance(
-      'hh-id', '2024-01-01', '2024-03-31', 'quarter'
+      'hh-id',
+      '2024-01-01',
+      '2024-03-31',
+      'quarter'
     )
 
     expect(result[0].periodBudget).toBe(1200) // 4800/4
@@ -163,9 +167,7 @@ describe('getCategoryBudgetPerformance', () => {
       _sum: { amount: new Decimal('24000') },
     } as never)
 
-    const result = await getCategoryBudgetPerformance(
-      'hh-id', '2024-01-01', '2024-12-31', 'year'
-    )
+    const result = await getCategoryBudgetPerformance('hh-id', '2024-01-01', '2024-12-31', 'year')
 
     expect(result[0].periodBudget).toBe(24000) // 24000/1
   })
@@ -226,7 +228,11 @@ describe('getUserBudgetPerformance', () => {
     } as never)
 
     const result = await getUserBudgetPerformance(
-      'hh-id', 'user-1', '2024-01-01', '2024-01-31', 'month'
+      'hh-id',
+      'user-1',
+      '2024-01-01',
+      '2024-01-31',
+      'month'
     )
 
     expect(result.noBudget).toBe(false)
@@ -245,7 +251,11 @@ describe('getUserBudgetPerformance', () => {
     } as never)
 
     const result = await getUserBudgetPerformance(
-      'hh-id', 'user-1', '2024-01-01', '2024-01-31', 'month'
+      'hh-id',
+      'user-1',
+      '2024-01-01',
+      '2024-01-31',
+      'month'
     )
 
     expect(result.totalBudget).toBe(500) // 6000/12
@@ -263,7 +273,11 @@ describe('getUserBudgetPerformance', () => {
     } as never)
 
     const result = await getUserBudgetPerformance(
-      'hh-id', 'user-1', '2024-01-01', '2024-03-31', 'quarter'
+      'hh-id',
+      'user-1',
+      '2024-01-01',
+      '2024-03-31',
+      'quarter'
     )
 
     expect(result.totalBudget).toBe(3000) // 12000/4
@@ -278,7 +292,11 @@ describe('getUserBudgetPerformance', () => {
     } as never)
 
     const result = await getUserBudgetPerformance(
-      'hh-id', 'user-1', '2024-01-01', '2024-12-31', 'year'
+      'hh-id',
+      'user-1',
+      '2024-01-01',
+      '2024-12-31',
+      'year'
     )
 
     expect(result.totalBudget).toBe(12000) // 12000/1
@@ -293,7 +311,11 @@ describe('getUserBudgetPerformance', () => {
     } as never)
 
     const result = await getUserBudgetPerformance(
-      'hh-id', 'user-1', '2024-01-01', '2024-01-31', 'month'
+      'hh-id',
+      'user-1',
+      '2024-01-01',
+      '2024-01-31',
+      'month'
     )
 
     expect(result.totalSpending).toBe(0)

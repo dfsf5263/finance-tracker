@@ -97,9 +97,7 @@ describe('GET /api/transactions/sankey', () => {
   })
 
   it('returns 400 for invalid endDate', async () => {
-    const response = await GET(
-      makeGetRequest({ householdId: HOUSEHOLD_ID, endDate: 'bad-date' })
-    )
+    const response = await GET(makeGetRequest({ householdId: HOUSEHOLD_ID, endDate: 'bad-date' }))
     expect(response.status).toBe(400)
     const body = await response.json()
     expect(body.error).toBe('Invalid endDate')

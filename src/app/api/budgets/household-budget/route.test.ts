@@ -220,9 +220,7 @@ describe('GET /api/budgets/household-budget', () => {
           },
         ] as never)
 
-      const response = await GET(
-        makeRequest({ budgetType: 'household', timePeriodType: 'month' })
-      )
+      const response = await GET(makeRequest({ budgetType: 'household', timePeriodType: 'month' }))
       expect(response.status).toBe(200)
       const body = await response.json()
 
@@ -261,9 +259,7 @@ describe('GET /api/budgets/household-budget', () => {
           },
         ] as never)
 
-      const response = await GET(
-        makeRequest({ budgetType: 'household', timePeriodType: 'month' })
-      )
+      const response = await GET(makeRequest({ budgetType: 'household', timePeriodType: 'month' }))
       const body = await response.json()
 
       expect(body.topTransactions).toHaveLength(1)

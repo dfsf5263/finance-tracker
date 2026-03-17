@@ -217,7 +217,6 @@ describe('POST /api/transactions', () => {
     expect(response.status).toBe(400)
   })
 
-
   it('returns 403 when user lacks write access', async () => {
     mockRequireHouseholdWriteAccess.mockResolvedValue(
       NextResponse.json({ error: 'Forbidden' }, { status: 403 })

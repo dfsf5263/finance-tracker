@@ -56,9 +56,7 @@ function setupEntityMocks(
   mockDb.householdType.findMany.mockResolvedValue(
     (overrides.types ?? [{ id: 'type-1', name: 'Purchase' }]) as never
   )
-  mockDb.householdUser.findMany.mockResolvedValue(
-    (overrides.users ?? []) as never
-  )
+  mockDb.householdUser.findMany.mockResolvedValue((overrides.users ?? []) as never)
 }
 
 beforeEach(() => {
@@ -87,9 +85,7 @@ describe('POST /api/transactions/bulk', () => {
     })
 
     it('returns 400 when transactions array is empty', async () => {
-      const response = await POST(
-        makePostRequest({ householdId: HOUSEHOLD_ID, transactions: [] })
-      )
+      const response = await POST(makePostRequest({ householdId: HOUSEHOLD_ID, transactions: [] }))
       expect(response.status).toBe(400)
     })
   })
