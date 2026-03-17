@@ -164,8 +164,9 @@ describe('hasTransactionsInPeriod', () => {
     await hasTransactionsInPeriod('hh-id', '2024-01-01', '2024-01-31')
 
     const call = mockDb.transaction.count.mock.calls[0][0]
-    expect(call?.where?.transactionDate?.gte).toEqual(new Date('2024-01-01'))
-    expect(call?.where?.transactionDate?.lte).toEqual(new Date('2024-01-31'))
+    const dateFilter = call?.where?.transactionDate as { gte?: Date; lte?: Date }
+    expect(dateFilter?.gte).toEqual(new Date('2024-01-01'))
+    expect(dateFilter?.lte).toEqual(new Date('2024-01-31'))
   })
 
   it('works with only startDate', async () => {
@@ -174,8 +175,9 @@ describe('hasTransactionsInPeriod', () => {
     await hasTransactionsInPeriod('hh-id', '2024-01-01')
 
     const call = mockDb.transaction.count.mock.calls[0][0]
-    expect(call?.where?.transactionDate?.gte).toEqual(new Date('2024-01-01'))
-    expect(call?.where?.transactionDate?.lte).toBeUndefined()
+    const dateFilter = call?.where?.transactionDate as { gte?: Date; lte?: Date }
+    expect(dateFilter?.gte).toEqual(new Date('2024-01-01'))
+    expect(dateFilter?.lte).toBeUndefined()
   })
 
   it('works with only endDate', async () => {
@@ -184,6 +186,7 @@ describe('hasTransactionsInPeriod', () => {
     await hasTransactionsInPeriod('hh-id', undefined, '2024-01-31')
 
     const call = mockDb.transaction.count.mock.calls[0][0]
-    expect(call?.where?.transactionDate?.lte).toEqual(new Date('2024-01-31'))
+    const dateFilter = call?.where?.transactionDate as { gte?: Date; lte?: Date }
+    expect(dateFilter?.lte).toEqual(new Date('2024-01-31'))
   })
 })

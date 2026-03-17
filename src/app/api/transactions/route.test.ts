@@ -164,8 +164,9 @@ describe('GET /api/transactions', () => {
     )
 
     const call = mockDb.transaction.findMany.mock.calls[0][0]
-    expect(call?.where?.transactionDate?.gte).toEqual(new Date('2024-01-01'))
-    expect(call?.where?.transactionDate?.lte).toEqual(new Date('2024-01-31'))
+    const dateFilter = call?.where?.transactionDate as { gte?: Date; lte?: Date }
+    expect(dateFilter?.gte).toEqual(new Date('2024-01-01'))
+    expect(dateFilter?.lte).toEqual(new Date('2024-01-31'))
   })
 
   it('applies search filter with OR conditions', async () => {
