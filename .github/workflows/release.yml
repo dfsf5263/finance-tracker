@@ -40,6 +40,17 @@ jobs:
           fi
           echo "date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
 
+      - name: Verify git tag matches package version
+        if: steps.context.outputs.is_release == 'true'
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="${{ steps.pkg.outputs.version }}"
+          if [[ "$TAG_VERSION" != "$PKG_VERSION" ]]; then
+            echo "::error::Git tag v${TAG_VERSION} does not match package.json version ${PKG_VERSION}. Update package.json before tagging."
+            exit 1
+          fi
+          echo "✓ Git tag v${TAG_VERSION} matches package.json"
+
       - name: Check version tag immutability
         if: steps.context.outputs.is_release == 'true'
         run: |

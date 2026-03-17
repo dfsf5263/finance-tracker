@@ -18,8 +18,6 @@ interface ValidationError {
 }
 
 export const POST = withApiLogging(async (request: NextRequest) => {
-  const correlationId = request.headers.get('x-correlation-id')
-  const log = logger.child({ correlationId })
   let body: unknown
 
   try {
@@ -29,7 +27,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
 
     if (!validation.success) {
       const parsedErrors = parseValidationErrors(validation.error)
-      log.warn({ errorCount: parsedErrors.length }, 'bulk upload: schema validation failed')
+      logger.warn({ errorCount: parsedErrors.length }, 'bulk upload: schema validation failed')
 
       return NextResponse.json(
         {
@@ -42,7 +40,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     }
 
     const { transactions, householdId } = validation.data
-    log.info({ transactionCount: transactions.length, householdId }, 'bulk upload: starting')
+    logger.info({ transactionCount: transactions.length, householdId }, 'bulk upload: starting')
 
     // Verify user has write access to household
     const authResult = await requireHouseholdWriteAccess(request, householdId)
@@ -50,7 +48,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
 
     // Check for intra-file duplicates first
     const intraFileDuplicates = checkIntraFileDuplicates(transactions)
-    log.info(
+    logger.info(
       { intraFileDuplicateCount: intraFileDuplicates.length },
       'bulk upload: intra-file duplicate check complete'
     )
@@ -58,7 +56,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     // Check for duplicates against database (single batched query)
     const dbDupStart = Date.now()
     const dbDuplicates = await checkDuplicateTransactions(transactions, householdId)
-    log.info(
+    logger.info(
       { dbDuplicateCount: dbDuplicates.length, durationMs: Date.now() - dbDupStart },
       'bulk upload: db duplicate check complete'
     )
@@ -73,7 +71,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     const validTransactions = transactions.filter(
       (_, index) => !duplicateRows.has(index + 2) // +2 for header row and 0-index
     )
-    log.info(
+    logger.info(
       { validCount: validTransactions.length, duplicateCount: duplicateRows.size },
       'bulk upload: deduplication complete'
     )
@@ -127,13 +125,13 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     // Process valid transactions if any exist
     if (validTransactions.length > 0) {
       const txStart = Date.now()
-      log.info({ validCount: validTransactions.length }, 'bulk upload: beginning db transaction')
+      logger.info({ validCount: validTransactions.length }, 'bulk upload: beginning db transaction')
       try {
         const result = await db.$transaction(async (tx) => {
           // Validate all entities exist
           const entityValStart = Date.now()
           const entityValidation = await validateEntities(tx, validTransactions, householdId)
-          log.info(
+          logger.info(
             { valid: entityValidation.valid, durationMs: Date.now() - entityValStart },
             'bulk upload: entity validation complete'
           )
@@ -142,7 +140,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
             // Add entity validation failures
             const entityFailures = getEntityValidationFailures(validTransactions, entityValidation)
             failures.push(...entityFailures)
-            log.warn(
+            logger.warn(
               { entityFailureCount: entityFailures.length },
               'bulk upload: entity validation failures found'
             )
@@ -154,7 +152,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
             )
 
             if (finalValidTransactions.length === 0) {
-              log.warn('bulk upload: no valid transactions remain after entity validation')
+              logger.warn('bulk upload: no valid transactions remain after entity validation')
               return { count: 0 }
             }
 
@@ -176,7 +174,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
             const insertResult = await tx.transaction.createMany({
               data: preparedTransactions,
             })
-            log.info(
+            logger.info(
               { inserted: insertResult.count, durationMs: Date.now() - insertStart },
               'bulk upload: createMany complete (partial — entity failures excluded)'
             )
@@ -201,7 +199,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
           const insertResult = await tx.transaction.createMany({
             data: preparedTransactions,
           })
-          log.info(
+          logger.info(
             { inserted: insertResult.count, durationMs: Date.now() - insertStart },
             'bulk upload: createMany complete'
           )
@@ -209,7 +207,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
         })
 
         successfulCount = result.count
-        log.info(
+        logger.info(
           { successfulCount, durationMs: Date.now() - txStart },
           'bulk upload: db transaction complete'
         )
@@ -218,7 +216,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
           // This means some transactions were duplicates that we missed
           // The error doesn't tell us which ones, so we need to handle this differently
-          log.warn({ err: error }, 'bulk upload: unique constraint violation during insert')
+          logger.warn({ err: error }, 'bulk upload: unique constraint violation during insert')
 
           // Since we can't identify which specific transactions failed in a bulk operation,
           // we'll mark all as potentially having constraint violations
@@ -235,7 +233,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
           successfulCount = 0
         } else {
           // Other database errors
-          log.error({ err: error }, 'bulk upload: db transaction failed')
+          logger.error({ err: error }, 'bulk upload: db transaction failed')
           validTransactions.forEach((t) => {
             const originalIndex = transactions.findIndex((orig) => orig === t)
             failures.push({
@@ -264,7 +262,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       },
     }))
 
-    log.info(
+    logger.info(
       { total: transactions.length, successful: successfulCount, failed: failures.length },
       'bulk upload: finished'
     )
