@@ -15,6 +15,7 @@ import {
   Tag,
   Target,
   TrendingUp,
+  FileSpreadsheet,
   Upload,
   User,
   Users,
@@ -109,6 +110,11 @@ const data = {
     },
   ],
   utility: [
+    {
+      name: 'CSV Converter',
+      url: '/dashboard/utility/csv-converter',
+      icon: FileSpreadsheet,
+    },
     {
       name: 'DeDupe',
       url: '/dashboard/utility/dedupe',
