@@ -30,7 +30,6 @@ const mockRequireHouseholdAccess = vi.mocked(requireHouseholdAccess)
 const mockCanInviteMembers = vi.mocked(canInviteMembers)
 
 const HOUSEHOLD_ID = 'd4e5f6a7-b8c9-4123-8efa-234567890123'
-const USER_ID = 'test-user-id'
 
 const invitations = [{ id: 'inv-1', role: 'MEMBER', status: 'PENDING', inviter: {}, invitee: null }]
 
