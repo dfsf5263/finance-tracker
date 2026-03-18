@@ -79,21 +79,13 @@ fi
 
 # ── Confirm ──────────────────────────────────────────────────
 
-read -rp "Create and push tag ${TAG} on main? [y/N] " CONFIRM
+read -rp "Create tag ${TAG} on main and merge into develop? [y/N] " CONFIRM
 if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
   echo "Aborted."
   exit 0
 fi
 
-# ── Tag main ─────────────────────────────────────────────────
-
-echo
-echo "Tagging origin/main as ${TAG}..."
-run git tag "$TAG" origin/main
-run git push origin "$TAG"
-echo "✓ Tag ${TAG} pushed"
-
-# ── Merge main into develop ──────────────────────────────────
+# ── Merge main into develop (do this FIRST — it can fail with conflicts) ─────
 
 echo
 echo "Merging main into develop..."
@@ -146,12 +138,23 @@ echo
 echo "Running npm install..."
 run npm install
 
-# ── Commit and push ──────────────────────────────────────────
+# ── Commit version bump ──────────────────────────────────────
 
 echo
 echo "Committing version bump..."
 run git add package.json package-lock.json
 run git commit -m "chore: bump version to ${NEXT_VERSION}"
+
+# ── Tag main and push everything ─────────────────────────────
+# Tag and push happen LAST so nothing is irreversible until all
+# local steps (merge + version bump) have succeeded.
+
+echo
+echo "Tagging origin/main as ${TAG}..."
+run git tag "$TAG" origin/main
+
+echo "Pushing tag and develop branch..."
+run git push origin "$TAG"
 run git push origin develop
 
 echo
