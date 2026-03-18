@@ -266,54 +266,32 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
 
   const fetchCategories = useCallback(async () => {
     if (!selectedHousehold) return
-    try {
-      const response = await fetch(`/api/categories?householdId=${selectedHousehold.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setCategories(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch categories:', error)
-    }
+    const { data } = await apiFetch<TransactionCategory[]>(
+      `/api/categories?householdId=${selectedHousehold.id}`
+    )
+    if (data) setCategories(data)
   }, [selectedHousehold])
 
   const fetchTypes = useCallback(async () => {
     if (!selectedHousehold) return
-    try {
-      const response = await fetch(`/api/types?householdId=${selectedHousehold.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setTypes(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch types:', error)
-    }
+    const { data } = await apiFetch<TransactionType[]>(
+      `/api/types?householdId=${selectedHousehold.id}`
+    )
+    if (data) setTypes(data)
   }, [selectedHousehold])
 
   const fetchAccounts = useCallback(async () => {
     if (!selectedHousehold) return
-    try {
-      const response = await fetch(`/api/accounts?householdId=${selectedHousehold.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setAccounts(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch accounts:', error)
-    }
+    const { data } = await apiFetch<Account[]>(`/api/accounts?householdId=${selectedHousehold.id}`)
+    if (data) setAccounts(data)
   }, [selectedHousehold])
 
   const fetchUsers = useCallback(async () => {
     if (!selectedHousehold) return
-    try {
-      const response = await fetch(`/api/users?householdId=${selectedHousehold.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setUsers(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch users:', error)
-    }
+    const { data } = await apiFetch<TransactionUser[]>(
+      `/api/users?householdId=${selectedHousehold.id}`
+    )
+    if (data) setUsers(data)
   }, [selectedHousehold])
 
   const updateColumnMapping = (csvHeader: string, mappedField: keyof CSVTransaction | 'skip') => {

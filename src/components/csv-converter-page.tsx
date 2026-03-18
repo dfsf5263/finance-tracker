@@ -17,6 +17,7 @@ import { FileSpreadsheet, FileText, AlertCircle, Download, ExternalLink, Info } 
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { useHousehold } from '@/contexts/household-context'
+import { apiFetch } from '@/lib/http-utils'
 import {
   INSTITUTIONS,
   mapCsvRow,
@@ -175,13 +176,10 @@ export function CSVConverterPage() {
   const fetchEntities = useCallback(
     async (endpoint: string): Promise<HouseholdEntity[]> => {
       if (!selectedHousehold) return []
-      try {
-        const response = await fetch(`/api/${endpoint}?householdId=${selectedHousehold.id}`)
-        if (response.ok) return await response.json()
-      } catch (error) {
-        console.error(`Failed to fetch ${endpoint}:`, error)
-      }
-      return []
+      const { data } = await apiFetch<HouseholdEntity[]>(
+        `/api/${endpoint}?householdId=${selectedHousehold.id}`
+      )
+      return data ?? []
     },
     [selectedHousehold]
   )
