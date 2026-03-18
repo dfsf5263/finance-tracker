@@ -18,10 +18,10 @@ export interface OutputRow {
   transactionDate: Date | null
   postDate: Date | null
   description: string
-  amount: number
+  amount: number | null
 }
 
-// ── Institution configs derived from INSTITUTION_CSV.md ─────
+// ── Institution configs derived from docs/CSV_CONVERTER.md ──
 
 export const INSTITUTIONS: Record<InstitutionKey, InstitutionConfig> = {
   fidelity: {
@@ -78,7 +78,7 @@ export function mapCsvRow(csvRow: Record<string, string>, config: InstitutionCon
   let transactionDate: Date | null = null
   let postDate: Date | null = null
   let description = ''
-  let amount = 0
+  let amount: number | null = null
 
   for (const [csvCol, field] of Object.entries(config.mapping)) {
     const raw = csvRow[csvCol]?.trim() ?? ''
@@ -94,7 +94,7 @@ export function mapCsvRow(csvRow: Record<string, string>, config: InstitutionCon
         break
       case 'amount': {
         const parsed = Number.parseFloat(raw.replace(/[,$]/g, ''))
-        amount = config.invertAmount ? parsed * -1 : parsed
+        amount = Number.isFinite(parsed) ? (config.invertAmount ? parsed * -1 : parsed) : null
         break
       }
     }

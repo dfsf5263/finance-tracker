@@ -66,6 +66,21 @@ fi
 VERSION=$(git show origin/main:package.json | jq -r .version)
 TAG="v${VERSION}"
 
+# ── Early tag conflict guard ─────────────────────────────────
+# Fail fast BEFORE any local changes (merge/version bump) if the
+# tag already exists but points to the wrong commit.
+
+if git rev-parse "$TAG" &>/dev/null || git ls-remote --exit-code --tags origin "refs/tags/$TAG" &>/dev/null; then
+  EXISTING_TAG_SHA=$(git rev-parse "$TAG" 2>/dev/null || git ls-remote origin "refs/tags/$TAG" | cut -f1)
+  MAIN_SHA=$(git rev-parse origin/main)
+  if [[ "$EXISTING_TAG_SHA" != "$MAIN_SHA" ]]; then
+    echo "Error: tag ${TAG} already exists but points to a different commit." >&2
+    echo "  Tag points to:  ${EXISTING_TAG_SHA}" >&2
+    echo "  origin/main is: ${MAIN_SHA}" >&2
+    exit 1
+  fi
+fi
+
 echo
 echo "Version on main: ${VERSION}"
 echo "Tag to create:   ${TAG}"
@@ -147,21 +162,14 @@ run git commit -m "chore: bump version to ${NEXT_VERSION}"
 # ── Tag main and push everything ─────────────────────────────
 # Tag and push happen LAST so nothing is irreversible until all
 # local steps (merge + version bump) have succeeded.
-# If the tag was already created (e.g. by a previous partial run),
-# skip creation as long as it points to the correct commit.
+# Conflict case was already caught by the early guard above;
+# this only handles the idempotent re-run (tag already correct).
 
 echo
 TAG_EXISTS=false
 if git rev-parse "$TAG" &>/dev/null || git ls-remote --exit-code --tags origin "refs/tags/$TAG" &>/dev/null; then
-  EXISTING_TAG_SHA=$(git rev-parse "$TAG" 2>/dev/null || git ls-remote origin "refs/tags/$TAG" | cut -f1)
-  MAIN_SHA=$(git rev-parse origin/main)
-  if [[ "$EXISTING_TAG_SHA" == "$MAIN_SHA" ]]; then
-    echo "✓ Tag ${TAG} already exists on origin/main — skipping tag creation"
-    TAG_EXISTS=true
-  else
-    echo "Error: tag ${TAG} already exists but points to a different commit." >&2
-    exit 1
-  fi
+  echo "✓ Tag ${TAG} already exists on origin/main — skipping tag creation"
+  TAG_EXISTS=true
 fi
 
 if ! $TAG_EXISTS; then

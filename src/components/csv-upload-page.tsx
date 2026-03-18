@@ -1,5 +1,6 @@
 'use client'
 
+import { isValidCsvFile } from '@/lib/file-utils'
 import React, { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -159,7 +160,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
   const [entitiesLoaded, setEntitiesLoaded] = useState(false)
 
   const processFile = (selectedFile: File) => {
-    if (selectedFile && selectedFile.type === 'text/csv') {
+    if (selectedFile && isValidCsvFile(selectedFile)) {
       setFile(selectedFile)
       parseCSV(selectedFile)
     } else {

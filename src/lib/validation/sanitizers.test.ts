@@ -40,6 +40,22 @@ describe('sanitizeText', () => {
   it('handles string with only dangerous chars', () => {
     expect(sanitizeText('<>\'"')).toBe('')
   })
+
+  it('strips leading formula characters (=)', () => {
+    expect(sanitizeText('=CMD|calc')).toBe('CMD|calc')
+  })
+
+  it('strips leading formula characters (+)', () => {
+    expect(sanitizeText('+1+2')).toBe('1+2')
+  })
+
+  it('strips leading formula characters (@)', () => {
+    expect(sanitizeText('@SUM(A1)')).toBe('SUM(A1)')
+  })
+
+  it('preserves leading minus (not a formula prefix)', () => {
+    expect(sanitizeText('-85.79')).toBe('-85.79')
+  })
 })
 
 describe('convertMMDDYYYYToISO', () => {

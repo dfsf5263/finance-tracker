@@ -160,7 +160,13 @@ describe('mapCsvRow', () => {
     const row = { Date: '2026-01-01' }
     const result = mapCsvRow(row, INSTITUTIONS.fidelity)
     expect(result.description).toBe('')
-    expect(result.amount).toBeNaN()
+    expect(result.amount).toBe(null)
+  })
+
+  it('defaults to null for non-numeric amount', () => {
+    const row = { Date: '2026-01-01', Name: 'Test', Amount: 'N/A' }
+    const result = mapCsvRow(row, INSTITUTIONS.fidelity)
+    expect(result.amount).toBe(null)
   })
 })
 

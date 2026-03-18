@@ -57,6 +57,7 @@ tsconfig.tsbuildinfo
 # Playwright
 tests/e2e/.auth/
 playwright-report/
+playwright-report-no-email/
 test-results/
 # Private dev notes (not for public repo)
 .dev-notes/

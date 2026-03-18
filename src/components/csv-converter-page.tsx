@@ -14,8 +14,6 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { FileSpreadsheet, FileText, AlertCircle, Download, ExternalLink, Info } from 'lucide-react'
-import Papa from 'papaparse'
-import ExcelJS from 'exceljs'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { useHousehold } from '@/contexts/household-context'
@@ -26,6 +24,8 @@ import {
   type InstitutionKey,
   type OutputRow,
 } from '@/lib/csv-converter'
+import { isValidCsvFile, sanitizeCellValue } from '@/lib/file-utils'
+import type ExcelJS from 'exceljs'
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -35,18 +35,7 @@ interface HouseholdEntity {
   householdId: string
 }
 
-// ── Excel generation ────────────────────────────────────────
-
-const HEADER_FILL: ExcelJS.FillPattern = {
-  type: 'pattern',
-  pattern: 'solid',
-  fgColor: { argb: 'FF4472C4' },
-}
-
-const HEADER_FONT: Partial<ExcelJS.Font> = {
-  bold: true,
-  color: { argb: 'FFFFFFFF' },
-}
+// ── Excel generation (lazy-loaded to keep initial bundle small) ─
 
 const COLUMNS = [
   { header: 'Account', key: 'account', width: 20 },
@@ -60,35 +49,6 @@ const COLUMNS = [
   { header: 'Memo', key: 'memo', width: 30 },
 ]
 
-function buildListValidation(
-  names: string[],
-  ws: ExcelJS.Worksheet,
-  listsSheet: ExcelJS.Worksheet,
-  colIndex: number,
-  rowCount: number,
-  listColLetter: string
-): void {
-  if (names.length === 0) return
-
-  // Write entity names into the hidden _Lists sheet
-  names.forEach((name, i) => {
-    listsSheet.getCell(`${listColLetter}${i + 1}`).value = name
-  })
-
-  const rangeRef = `'_Lists'!$${listColLetter}$1:$${listColLetter}$${names.length}`
-
-  for (let r = 2; r <= rowCount + 1; r++) {
-    ws.getCell(r, colIndex).dataValidation = {
-      type: 'list',
-      allowBlank: true,
-      formulae: [rangeRef],
-      showErrorMessage: true,
-      errorTitle: 'Invalid value',
-      error: 'Please select a value from the dropdown list.',
-    }
-  }
-}
-
 async function generateExcel(
   rows: OutputRow[],
   accounts: HouseholdEntity[],
@@ -96,6 +56,43 @@ async function generateExcel(
   categories: HouseholdEntity[],
   types: HouseholdEntity[]
 ): Promise<Blob> {
+  const ExcelJS = await import('exceljs')
+
+  const headerFill: ExcelJS.FillPattern = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF4472C4' },
+  }
+  const headerFont: Partial<ExcelJS.Font> = {
+    bold: true,
+    color: { argb: 'FFFFFFFF' },
+  }
+
+  function buildListValidation(
+    names: string[],
+    ws: ExcelJS.Worksheet,
+    listsSheet: ExcelJS.Worksheet,
+    colIndex: number,
+    rowCount: number,
+    listColLetter: string
+  ): void {
+    if (names.length === 0) return
+    names.forEach((name, i) => {
+      listsSheet.getCell(`${listColLetter}${i + 1}`).value = name
+    })
+    const rangeRef = `'_Lists'!$${listColLetter}$1:$${listColLetter}$${names.length}`
+    for (let r = 2; r <= rowCount + 1; r++) {
+      ws.getCell(r, colIndex).dataValidation = {
+        type: 'list',
+        allowBlank: true,
+        formulae: [rangeRef],
+        showErrorMessage: true,
+        errorTitle: 'Invalid value',
+        error: 'Please select a value from the dropdown list.',
+      }
+    }
+  }
+
   const wb = new ExcelJS.Workbook()
   wb.creator = 'Finance Tracker'
   wb.created = new Date()
@@ -106,8 +103,8 @@ async function generateExcel(
   // Style header row
   const headerRow = ws.getRow(1)
   headerRow.eachCell((cell) => {
-    cell.fill = HEADER_FILL
-    cell.font = HEADER_FONT
+    cell.fill = headerFill
+    cell.font = headerFont
     cell.alignment = { vertical: 'middle', horizontal: 'center' }
   })
   headerRow.height = 22
@@ -130,7 +127,7 @@ async function generateExcel(
       user: '',
       transactionDate: row.transactionDate,
       postDate: row.postDate,
-      description: row.description,
+      description: sanitizeCellValue(row.description),
       category: '',
       type: '',
       amount: row.amount,
@@ -209,7 +206,7 @@ export function CSVConverterPage() {
   // ── File handling ─────────────────────────────────────────
 
   const processFile = (selectedFile: File) => {
-    if (selectedFile && selectedFile.type === 'text/csv') {
+    if (selectedFile && isValidCsvFile(selectedFile)) {
       setFile(selectedFile)
     } else {
       toast.error('Please select a valid CSV file')
@@ -259,8 +256,9 @@ export function CSVConverterPage() {
 
     setIsConverting(true)
     try {
+      const Papa = await import('papaparse')
       const text = await file.text()
-      const { data, errors } = Papa.parse<Record<string, string>>(text, {
+      const { data, errors } = Papa.default.parse<Record<string, string>>(text, {
         header: true,
         skipEmptyLines: true,
       })
