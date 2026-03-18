@@ -71,12 +71,6 @@ echo "Version on main: ${VERSION}"
 echo "Tag to create:   ${TAG}"
 echo
 
-# Check if tag already exists (locally or on origin)
-if git rev-parse "$TAG" &>/dev/null || git ls-remote --exit-code --tags origin "refs/tags/$TAG" &>/dev/null; then
-  echo "Error: tag ${TAG} already exists." >&2
-  exit 1
-fi
-
 # ── Confirm ──────────────────────────────────────────────────
 
 read -rp "Create tag ${TAG} on main and merge into develop? [y/N] " CONFIRM
@@ -85,13 +79,18 @@ if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
   exit 0
 fi
 
-# ── Merge main into develop (do this FIRST — it can fail with conflicts) ─────
+# ── Merge main into develop ─────────────────────────────────
+# Skip if already done (idempotent re-run after a resolved conflict).
 
 echo
-echo "Merging main into develop..."
 run git checkout develop
-run git merge main --no-edit
-echo "✓ main merged into develop"
+if git merge-base --is-ancestor origin/main HEAD; then
+  echo "✓ main is already merged into develop — skipping"
+else
+  echo "Merging main into develop..."
+  run git merge main --no-edit
+  echo "✓ main merged into develop"
+fi
 
 # ── Prompt for next version bump ─────────────────────────────
 
@@ -148,13 +147,33 @@ run git commit -m "chore: bump version to ${NEXT_VERSION}"
 # ── Tag main and push everything ─────────────────────────────
 # Tag and push happen LAST so nothing is irreversible until all
 # local steps (merge + version bump) have succeeded.
+# If the tag was already created (e.g. by a previous partial run),
+# skip creation as long as it points to the correct commit.
 
 echo
-echo "Tagging origin/main as ${TAG}..."
-run git tag "$TAG" origin/main
+TAG_EXISTS=false
+if git rev-parse "$TAG" &>/dev/null || git ls-remote --exit-code --tags origin "refs/tags/$TAG" &>/dev/null; then
+  EXISTING_TAG_SHA=$(git rev-parse "$TAG" 2>/dev/null || git ls-remote origin "refs/tags/$TAG" | cut -f1)
+  MAIN_SHA=$(git rev-parse origin/main)
+  if [[ "$EXISTING_TAG_SHA" == "$MAIN_SHA" ]]; then
+    echo "✓ Tag ${TAG} already exists on origin/main — skipping tag creation"
+    TAG_EXISTS=true
+  else
+    echo "Error: tag ${TAG} already exists but points to a different commit." >&2
+    exit 1
+  fi
+fi
 
-echo "Pushing tag and develop branch..."
-run git push origin "$TAG"
+if ! $TAG_EXISTS; then
+  echo "Tagging origin/main as ${TAG}..."
+  run git tag "$TAG" origin/main
+fi
+
+echo "Pushing develop branch..."
+if ! $TAG_EXISTS; then
+  echo "Pushing tag ${TAG}..."
+  run git push origin "$TAG"
+fi
 run git push origin develop
 
 echo
