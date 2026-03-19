@@ -27,6 +27,7 @@ export function isValidCsvFile(file: File): boolean {
 export function sanitizeCellValue(value: string): string {
   if (value.length === 0) return value
   const first = value[0]
+  const isNegativeNumber = /^-(?:\d+|\d*\.\d+)$/.test(value)
   if (
     first === '=' ||
     first === '+' ||
@@ -38,8 +39,8 @@ export function sanitizeCellValue(value: string): string {
     return `'${value}`
   }
   // Leading minus is only dangerous when followed by a non-digit (e.g. `-SUM()`).
-  // Numeric negatives like `-85.79` are safe and must stay as-is.
-  if (first === '-' && (value.length === 1 || !/^\d/.test(value[1]))) {
+  // Numeric negatives like `-85.79` and `-.5` are safe and must stay as-is.
+  if (first === '-' && !isNegativeNumber) {
     return `'${value}`
   }
   return value

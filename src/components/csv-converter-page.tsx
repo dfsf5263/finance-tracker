@@ -285,8 +285,15 @@ export function CSVConverterPage() {
 
       // Map rows
       const rows: OutputRow[] = data.map((csvRow) => mapCsvRow(csvRow, config))
+      const transactionDateHeader = Object.entries(config.mapping).find(
+        ([, field]) => field === 'transactionDate'
+      )?.[0]
 
-      const invalidDates = rows.filter((r, i) => !r.transactionDate && data[i])
+      const invalidDates = rows.filter((r, i) => {
+        if (r.transactionDate || !transactionDateHeader) return false
+        const rawDate = data[i]?.[transactionDateHeader]?.trim() ?? ''
+        return rawDate.length > 0
+      })
       if (invalidDates.length > 0) {
         toast.warning(
           `${invalidDates.length} row(s) had unparseable dates — they will appear blank in the Excel file`

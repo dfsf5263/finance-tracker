@@ -92,6 +92,10 @@ describe('sanitizeCellValue', () => {
     expect(sanitizeCellValue('-85.79')).toBe('-85.79')
   })
 
+  it('preserves negative decimals without a leading zero', () => {
+    expect(sanitizeCellValue('-.5')).toBe('-.5')
+  })
+
   it('preserves negative integers like -100', () => {
     expect(sanitizeCellValue('-100')).toBe('-100')
   })
