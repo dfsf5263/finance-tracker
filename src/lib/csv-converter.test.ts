@@ -44,17 +44,19 @@ describe('parseInstitutionDate', () => {
   it('parses ISO format (YYYY-MM-DD)', () => {
     const result = parseInstitutionDate('2026-02-02', 'iso')
     expect(result).toBeInstanceOf(Date)
-    expect(result!.getFullYear()).toBe(2026)
-    expect(result!.getMonth()).toBe(1) // 0-indexed
-    expect(result!.getDate()).toBe(2)
+    expect(result!.getUTCFullYear()).toBe(2026)
+    expect(result!.getUTCMonth()).toBe(1) // 0-indexed
+    expect(result!.getUTCDate()).toBe(2)
+    expect(result!.getUTCHours()).toBe(12)
   })
 
   it('parses MDY format (MM/DD/YYYY)', () => {
     const result = parseInstitutionDate('02/19/2026', 'mdy')
     expect(result).toBeInstanceOf(Date)
-    expect(result!.getFullYear()).toBe(2026)
-    expect(result!.getMonth()).toBe(1)
-    expect(result!.getDate()).toBe(19)
+    expect(result!.getUTCFullYear()).toBe(2026)
+    expect(result!.getUTCMonth()).toBe(1)
+    expect(result!.getUTCDate()).toBe(19)
+    expect(result!.getUTCHours()).toBe(12)
   })
 
   it('returns null for empty string', () => {
@@ -74,7 +76,7 @@ describe('parseInstitutionDate', () => {
   it('trims whitespace before parsing', () => {
     const result = parseInstitutionDate('  2026-02-02  ', 'iso')
     expect(result).toBeInstanceOf(Date)
-    expect(result!.getDate()).toBe(2)
+    expect(result!.getUTCDate()).toBe(2)
   })
 })
 
@@ -89,7 +91,7 @@ describe('mapCsvRow', () => {
     }
     const result = mapCsvRow(row, INSTITUTIONS.fidelity)
     expect(result.transactionDate).toBeInstanceOf(Date)
-    expect(result.transactionDate!.getFullYear()).toBe(2026)
+    expect(result.transactionDate!.getUTCFullYear()).toBe(2026)
     expect(result.description).toBe('Blizzard Entertainment')
     expect(result.amount).toBe(-85.79)
     expect(result.postDate).toBeNull()
@@ -145,7 +147,7 @@ describe('mapCsvRow', () => {
     const result = mapCsvRow(row, INSTITUTIONS.chase)
     expect(result.transactionDate).toBeInstanceOf(Date)
     expect(result.postDate).toBeInstanceOf(Date)
-    expect(result.postDate!.getDate()).toBe(27)
+    expect(result.postDate!.getUTCDate()).toBe(27)
     expect(result.description).toBe('AUTOMATIC PAYMENT')
     expect(result.amount).toBe(1916.14)
   })

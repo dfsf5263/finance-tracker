@@ -202,3 +202,4 @@ jobs:
         with:
           generate_release_notes: true
           body_path: ${{ runner.temp }}/release-notes.md
+          append_body: true

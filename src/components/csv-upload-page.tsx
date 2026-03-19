@@ -5,6 +5,7 @@ import React, { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -205,10 +206,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     }
   }
 
-  const handleUploadAreaClick = () => {
-    const fileInput = document.getElementById('csv-upload') as HTMLInputElement
-    fileInput?.click()
-  }
+  // ── CSV parsing ───────────────────────────────────────────
 
   const parseCSV = (csvFile: File) => {
     Papa.parse(csvFile, {
@@ -718,17 +716,18 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 pt-4 space-y-4">
-            <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+            <label
+              htmlFor="csv-upload"
+              className={cn(
+                'block border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
                 isDragOver
                   ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
                   : 'border-muted-foreground/25 hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-950/10'
-              }`}
+              )}
               onDragOver={handleDragOver}
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={handleUploadAreaClick}
             >
               <Input
                 type="file"
@@ -738,9 +737,10 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
                 id="csv-upload"
               />
               <FileText
-                className={`h-8 w-8 mx-auto mb-4 ${
+                className={cn(
+                  'h-8 w-8 mx-auto mb-4',
                   isDragOver ? 'text-blue-500' : 'text-muted-foreground'
-                }`}
+                )}
               />
               <div className="space-y-2">
                 <div className="text-sm font-medium">
@@ -750,7 +750,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
                   Supported format: CSV files only
                 </div>
               </div>
-            </div>
+            </label>
 
             {file && (
               <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">

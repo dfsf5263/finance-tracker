@@ -80,6 +80,10 @@ describe('sanitizeCellValue', () => {
     expect(sanitizeCellValue('\rcmd')).toBe("'\rcmd")
   })
 
+  it('prefixes newline with single quote', () => {
+    expect(sanitizeCellValue('\ncmd')).toBe("'\ncmd")
+  })
+
   it('prefixes formula-like minus (e.g. -SUM)', () => {
     expect(sanitizeCellValue('-SUM(A1)')).toBe("'-SUM(A1)")
   })

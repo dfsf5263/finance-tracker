@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -248,10 +249,6 @@ export function CSVConverterPage() {
     if (droppedFile) processFile(droppedFile)
   }
 
-  const handleUploadAreaClick = () => {
-    document.getElementById('csv-converter-upload')?.click()
-  }
-
   // ── Convert ───────────────────────────────────────────────
 
   const handleConvert = async () => {
@@ -366,17 +363,18 @@ export function CSVConverterPage() {
           </div>
 
           {/* Drag-and-drop zone */}
-          <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+          <label
+            htmlFor="csv-converter-upload"
+            className={cn(
+              'block border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
               isDragOver
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
                 : 'border-muted-foreground/25 hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-950/10'
-            }`}
+            )}
             onDragOver={handleDragOver}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            onClick={handleUploadAreaClick}
           >
             <Input
               type="file"
@@ -386,9 +384,10 @@ export function CSVConverterPage() {
               id="csv-converter-upload"
             />
             <FileText
-              className={`h-8 w-8 mx-auto mb-4 ${
+              className={cn(
+                'h-8 w-8 mx-auto mb-4',
                 isDragOver ? 'text-blue-500' : 'text-muted-foreground'
-              }`}
+              )}
             />
             <div className="space-y-2">
               <div className="text-sm font-medium">
@@ -396,7 +395,7 @@ export function CSVConverterPage() {
               </div>
               <div className="text-xs text-muted-foreground">Supported format: CSV files only</div>
             </div>
-          </div>
+          </label>
 
           {file && (
             <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">

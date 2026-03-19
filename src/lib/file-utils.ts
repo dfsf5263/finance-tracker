@@ -27,7 +27,14 @@ export function isValidCsvFile(file: File): boolean {
 export function sanitizeCellValue(value: string): string {
   if (value.length === 0) return value
   const first = value[0]
-  if (first === '=' || first === '+' || first === '@' || first === '\t' || first === '\r') {
+  if (
+    first === '=' ||
+    first === '+' ||
+    first === '@' ||
+    first === '\t' ||
+    first === '\r' ||
+    first === '\n'
+  ) {
     return `'${value}`
   }
   // Leading minus is only dangerous when followed by a non-digit (e.g. `-SUM()`).
