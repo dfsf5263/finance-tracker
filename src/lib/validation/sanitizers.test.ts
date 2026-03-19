@@ -41,19 +41,10 @@ describe('sanitizeText', () => {
     expect(sanitizeText('<>\'"')).toBe('')
   })
 
-  it('strips leading formula characters (=)', () => {
-    expect(sanitizeText('=CMD|calc')).toBe('CMD|calc')
-  })
-
-  it('strips leading formula characters (+)', () => {
-    expect(sanitizeText('+1+2')).toBe('1+2')
-  })
-
-  it('strips leading formula characters (@)', () => {
-    expect(sanitizeText('@SUM(A1)')).toBe('SUM(A1)')
-  })
-
-  it('preserves leading minus (not a formula prefix)', () => {
+  it('preserves leading formula characters (handled at export time)', () => {
+    expect(sanitizeText('=CMD|calc')).toBe('=CMD|calc')
+    expect(sanitizeText('+1+2')).toBe('+1+2')
+    expect(sanitizeText('@SUM(A1)')).toBe('@SUM(A1)')
     expect(sanitizeText('-85.79')).toBe('-85.79')
   })
 })

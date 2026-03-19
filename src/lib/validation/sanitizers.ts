@@ -1,17 +1,10 @@
-// Prevent XSS, SQL injection, and spreadsheet formula injection
+// Prevent XSS and SQL injection
 export function sanitizeText(text: string): string {
-  let sanitized = text
+  return text
     .replace(/[<>]/g, '') // Remove HTML tags
     .replace(/['";\\]/g, '') // Remove SQL/JS dangerous chars
     .replace(/\0/g, '') // Remove null bytes
     .trim()
-
-  // Strip leading characters that spreadsheet apps interpret as formulas
-  if (sanitized.length > 0 && /^[=+@\t\r]/.test(sanitized)) {
-    sanitized = sanitized.replace(/^[=+@\t\r]+/, '')
-  }
-
-  return sanitized
 }
 
 // Convert MM/DD/YYYY to ISO format (YYYY-MM-DD)

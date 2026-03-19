@@ -166,19 +166,28 @@ run git commit -m "chore: bump version to ${NEXT_VERSION}"
 # this only handles the idempotent re-run (tag already correct).
 
 echo
-TAG_EXISTS=false
-if git rev-parse "$TAG" &>/dev/null || git ls-remote --exit-code --tags origin "refs/tags/$TAG" &>/dev/null; then
-  echo "✓ Tag ${TAG} already exists on origin/main — skipping tag creation"
-  TAG_EXISTS=true
+LOCAL_TAG_EXISTS=false
+REMOTE_TAG_EXISTS=false
+if git rev-parse "$TAG" &>/dev/null; then
+  LOCAL_TAG_EXISTS=true
+fi
+if git ls-remote --exit-code --tags origin "refs/tags/$TAG" &>/dev/null; then
+  REMOTE_TAG_EXISTS=true
 fi
 
-if ! $TAG_EXISTS; then
-  echo "Tagging origin/main as ${TAG}..."
-  run git tag "$TAG" origin/main
+if $REMOTE_TAG_EXISTS; then
+  echo "✓ Tag ${TAG} already exists on origin — skipping tag creation and push"
+else
+  if ! $LOCAL_TAG_EXISTS; then
+    echo "Tagging origin/main as ${TAG}..."
+    run git tag "$TAG" origin/main
+  else
+    echo "Local tag ${TAG} exists but is not on origin — pushing it now..."
+  fi
 fi
 
 echo "Pushing develop branch..."
-if ! $TAG_EXISTS; then
+if ! $REMOTE_TAG_EXISTS; then
   echo "Pushing tag ${TAG}..."
   run git push origin "$TAG"
 fi

@@ -55,7 +55,7 @@ Expenses are exported as **positive** amounts. Credits are **negative** amounts.
 
 ```csv
 Date,Description,Card Member,Account #,Amount
-02/19/2026,PINECREST MARKET    pinecrestmkt.com    NY,JANE SMITH,-83021,24.50
+02/19/2026,PINECREST MARKET    pinecrestmkt.com    NY,TEST USER,-83021,24.50
 ```
 
 ---

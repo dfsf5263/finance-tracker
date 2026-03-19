@@ -57,7 +57,7 @@ async function generateExcel(
   categories: HouseholdEntity[],
   types: HouseholdEntity[]
 ): Promise<Blob> {
-  const ExcelJS = await import('exceljs')
+  const ExcelJS = await import('exceljs').then((m) => m.default ?? m)
 
   const headerFill: ExcelJS.FillPattern = {
     type: 'pattern',
@@ -186,7 +186,13 @@ export function CSVConverterPage() {
 
   React.useEffect(() => {
     const load = async () => {
-      if (!selectedHousehold) return
+      if (!selectedHousehold) {
+        setAccounts([])
+        setUsers([])
+        setCategories([])
+        setTypes([])
+        return
+      }
       const [a, u, c, t] = await Promise.all([
         fetchEntities('accounts'),
         fetchEntities('users'),
@@ -259,6 +265,7 @@ export function CSVConverterPage() {
       const { data, errors } = Papa.default.parse<Record<string, string>>(text, {
         header: true,
         skipEmptyLines: true,
+        transformHeader: (h) => h.trim(),
       })
 
       if (errors.length > 0) {
