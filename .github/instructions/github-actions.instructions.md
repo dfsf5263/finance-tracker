@@ -22,7 +22,8 @@ Current versions in use — keep these in sync across all workflows:
 | `github/codeql-action/*` | `@v4` |
 | `codecov/codecov-action` | `@v5` |
 | `softprops/action-gh-release` | `@v2` |
-| `zaproxy/action-baseline` | `@v0.13.0` |
+| `zaproxy/action-baseline` | `@v0.15.0` |
+| `semgrep` (pip) | `==1.156.0` |
 
 When adding a new action, check the action's GitHub releases page to confirm the latest
 major version and use it consistently across all workflow files.
@@ -32,6 +33,9 @@ major version and use it consistently across all workflow files.
 - Use `ubuntu-latest` for all standard jobs; use `ubuntu-24.04-arm` for arm64 image builds.
 - Do not use `npx <package>` for CI utilities unless the package is listed in `devDependencies`.
   Prefer shell built-ins, tools pre-installed on runners, or pinned package installs.
-- Prefer `actions/upload-artifact@v6` (not the internal `artifact_name` param on third-party
-  actions, which may use older versions internally).
+- Always pin `pip install` to an exact version (e.g. `pip install semgrep==1.156.0`) to keep
+  workflows reproducible.
+- Prefer `actions/upload-artifact@v6` for explicit artifact uploads. For `zaproxy/action-baseline`,
+  use the latest action version and its `artifact_name` input rather than layering a second upload
+  step on top.
 - Always add `if: always()` to artifact upload steps so reports are preserved even on failure.
