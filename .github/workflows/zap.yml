@@ -1,0 +1,69 @@
+name: OWASP ZAP
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  zap:
+    name: OWASP ZAP Baseline Scan
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      issues: write
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: finance_tracker_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/finance_tracker_test
+      BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+      APP_URL: http://localhost:3000
+      E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 25
+          cache: npm
+
+      - name: Use npm 11
+        run: npm install -g npm@11
+
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npx prisma db seed
+
+      - name: Build Next.js app
+        run: npm run build
+
+      - name: Start Next.js app
+        run: npm start &
+
+      - name: Wait for app to be ready
+        run: npx wait-on http://localhost:3000 --timeout 60000
+
+      - name: Run OWASP ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.13.0
+        with:
+          target: http://localhost:3000
+          fail_action: false
+          artifact_name: zap-report
