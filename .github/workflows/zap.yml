@@ -59,7 +59,13 @@ jobs:
         run: npm start &
 
       - name: Wait for app to be ready
-        run: npx wait-on http://localhost:3000 --timeout 60000
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000 > /dev/null 2>&1 && echo "App ready" && exit 0
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+          echo "App did not become ready in time" && exit 1
 
       - name: Run OWASP ZAP baseline scan
         uses: zaproxy/action-baseline@v0.13.0
