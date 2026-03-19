@@ -77,9 +77,11 @@ jobs:
 
       - name: Prepare ZAP context
         run: |
-          E2E_EMAIL_ENC=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ['E2E_EMAIL']))")
-          E2E_PASSWORD_ENC=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ['E2E_PASSWORD']))")
-          sed -i "s|__ZAP_USER_CREDENTIALS__|${E2E_EMAIL_ENC};${E2E_PASSWORD_ENC}|" .zap/finance-tracker.context
+          ZAP_USER_NAME_B64=$(python3 -c "import base64; print(base64.b64encode(b'E2E User').decode())")
+          ZAP_USERNAME_B64=$(python3 -c "import base64, os; print(base64.b64encode(os.environ['E2E_EMAIL'].encode()).decode())")
+          ZAP_PASSWORD_B64=$(python3 -c "import base64, os; print(base64.b64encode(os.environ['E2E_PASSWORD'].encode()).decode())")
+          ZAP_USER_ENCODED="0;true;${ZAP_USER_NAME_B64};5;${ZAP_USERNAME_B64}~${ZAP_PASSWORD_B64}~"
+          sed -i "s|__ZAP_USER_CREDENTIALS__|${ZAP_USER_ENCODED}|" .zap/finance-tracker.context
 
       - name: Run OWASP ZAP baseline scan
         uses: zaproxy/action-baseline@v0.15.0
@@ -158,9 +160,11 @@ jobs:
 
       - name: Prepare ZAP context
         run: |
-          E2E_EMAIL_ENC=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ['E2E_EMAIL']))")
-          E2E_PASSWORD_ENC=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ['E2E_PASSWORD']))")
-          sed -i "s|__ZAP_USER_CREDENTIALS__|${E2E_EMAIL_ENC};${E2E_PASSWORD_ENC}|" .zap/finance-tracker.context
+          ZAP_USER_NAME_B64=$(python3 -c "import base64; print(base64.b64encode(b'E2E User').decode())")
+          ZAP_USERNAME_B64=$(python3 -c "import base64, os; print(base64.b64encode(os.environ['E2E_EMAIL'].encode()).decode())")
+          ZAP_PASSWORD_B64=$(python3 -c "import base64, os; print(base64.b64encode(os.environ['E2E_PASSWORD'].encode()).decode())")
+          ZAP_USER_ENCODED="0;true;${ZAP_USER_NAME_B64};5;${ZAP_USERNAME_B64}~${ZAP_PASSWORD_B64}~"
+          sed -i "s|__ZAP_USER_CREDENTIALS__|${ZAP_USER_ENCODED}|" .zap/finance-tracker.context
 
       - name: Run OWASP ZAP full scan
         uses: zaproxy/action-full-scan@v0.13.0
