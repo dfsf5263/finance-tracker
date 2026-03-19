@@ -1,11 +1,11 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { hashPassword } from 'better-auth/crypto'
-import { randomInt, randomBytes } from 'node:crypto'
+import { randomInt } from 'node:crypto'
 
 // Cryptographically secure random float in [0, 1)
 function cryptoRandom(): number {
-  return randomBytes(4).readUInt32BE(0) / 0x100000000
+  return randomInt(0x100000000) / 0x100000000
 }
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
