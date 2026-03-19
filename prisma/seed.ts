@@ -1,18 +1,24 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { hashPassword } from 'better-auth/crypto'
+import { randomInt, randomBytes } from 'node:crypto'
+
+// Cryptographically secure random float in [0, 1)
+function cryptoRandom(): number {
+  return randomBytes(4).readUInt32BE(0) / 0x100000000
+}
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
 const prisma = new PrismaClient({ adapter })
 
 // Helper function to generate random date within a range
 function getRandomDate(start: Date, end: Date): Date {
-  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()))
+  return new Date(start.getTime() + cryptoRandom() * (end.getTime() - start.getTime()))
 }
 
 // Helper function to generate random amount
 function getRandomAmount(min: number, max: number): number {
-  return Math.round((Math.random() * (max - min) + min) * 100) / 100
+  return Math.round((cryptoRandom() * (max - min) + min) * 100) / 100
 }
 
 async function main() {
@@ -680,21 +686,20 @@ async function generateTestTransactions(
     const incomeType = householdTypes.find((t) => t.name === 'Income')
 
     // Generate 300-500 transactions per household
-    const numTransactions = Math.floor(Math.random() * 200) + 300
+    const numTransactions = randomInt(300, 501)
 
     for (let i = 0; i < numTransactions; i++) {
-      const template = transactionTemplates[Math.floor(Math.random() * transactionTemplates.length)]
+      const template = transactionTemplates[randomInt(0, transactionTemplates.length)]
       const category = householdCategories.find((c) => c.name === template.categoryName)
 
       if (!category || skipCategories.includes(template.categoryName)) continue
 
-      const account = householdAccounts[Math.floor(Math.random() * householdAccounts.length)]
-      const user =
-        Math.random() > 0.3
-          ? householdUsers[Math.floor(Math.random() * householdUsers.length)]
-          : null
+      const account = householdAccounts[randomInt(0, householdAccounts.length)]
+      const user = cryptoRandom() > 0.3 ? householdUsers[randomInt(0, householdUsers.length)] : null
       const transactionDate = getRandomDate(startDate, endDate)
-      const postDate = new Date(transactionDate.getTime() + Math.random() * 3 * 24 * 60 * 60 * 1000) // 0-3 days after transaction
+      const postDate = new Date(
+        transactionDate.getTime() + cryptoRandom() * 3 * 24 * 60 * 60 * 1000
+      ) // 0-3 days after transaction
       const amount = getRandomAmount(template.minAmount, template.maxAmount)
       const type = template.isOutflow ? saleType : incomeType
 
@@ -713,7 +718,7 @@ async function generateTestTransactions(
         categoryId: category.id,
         typeId: type.id,
         amount: finalAmount,
-        memo: Math.random() > 0.8 ? 'Auto-generated test transaction' : null,
+        memo: cryptoRandom() > 0.8 ? 'Auto-generated test transaction' : null,
       }
 
       transactions.push(transaction)
