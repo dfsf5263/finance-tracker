@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -161,6 +161,7 @@ async function generateExcel(
 
 export function CSVConverterPage() {
   const { selectedHousehold } = useHousehold()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [institution, setInstitution] = useState<InstitutionKey | null>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -247,6 +248,16 @@ export function CSVConverterPage() {
     setIsDragOver(false)
     const droppedFile = e.dataTransfer.files[0]
     if (droppedFile) processFile(droppedFile)
+  }
+
+  const openFilePicker = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleUploadTriggerKeyDown = (event: React.KeyboardEvent<HTMLLabelElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    openFilePicker()
   }
 
   // ── Convert ───────────────────────────────────────────────
@@ -372,18 +383,22 @@ export function CSVConverterPage() {
           {/* Drag-and-drop zone */}
           <label
             htmlFor="csv-converter-upload"
+            role="button"
+            tabIndex={0}
             className={cn(
               'block border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
               isDragOver
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
                 : 'border-muted-foreground/25 hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-950/10'
             )}
+            onKeyDown={handleUploadTriggerKeyDown}
             onDragOver={handleDragOver}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
             <Input
+              ref={fileInputRef}
               type="file"
               accept=".csv"
               onChange={handleFileChange}
