@@ -21,7 +21,6 @@ const mockRequireAuth = vi.mocked(requireAuth)
 
 const INVITATION_ID = 'inv-abc-123'
 const HOUSEHOLD_ID = 'd4e5f6a7-b8c9-4123-8efa-234567890123'
-const USER_ID = 'test-user-id'
 const OTHER_USER_ID = 'other-user-id'
 
 const invitation = {

@@ -92,3 +92,12 @@ Handles rate limiting (429), error toasts, and network errors automatically.
 - Format currency: `formatCurrency()` from `@/lib/utils`
 - Date handling: Use `date-fns` helpers and utilities from `@/lib/utils`
 - Dates are stored as DATE type (no time component) in the database
+
+## Accessibility
+
+- Use semantic HTML elements (`<label>`, `<button>`, `<nav>`, `<main>`, `<section>`) over generic `<div>` or `<span>` when the element has inherent meaning or behavior
+- Clickable areas that trigger actions must be `<button>` or `<a>` — never a `<div>` with only `onClick`
+- File upload zones should use `<label htmlFor="...">` wrapping or associated with the `<input type="file">` so they are keyboard and screen-reader accessible
+- All interactive elements must be keyboard-reachable (focusable and operable via Enter/Space)
+- Use `aria-label` or `aria-labelledby` on icon-only buttons and controls that lack visible text
+- Prefer shadcn/ui primitives (which include ARIA roles) over custom implementations

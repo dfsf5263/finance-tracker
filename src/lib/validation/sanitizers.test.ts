@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import {
   sanitizeText,
   convertMMDDYYYYToISO,
@@ -39,6 +39,13 @@ describe('sanitizeText', () => {
 
   it('handles string with only dangerous chars', () => {
     expect(sanitizeText('<>\'"')).toBe('')
+  })
+
+  it('preserves leading formula characters (handled at export time)', () => {
+    expect(sanitizeText('=CMD|calc')).toBe('=CMD|calc')
+    expect(sanitizeText('+1+2')).toBe('+1+2')
+    expect(sanitizeText('@SUM(A1)')).toBe('@SUM(A1)')
+    expect(sanitizeText('-85.79')).toBe('-85.79')
   })
 })
 

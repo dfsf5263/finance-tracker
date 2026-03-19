@@ -16,6 +16,7 @@ export function getPageTitle(pathname: string): string {
     '/dashboard/definitions/accounts': 'Definitions - Accounts',
     '/dashboard/utility': 'Utility',
     '/dashboard/utility/dedupe': 'Utility - DeDupe',
+    '/dashboard/utility/csv-converter': 'Utility - CSV Converter',
     '/dashboard/settings': 'Settings',
   }
 

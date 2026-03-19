@@ -28,6 +28,19 @@ run() {
   fi
 }
 
+resolve_remote_tag_sha() {
+  local tag="$1"
+  local sha
+
+  sha=$(git ls-remote origin "refs/tags/${tag}^{}" | cut -f1)
+  if [[ -n "$sha" ]]; then
+    printf '%s\n' "$sha"
+    return 0
+  fi
+
+  git ls-remote origin "refs/tags/${tag}" | cut -f1
+}
+
 # ── Pre-flight checks ───────────────────────────────────────
 
 if ! command -v jq &>/dev/null; then
@@ -66,40 +79,46 @@ fi
 VERSION=$(git show origin/main:package.json | jq -r .version)
 TAG="v${VERSION}"
 
+# ── Early tag conflict guard ─────────────────────────────────
+# Fail fast BEFORE any local changes (merge/version bump) if the
+# tag already exists but points to the wrong commit.
+
+if git rev-parse "$TAG" &>/dev/null || git ls-remote --exit-code --tags origin "refs/tags/$TAG" &>/dev/null; then
+  EXISTING_TAG_SHA=$(git rev-parse "$TAG^{}" 2>/dev/null || resolve_remote_tag_sha "$TAG")
+  MAIN_SHA=$(git rev-parse origin/main)
+  if [[ "$EXISTING_TAG_SHA" != "$MAIN_SHA" ]]; then
+    echo "Error: tag ${TAG} already exists but points to a different commit." >&2
+    echo "  Tag points to:  ${EXISTING_TAG_SHA}" >&2
+    echo "  origin/main is: ${MAIN_SHA}" >&2
+    exit 1
+  fi
+fi
+
 echo
 echo "Version on main: ${VERSION}"
 echo "Tag to create:   ${TAG}"
 echo
 
-# Check if tag already exists (locally or on origin)
-if git rev-parse "$TAG" &>/dev/null || git ls-remote --exit-code --tags origin "refs/tags/$TAG" &>/dev/null; then
-  echo "Error: tag ${TAG} already exists." >&2
-  exit 1
-fi
-
 # ── Confirm ──────────────────────────────────────────────────
 
-read -rp "Create and push tag ${TAG} on main? [y/N] " CONFIRM
+read -rp "Create tag ${TAG} on main and merge into develop? [y/N] " CONFIRM
 if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
   echo "Aborted."
   exit 0
 fi
 
-# ── Tag main ─────────────────────────────────────────────────
+# ── Merge main into develop ─────────────────────────────────
+# Skip if already done (idempotent re-run after a resolved conflict).
 
 echo
-echo "Tagging origin/main as ${TAG}..."
-run git tag "$TAG" origin/main
-run git push origin "$TAG"
-echo "✓ Tag ${TAG} pushed"
-
-# ── Merge main into develop ──────────────────────────────────
-
-echo
-echo "Merging main into develop..."
 run git checkout develop
-run git merge main --no-edit
-echo "✓ main merged into develop"
+if git merge-base --is-ancestor origin/main HEAD; then
+  echo "✓ main is already merged into develop — skipping"
+else
+  echo "Merging main into develop..."
+  run git merge main --no-edit
+  echo "✓ main merged into develop"
+fi
 
 # ── Prompt for next version bump ─────────────────────────────
 
@@ -146,12 +165,45 @@ echo
 echo "Running npm install..."
 run npm install
 
-# ── Commit and push ──────────────────────────────────────────
+# ── Commit version bump ──────────────────────────────────────
 
 echo
 echo "Committing version bump..."
 run git add package.json package-lock.json
 run git commit -m "chore: bump version to ${NEXT_VERSION}"
+
+# ── Tag main and push everything ─────────────────────────────
+# Tag and push happen LAST so nothing is irreversible until all
+# local steps (merge + version bump) have succeeded.
+# Conflict case was already caught by the early guard above;
+# this only handles the idempotent re-run (tag already correct).
+
+echo
+LOCAL_TAG_EXISTS=false
+REMOTE_TAG_EXISTS=false
+if git rev-parse "$TAG" &>/dev/null; then
+  LOCAL_TAG_EXISTS=true
+fi
+if git ls-remote --exit-code --tags origin "refs/tags/$TAG" &>/dev/null; then
+  REMOTE_TAG_EXISTS=true
+fi
+
+if $REMOTE_TAG_EXISTS; then
+  echo "✓ Tag ${TAG} already exists on origin — skipping tag creation and push"
+else
+  if ! $LOCAL_TAG_EXISTS; then
+    echo "Tagging origin/main as ${TAG}..."
+    run git tag "$TAG" origin/main
+  else
+    echo "Local tag ${TAG} exists but is not on origin — pushing it now..."
+  fi
+fi
+
+if ! $REMOTE_TAG_EXISTS; then
+  echo "Pushing tag ${TAG}..."
+  run git push origin "$TAG"
+fi
+echo "Pushing develop branch..."
 run git push origin develop
 
 echo

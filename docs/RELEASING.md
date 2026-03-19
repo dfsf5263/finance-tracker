@@ -7,7 +7,7 @@ This document describes the release process for Finance Tracker, including how D
 | Trigger | Docker Tags | GitHub Release |
 |---|---|---|
 | Push to `main` | `:nightly`, `:nightly-YYYYMMDD`, `:nightly-sha-<commit>` | No |
-| Push `v*` tag | `:latest`, `:<version>`, `:sha-<commit>` | Yes (auto-generated notes) |
+| Push `v*` tag | `:latest`, `:<version>`, `:sha-<commit>` | Yes (commit-subject synopsis + auto-generated notes) |
 
 - **`:nightly`** — always points to the latest `main` build. Overwritten on every merge.
 - **`:nightly-YYYYMMDD`** — date-stamped nightly for traceability (e.g., `:nightly-20260317`).
@@ -47,6 +47,7 @@ The tag push triggers the Release workflow, which will:
 2. Build multi-arch images (amd64 + arm64)
 3. Create the multi-arch manifest tagged as `:latest`, `:0.2.0`, and `:sha-<commit>`
 4. Create a GitHub Release at `github.com/dfsf5263/finance-tracker/releases/tag/v0.2.0` with auto-generated release notes
+  plus a synopsis section built from the subject line of each commit since the previous tag
 
 Check the [Actions tab](https://github.com/dfsf5263/finance-tracker/actions/workflows/release.yml) to confirm the workflow succeeded.
 
@@ -83,7 +84,7 @@ v* tag push
        ├─ Build amd64 image
        ├─ Build arm64 image
        ├─ Publish manifest → :latest, :X.Y.Z, :sha-xxx
-       └─ Create GitHub Release with auto-generated notes
+       └─ Create GitHub Release with commit-subject synopsis + auto-generated notes
 ```
 
 ## Version Immutability

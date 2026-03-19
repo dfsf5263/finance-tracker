@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
 import { mockDb } from '@/test/mocks/db'
-import { mockAuthContext, mockHouseholdAccess } from '@/test/mocks/auth'
+import { mockAuthContext } from '@/test/mocks/auth'
 
 vi.mock('@/lib/db', () => ({ db: mockDb }))
 vi.mock('@/lib/auth-middleware', () => ({

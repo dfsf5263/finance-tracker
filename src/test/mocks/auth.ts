@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import type { AuthContext } from '@/lib/auth-middleware'
 import type { HouseholdRole } from '@prisma/client'
 

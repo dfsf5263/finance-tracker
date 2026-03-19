@@ -1,9 +1,11 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import { isValidCsvFile } from '@/lib/file-utils'
+import React, { useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -124,6 +126,7 @@ function convertCSVDateToISO(csvDate: string): string {
 
 export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
   const { selectedHousehold, getUserRole } = useHousehold()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const userRole = getUserRole()
   const canEdit = canManageData(userRole)
   const [file, setFile] = useState<File | null>(null)
@@ -159,7 +162,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
   const [entitiesLoaded, setEntitiesLoaded] = useState(false)
 
   const processFile = (selectedFile: File) => {
-    if (selectedFile && selectedFile.type === 'text/csv') {
+    if (selectedFile && isValidCsvFile(selectedFile)) {
       setFile(selectedFile)
       parseCSV(selectedFile)
     } else {
@@ -204,10 +207,17 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     }
   }
 
-  const handleUploadAreaClick = () => {
-    const fileInput = document.getElementById('csv-upload') as HTMLInputElement
-    fileInput?.click()
+  const openFilePicker = () => {
+    fileInputRef.current?.click()
   }
+
+  const handleUploadTriggerKeyDown = (event: React.KeyboardEvent<HTMLLabelElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    openFilePicker()
+  }
+
+  // ── CSV parsing ───────────────────────────────────────────
 
   const parseCSV = (csvFile: File) => {
     Papa.parse(csvFile, {
@@ -265,54 +275,32 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
 
   const fetchCategories = useCallback(async () => {
     if (!selectedHousehold) return
-    try {
-      const response = await fetch(`/api/categories?householdId=${selectedHousehold.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setCategories(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch categories:', error)
-    }
+    const { data } = await apiFetch<TransactionCategory[]>(
+      `/api/categories?householdId=${selectedHousehold.id}`
+    )
+    if (data) setCategories(data)
   }, [selectedHousehold])
 
   const fetchTypes = useCallback(async () => {
     if (!selectedHousehold) return
-    try {
-      const response = await fetch(`/api/types?householdId=${selectedHousehold.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setTypes(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch types:', error)
-    }
+    const { data } = await apiFetch<TransactionType[]>(
+      `/api/types?householdId=${selectedHousehold.id}`
+    )
+    if (data) setTypes(data)
   }, [selectedHousehold])
 
   const fetchAccounts = useCallback(async () => {
     if (!selectedHousehold) return
-    try {
-      const response = await fetch(`/api/accounts?householdId=${selectedHousehold.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setAccounts(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch accounts:', error)
-    }
+    const { data } = await apiFetch<Account[]>(`/api/accounts?householdId=${selectedHousehold.id}`)
+    if (data) setAccounts(data)
   }, [selectedHousehold])
 
   const fetchUsers = useCallback(async () => {
     if (!selectedHousehold) return
-    try {
-      const response = await fetch(`/api/users?householdId=${selectedHousehold.id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setUsers(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch users:', error)
-    }
+    const { data } = await apiFetch<TransactionUser[]>(
+      `/api/users?householdId=${selectedHousehold.id}`
+    )
+    if (data) setUsers(data)
   }, [selectedHousehold])
 
   const updateColumnMapping = (csvHeader: string, mappedField: keyof CSVTransaction | 'skip') => {
@@ -739,19 +727,24 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 pt-4 space-y-4">
-            <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+            <label
+              htmlFor="csv-upload"
+              role="button"
+              tabIndex={0}
+              className={cn(
+                'block border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
                 isDragOver
                   ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
                   : 'border-muted-foreground/25 hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-950/10'
-              }`}
+              )}
+              onKeyDown={handleUploadTriggerKeyDown}
               onDragOver={handleDragOver}
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={handleUploadAreaClick}
             >
               <Input
+                ref={fileInputRef}
                 type="file"
                 accept=".csv"
                 onChange={handleFileChange}
@@ -759,9 +752,10 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
                 id="csv-upload"
               />
               <FileText
-                className={`h-8 w-8 mx-auto mb-4 ${
+                className={cn(
+                  'h-8 w-8 mx-auto mb-4',
                   isDragOver ? 'text-blue-500' : 'text-muted-foreground'
-                }`}
+                )}
               />
               <div className="space-y-2">
                 <div className="text-sm font-medium">
@@ -771,7 +765,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
                   Supported format: CSV files only
                 </div>
               </div>
-            </div>
+            </label>
 
             {file && (
               <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
