@@ -28,6 +28,19 @@ run() {
   fi
 }
 
+resolve_remote_tag_sha() {
+  local tag="$1"
+  local sha
+
+  sha=$(git ls-remote origin "refs/tags/${tag}^{}" | cut -f1)
+  if [[ -n "$sha" ]]; then
+    printf '%s\n' "$sha"
+    return 0
+  fi
+
+  git ls-remote origin "refs/tags/${tag}" | cut -f1
+}
+
 # ── Pre-flight checks ───────────────────────────────────────
 
 if ! command -v jq &>/dev/null; then
@@ -71,7 +84,7 @@ TAG="v${VERSION}"
 # tag already exists but points to the wrong commit.
 
 if git rev-parse "$TAG" &>/dev/null || git ls-remote --exit-code --tags origin "refs/tags/$TAG" &>/dev/null; then
-  EXISTING_TAG_SHA=$(git rev-parse "$TAG" 2>/dev/null || git ls-remote origin "refs/tags/$TAG" | cut -f1)
+  EXISTING_TAG_SHA=$(git rev-parse "$TAG^{}" 2>/dev/null || resolve_remote_tag_sha "$TAG")
   MAIN_SHA=$(git rev-parse origin/main)
   if [[ "$EXISTING_TAG_SHA" != "$MAIN_SHA" ]]; then
     echo "Error: tag ${TAG} already exists but points to a different commit." >&2

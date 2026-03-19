@@ -116,6 +116,6 @@ Account | User | Transaction Date | Post Date | Description | Category | Type | 
 
 - **Account**, **User**, **Category**, **Type**, and **Memo** columns are left blank for the user to fill in via dropdown or manually.
 - Dropdown lists are powered by a hidden `_Lists` worksheet sourced from the household's definitions.
-- Descriptions are sanitized to prevent Excel formula injection (values starting with `=`, `+`, `@`, tab, or carriage return are prefixed with `'`).
+- Descriptions are sanitized to prevent Excel formula injection (values starting with `=`, `+`, `@`, tab, carriage return, or newline are prefixed with `'`; values starting with `-` are also prefixed when the next character is not a digit).
 - Dates are converted to `MM/DD/YYYY` format regardless of the source institution's format.
 - Non-numeric or empty amount values produce blank cells rather than zero.

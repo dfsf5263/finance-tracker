@@ -80,7 +80,7 @@ async function generateExcel(
   ): void {
     if (names.length === 0) return
     names.forEach((name, i) => {
-      listsSheet.getCell(`${listColLetter}${i + 1}`).value = name
+      listsSheet.getCell(`${listColLetter}${i + 1}`).value = sanitizeCellValue(name)
     })
     const rangeRef = `'_Lists'!$${listColLetter}$1:$${listColLetter}$${names.length}`
     for (let r = 2; r <= rowCount + 1; r++) {
