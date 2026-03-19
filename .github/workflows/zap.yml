@@ -56,9 +56,9 @@ jobs:
         run: npm install -g npm@11
 
       - run: npm ci
-      - run: npx prisma generate
-      - run: npx prisma migrate deploy
-      - run: npx prisma db seed
+      - run: npm run db:generate
+      - run: npm run db:migrate:deploy
+      - run: npm run db:seed
 
       - name: Build Next.js app
         run: npm run build
@@ -81,7 +81,7 @@ jobs:
           ZAP_USERNAME_B64=$(python3 -c "import base64, os; print(base64.b64encode(os.environ['E2E_EMAIL'].encode()).decode())")
           ZAP_PASSWORD_B64=$(python3 -c "import base64, os; print(base64.b64encode(os.environ['E2E_PASSWORD'].encode()).decode())")
           ZAP_USER_ENCODED="0;true;${ZAP_USER_NAME_B64};5;${ZAP_USERNAME_B64}~${ZAP_PASSWORD_B64}~"
-          sed -i "s|__ZAP_USER_CREDENTIALS__|${ZAP_USER_ENCODED}|" .zap/finance-tracker.context
+          sed -i "s|__ZAP_USER_ENCODED__|${ZAP_USER_ENCODED}|" .zap/finance-tracker.context
 
       - name: Run OWASP ZAP baseline scan
         uses: zaproxy/action-baseline@v0.15.0
@@ -139,9 +139,9 @@ jobs:
         run: npm install -g npm@11
 
       - run: npm ci
-      - run: npx prisma generate
-      - run: npx prisma migrate deploy
-      - run: npx prisma db seed
+      - run: npm run db:generate
+      - run: npm run db:migrate:deploy
+      - run: npm run db:seed
 
       - name: Build Next.js app
         run: npm run build
@@ -164,7 +164,7 @@ jobs:
           ZAP_USERNAME_B64=$(python3 -c "import base64, os; print(base64.b64encode(os.environ['E2E_EMAIL'].encode()).decode())")
           ZAP_PASSWORD_B64=$(python3 -c "import base64, os; print(base64.b64encode(os.environ['E2E_PASSWORD'].encode()).decode())")
           ZAP_USER_ENCODED="0;true;${ZAP_USER_NAME_B64};5;${ZAP_USERNAME_B64}~${ZAP_PASSWORD_B64}~"
-          sed -i "s|__ZAP_USER_CREDENTIALS__|${ZAP_USER_ENCODED}|" .zap/finance-tracker.context
+          sed -i "s|__ZAP_USER_ENCODED__|${ZAP_USER_ENCODED}|" .zap/finance-tracker.context
 
       - name: Run OWASP ZAP full scan
         uses: zaproxy/action-full-scan@v0.13.0

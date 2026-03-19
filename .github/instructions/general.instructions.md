@@ -72,3 +72,31 @@ Before staging any changes to git, always run the following three commands in or
 3. `npm run test` — runs the full Vitest unit test suite
 
 Do not stage or commit if any of these commands fail. Fix all errors first, then re-run the checks.
+
+## Commit Messages (Copilot)
+
+Use Conventional Commits for all new commits.
+
+- Preferred format: `<type>(<scope>): <summary>`
+- Scope is recommended when it adds clarity and may be omitted when the change is repo-wide
+- Keep the summary concise, imperative, and without a trailing period
+- Choose the type that best matches the primary intent of the change
+
+Allowed types:
+
+- `feat`: a user-facing feature or capability
+- `fix`: a bug fix or regression fix
+- `refactor`: code restructuring without behavior changes
+- `perf`: a performance improvement
+- `test`: adding or updating tests
+- `docs`: documentation-only changes
+- `build`: changes to dependencies, packaging, or build tooling
+- `ci`: changes to GitHub Actions or other CI/CD automation
+- `chore`: maintenance work that does not fit the types above
+- `revert`: reverting a previous commit
+
+Examples:
+
+- `feat(auth): add household invitation acceptance flow`
+- `fix(zap): encode context user credentials correctly`
+- `ci(actions): add authenticated ZAP full scan`

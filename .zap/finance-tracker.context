@@ -46,7 +46,7 @@
             </basic>
         </authorization>
         <users>
-            <user>__ZAP_USER_CREDENTIALS__</user>
+            <user>__ZAP_USER_ENCODED__</user>
         </users>
     </context>
 </configuration>
