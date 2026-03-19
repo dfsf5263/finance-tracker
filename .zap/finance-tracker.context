@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<configuration>
+    <context>
+        <name>Finance Tracker</name>
+        <desc>Authenticated scanning context for Finance Tracker</desc>
+        <inscope>true</inscope>
+        <incregexes>http://localhost:3000.*</incregexes>
+        <tech>
+            <include>Db.PostgreSQL</include>
+            <include>Language.JavaScript</include>
+            <include>OS.Linux</include>
+        </tech>
+        <urlparser>
+            <class>org.zaproxy.zap.model.StandardParameterParser</class>
+            <config>{"kvps":"&amp;","kvs":"=","struct":[]}</config>
+        </urlparser>
+        <postparser>
+            <class>org.zaproxy.zap.model.StandardParameterParser</class>
+            <config>{"kvps":"&amp;","kvs":"=","struct":[]}</config>
+        </postparser>
+        <authentication>
+            <type>2</type>
+            <strategy>EACH_RESP</strategy>
+            <pollurl></pollurl>
+            <polldata></polldata>
+            <pollheaders></pollheaders>
+            <pollfreq>60</pollfreq>
+            <pollunits>REQUESTS</pollunits>
+            <loggedin>\Qdashboard\E</loggedin>
+            <loggedout>\Q/sign-in\E</loggedout>
+            <jsonbasedauthentication>
+                <loginurl>http://localhost:3000/api/auth/sign-in/email</loginurl>
+                <loginrequestdata>{&quot;email&quot;:&quot;{%username%}&quot;,&quot;password&quot;:&quot;{%password%}&quot;}</loginrequestdata>
+            </jsonbasedauthentication>
+        </authentication>
+        <session>
+            <type>0</type>
+        </session>
+        <authorization>
+            <type>0</type>
+            <basic>
+                <header></header>
+                <body></body>
+                <logic>AND</logic>
+                <code>-1</code>
+            </basic>
+        </authorization>
+        <users>
+            <user>__ZAP_USER_CREDENTIALS__</user>
+        </users>
+    </context>
+</configuration>

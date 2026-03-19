@@ -23,6 +23,7 @@ Current versions in use — keep these in sync across all workflows:
 | `codecov/codecov-action` | `@v5` |
 | `softprops/action-gh-release` | `@v2` |
 | `zaproxy/action-baseline` | `@v0.15.0` |
+| `zaproxy/action-full-scan` | `@v0.13.0` |
 | `semgrep` (pip) | `==1.156.0` |
 
 When adding a new action, check the action's GitHub releases page to confirm the latest
