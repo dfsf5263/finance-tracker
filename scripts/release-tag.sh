@@ -199,11 +199,11 @@ else
   fi
 fi
 
-echo "Pushing develop branch..."
 if ! $REMOTE_TAG_EXISTS; then
   echo "Pushing tag ${TAG}..."
   run git push origin "$TAG"
 fi
+echo "Pushing develop branch..."
 run git push origin develop
 
 echo
