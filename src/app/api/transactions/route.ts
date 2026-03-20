@@ -11,6 +11,7 @@ import {
   transactionCreateSchema,
 } from '@/lib/validation'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
+import { prismaDateToISO } from '@/lib/date-utils'
 
 export const GET = withApiLogging(async (request: NextRequest) => {
   try {
@@ -89,8 +90,8 @@ export const GET = withApiLogging(async (request: NextRequest) => {
     // Transform dates to date-only format for frontend
     const transformedTransactions = transactions.map((transaction) => ({
       ...transaction,
-      transactionDate: transaction.transactionDate.toISOString().split('T')[0],
-      postDate: transaction.postDate.toISOString().split('T')[0],
+      transactionDate: prismaDateToISO(transaction.transactionDate),
+      postDate: prismaDateToISO(transaction.postDate),
     }))
 
     return NextResponse.json({
@@ -169,8 +170,8 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     // Transform dates to date-only format for frontend
     const transformedTransaction = {
       ...transaction,
-      transactionDate: transaction.transactionDate.toISOString().split('T')[0],
-      postDate: transaction.postDate.toISOString().split('T')[0],
+      transactionDate: prismaDateToISO(transaction.transactionDate),
+      postDate: prismaDateToISO(transaction.postDate),
     }
 
     return NextResponse.json(transformedTransaction, { status: 201 })

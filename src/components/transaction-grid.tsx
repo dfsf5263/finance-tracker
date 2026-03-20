@@ -35,7 +35,8 @@ import {
   Upload,
   DollarSign,
 } from 'lucide-react'
-import { formatCurrency, formatDateFromISO } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
+import { displayDate } from '@/lib/date-utils'
 import { toast } from 'sonner'
 import { apiFetch } from '@/lib/http-utils'
 import {
@@ -636,7 +637,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                     {transaction.user?.name || 'Household'}
                   </TableCell>
                   <TableCell className="p-3 text-sm text-foreground">
-                    {formatDateFromISO(transaction.transactionDate)}
+                    {displayDate(transaction.transactionDate)}
                   </TableCell>
                   <TableCell className="p-3 text-sm text-foreground max-w-xs truncate">
                     {transaction.description}
@@ -768,7 +769,7 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Date:</span>
                   <span className="font-medium">
-                    {formatDateFromISO(transactionToDelete.transactionDate)}
+                    {displayDate(transactionToDelete.transactionDate)}
                   </span>
                 </div>
                 <div className="flex justify-between">

@@ -6,6 +6,7 @@ import {
 } from '@/lib/budget-analytics'
 import { getHouseholdUsers } from '@/lib/user-analytics'
 import logger from '@/lib/logger'
+import { monthStartISO, monthEndISO, monthName as getMonthLabel } from '@/lib/date-utils'
 
 interface MonthlySpendingData {
   currentTotal: number
@@ -49,8 +50,8 @@ export interface HouseholdSummaryData {
   householdId: string
   householdName: string
   period: {
-    start: Date
-    end: Date
+    start: string
+    end: string
     type: 'current' | 'review'
     monthName: string
     year: number
@@ -71,37 +72,34 @@ export async function generateHouseholdSummary(
   const isMonthlyReview = currentDay <= 7
 
   // Determine reporting period
-  let startDate: Date
-  let endDate: Date
-  let periodType: 'current' | 'review'
+  let targetMonth: number
   let targetYear: number
+  let periodType: 'current' | 'review'
 
   if (isMonthlyReview) {
     // Days 1-7: Report on previous month
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    startDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1)
-    endDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0)
+    const prevMonth = now.getMonth() // 0-indexed, so this is actually last month in 1-indexed
+    targetMonth = prevMonth === 0 ? 12 : prevMonth
+    targetYear = prevMonth === 0 ? now.getFullYear() - 1 : now.getFullYear()
     periodType = 'review'
-    targetYear = lastMonth.getFullYear()
   } else {
     // Days 8-31: Report on current month
-    startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    periodType = 'current'
+    targetMonth = now.getMonth() + 1
     targetYear = now.getFullYear()
+    periodType = 'current'
   }
 
-  const monthName = startDate.toLocaleDateString('en-US', { month: 'long' })
+  const periodMonthName = getMonthLabel(targetMonth)
 
   // Format dates for API calls
-  const startDateStr = startDate.toISOString().split('T')[0]
-  const endDateStr = endDate.toISOString().split('T')[0]
+  const startDateStr = monthStartISO(targetYear, targetMonth)
+  const endDateStr = monthEndISO(targetYear, targetMonth)
 
   // Calculate previous period dates for comparison
-  const prevStartDate = new Date(startDate.getFullYear(), startDate.getMonth() - 1, 1)
-  const prevEndDate = new Date(startDate.getFullYear(), startDate.getMonth(), 0)
-  const prevStartDateStr = prevStartDate.toISOString().split('T')[0]
-  const prevEndDateStr = prevEndDate.toISOString().split('T')[0]
+  const prevTargetMonth = targetMonth === 1 ? 12 : targetMonth - 1
+  const prevTargetYear = targetMonth === 1 ? targetYear - 1 : targetYear
+  const prevStartDateStr = monthStartISO(prevTargetYear, prevTargetMonth)
+  const prevEndDateStr = monthEndISO(prevTargetYear, prevTargetMonth)
 
   // Check if household has any transactions in the reporting period
   const hasTransactions = await hasTransactionsInPeriod(householdId, startDateStr, endDateStr)
@@ -320,10 +318,10 @@ export async function generateHouseholdSummary(
       householdId,
       householdName,
       period: {
-        start: startDate,
-        end: endDate,
+        start: startDateStr,
+        end: endDateStr,
         type: periodType,
-        monthName,
+        monthName: periodMonthName,
         year: targetYear,
       },
       spending: {

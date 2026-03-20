@@ -34,13 +34,8 @@ import {
   HelpCircle,
   ExternalLink,
 } from 'lucide-react'
-import {
-  formatCurrency,
-  getDateRange,
-  getMonthName,
-  getCurrentYear,
-  getCurrentMonth,
-} from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
+import { getDateRange, monthName, currentYear, currentMonth } from '@/lib/date-utils'
 import { useHousehold } from '@/contexts/household-context'
 
 interface UserBudgetData {
@@ -102,13 +97,13 @@ export function UserBudget() {
   const [includeInflow, setIncludeInflow] = useState(false)
   const [timePeriod, setTimePeriod] = useState<TimePeriod>({
     type: 'month',
-    year: getCurrentYear(),
-    month: getCurrentMonth(),
+    year: currentYear(),
+    month: currentMonth(),
   })
 
   // Static years for dropdown
-  const currentYear = getCurrentYear()
-  const years = Array.from({ length: 5 }, (_, i) => currentYear - i)
+  const thisYear = currentYear()
+  const years = Array.from({ length: 5 }, (_, i) => thisYear - i)
 
   // Fetch users with budgets
   useEffect(() => {
@@ -215,7 +210,7 @@ export function UserBudget() {
   const getPeriodLabel = (period: TimePeriod) => {
     switch (period.type) {
       case 'month':
-        return `${getMonthName(period.month!)} ${period.year}`
+        return `${monthName(period.month!)} ${period.year}`
       case 'quarter':
         return `Q${period.quarter} ${period.year}`
       case 'year':
@@ -563,7 +558,7 @@ export function UserBudget() {
                   <SelectContent>
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
                       <SelectItem key={month} value={month.toString()}>
-                        {getMonthName(month)}
+                        {monthName(month)}
                       </SelectItem>
                     ))}
                   </SelectContent>

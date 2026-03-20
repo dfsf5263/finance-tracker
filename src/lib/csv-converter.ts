@@ -1,4 +1,4 @@
-import { parse, isValid } from 'date-fns'
+import { parseInstitutionDate } from '@/lib/date-utils'
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -58,20 +58,6 @@ export const INSTITUTIONS: Record<InstitutionKey, InstitutionConfig> = {
     dateFormat: 'mdy',
     amountNote: 'Expenses are negative, credits are positive',
   },
-}
-
-// ── Date parsing ────────────────────────────────────────────
-
-export function parseInstitutionDate(value: string, dateFormat: 'iso' | 'mdy'): Date | null {
-  if (!value?.trim()) return null
-  const trimmed = value.trim()
-  const parsed =
-    dateFormat === 'iso'
-      ? parse(trimmed, 'yyyy-MM-dd', new Date())
-      : parse(trimmed, 'MM/dd/yyyy', new Date())
-  if (!isValid(parsed)) return null
-  // Anchor at noon UTC so Excel serial-date conversion never shifts the calendar day
-  return new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 12))
 }
 
 // ── Row mapping ─────────────────────────────────────────────

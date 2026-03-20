@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures'
 import type { Page } from '@playwright/test'
-import { format } from 'date-fns'
+import { displayDateFull } from '../../src/lib/date-utils'
 
 const MONTH_NAMES = [
   'January',
@@ -33,7 +33,7 @@ async function pickDate(page: Page, labelText: string, year: number, month: numb
 
   // Navigate month-by-month to the target month (guard against infinite loops)
   for (let guard = 0; guard < 36; guard++) {
-    const captionText = await popover.locator('.rdp-caption_label').textContent()
+    const captionText = await popover.getByRole('status').textContent()
     if (!captionText) break
     const parts = captionText.trim().split(' ')
     const currentMonth = MONTH_NAMES.indexOf(parts[0]) + 1
@@ -46,8 +46,8 @@ async function pickDate(page: Page, labelText: string, year: number, month: numb
     }
   }
 
-  // Click the day — react-day-picker uses date-fns PPPP for the button aria-label
-  const ariaLabel = format(new Date(year, month - 1, day), 'PPPP')
+  // Click the day — react-day-picker uses this format for the button aria-label
+  const ariaLabel = displayDateFull(year, month, day)
   await popover.getByRole('button', { name: ariaLabel }).click()
 
   // Wait for the popover to fully close before returning

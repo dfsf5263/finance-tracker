@@ -21,6 +21,9 @@ function createAuthInstance(options: {
     basePath: '/api/auth',
     secret: options.betterAuthSecret,
     trustedOrigins: [new URL(options.appUrl).origin],
+    rateLimit: {
+      enabled: process.env.BETTER_AUTH_DISABLE_RATE_LIMIT !== 'true',
+    },
     database: prismaAdapter(prisma, {
       provider: 'postgresql',
     }),
@@ -89,12 +92,16 @@ function createAuthInstance(options: {
       crossSubDomainCookies: {
         enabled: false,
       },
-      useSecureCookies: process.env.NODE_ENV === 'production',
+      useSecureCookies: shouldUseSecureCookies(),
       database: {
         generateId: false, // Let PostgreSQL generate UUIDs automatically
       },
     },
   })
+}
+
+export function shouldUseSecureCookies(nodeEnv = process.env.NODE_ENV): boolean {
+  return nodeEnv === 'production'
 }
 
 let authInstance: ReturnType<typeof createAuthInstance> | null = null

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getCurrentMonth, getCurrentYear, getMonthName } from '@/lib/utils'
+import { currentMonth, currentYear, monthName } from '@/lib/date-utils'
 import { apiFetch } from '@/lib/http-utils'
 
 interface ActiveMonthData {
@@ -66,9 +66,9 @@ export function useActiveMonth(householdId: string | null): UseActiveMonthReturn
 
       // Fallback to current month if API fails
       const fallbackData: ActiveMonthData = {
-        year: getCurrentYear(),
-        month: getCurrentMonth(),
-        monthName: getMonthName(getCurrentMonth()),
+        year: currentYear(),
+        month: currentMonth(),
+        monthName: monthName(currentMonth()),
         isCurrentMonth: true,
         message: 'Using current month (API failed)',
       }

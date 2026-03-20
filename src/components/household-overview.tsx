@@ -1,6 +1,6 @@
 'use client'
 
-import { format } from 'date-fns'
+import { displayTimestamp } from '@/lib/date-utils'
 import { Badge } from '@/components/ui/badge'
 
 interface HouseholdOverviewProps {
@@ -90,7 +90,7 @@ export function HouseholdOverview({ household }: HouseholdOverviewProps) {
       {household.createdAt && (
         <div>
           <h3 className="font-medium text-sm text-muted-foreground mb-2">Created</h3>
-          <p className="text-sm">{format(new Date(household.createdAt), 'PPP')}</p>
+          <p className="text-sm">{displayTimestamp(household.createdAt)}</p>
         </div>
       )}
     </div>

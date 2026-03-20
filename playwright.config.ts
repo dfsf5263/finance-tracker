@@ -38,8 +38,47 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'tests/e2e/.auth/user.json',
+        timezoneId: 'America/New_York',
       },
       testIgnore: /auth\.spec\.ts/,
+      dependencies: ['household-setup'],
+    },
+    // Re-run date-sensitive specs in UTC+13 to catch day-shift bugs
+    {
+      name: 'tz-ahead',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/e2e/.auth/user.json',
+        timezoneId: 'Pacific/Auckland',
+      },
+      testMatch: [
+        /analytics-breakdown\.spec\.ts/,
+        /budgeting\.spec\.ts/,
+        /dedupe\.spec\.ts/,
+        /settings-household\.spec\.ts/,
+        /settings-invitations\.spec\.ts/,
+        /transactions-manage\.spec\.ts/,
+        /transactions-upload\.spec\.ts/,
+      ],
+      dependencies: ['household-setup'],
+    },
+    // Re-run date-sensitive specs in UTC-10 to catch day-shift bugs
+    {
+      name: 'tz-behind',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/e2e/.auth/user.json',
+        timezoneId: 'Pacific/Honolulu',
+      },
+      testMatch: [
+        /analytics-breakdown\.spec\.ts/,
+        /budgeting\.spec\.ts/,
+        /dedupe\.spec\.ts/,
+        /settings-household\.spec\.ts/,
+        /settings-invitations\.spec\.ts/,
+        /transactions-manage\.spec\.ts/,
+        /transactions-upload\.spec\.ts/,
+      ],
       dependencies: ['household-setup'],
     },
     // Auth spec runs last — sign-out invalidates the server session
@@ -50,7 +89,7 @@ export default defineConfig({
         storageState: 'tests/e2e/.auth/user.json',
       },
       testMatch: /auth\.spec\.ts/,
-      dependencies: ['chromium'],
+      dependencies: ['chromium', 'tz-ahead', 'tz-behind'],
     },
   ],
 

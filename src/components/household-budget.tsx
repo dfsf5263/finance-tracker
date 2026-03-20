@@ -43,15 +43,15 @@ import {
   ExternalLink,
   Loader2,
 } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
 import {
-  formatCurrency,
   getDateRange,
-  getMonthName,
-  getCurrentYear,
-  getCurrentMonth,
-  getCurrentQuarter,
-  formatDateFromISO,
-} from '@/lib/utils'
+  monthName,
+  currentYear,
+  currentMonth,
+  currentQuarter,
+  displayDate,
+} from '@/lib/date-utils'
 import { useHousehold } from '@/contexts/household-context'
 
 interface HouseholdBudgetData {
@@ -192,9 +192,9 @@ export function HouseholdBudget() {
   const [categoryNoBudget, setCategoryNoBudget] = useState(false)
   const [timePeriod, setTimePeriod] = useState<TimePeriod>({
     type: 'month',
-    year: getCurrentYear(),
-    month: getCurrentMonth(),
-    quarter: getCurrentQuarter(),
+    year: currentYear(),
+    month: currentMonth(),
+    quarter: currentQuarter(),
   })
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [categories, setCategories] = useState<Category[]>([])
@@ -202,7 +202,7 @@ export function HouseholdBudget() {
   const [loadingTransactions, setLoadingTransactions] = useState<Record<string, boolean>>({})
 
   // Generate static year list for last 5 years
-  const yearOptions = Array.from({ length: 5 }, (_, i) => getCurrentYear() - i)
+  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear() - i)
 
   // Fetch categories
   useEffect(() => {
@@ -341,7 +341,7 @@ export function HouseholdBudget() {
   const getPeriodLabel = (period: TimePeriod) => {
     switch (period.type) {
       case 'month':
-        return `${getMonthName(period.month)} ${period.year}`
+        return `${monthName(period.month)} ${period.year}`
       case 'quarter':
         return `Q${period.quarter} ${period.year}`
       case 'year':
@@ -525,7 +525,7 @@ export function HouseholdBudget() {
                     <SelectContent>
                       {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
                         <SelectItem key={month} value={month.toString()}>
-                          {getMonthName(month)}
+                          {monthName(month)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -795,7 +795,7 @@ export function HouseholdBudget() {
                                     {transactions[item.categoryId].map((transaction) => (
                                       <tr key={transaction.id} className="border-b">
                                         <td className="py-2">
-                                          {formatDateFromISO(transaction.transactionDate)}
+                                          {displayDate(transaction.transactionDate)}
                                         </td>
                                         <td className="py-2">{transaction.description}</td>
                                         <td className="py-2">{transaction.account?.name || '-'}</td>

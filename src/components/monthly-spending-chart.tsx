@@ -13,7 +13,8 @@ import {
   ReferenceLine,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency, getMonthName } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
+import { monthName, monthStartISO, monthEndISO } from '@/lib/date-utils'
 import { useHousehold } from '@/contexts/household-context'
 import { useActiveMonth } from '@/hooks/use-active-month'
 
@@ -88,8 +89,8 @@ export function MonthlySpendingChart() {
             targetYear -= 1
           }
 
-          const startDate = new Date(targetYear, targetMonth - 1, 1).toISOString().split('T')[0]
-          const endDate = new Date(targetYear, targetMonth, 0).toISOString().split('T')[0]
+          const startDate = monthStartISO(targetYear, targetMonth)
+          const endDate = monthEndISO(targetYear, targetMonth)
 
           // Fetch spending data
           const spendingResponse = await fetch(
@@ -118,7 +119,7 @@ export function MonthlySpendingChart() {
           }
 
           monthlyData.push({
-            month: getMonthName(targetMonth).slice(0, 3), // Short month name
+            month: monthName(targetMonth).slice(0, 3), // Short month name
             monthNumber: targetMonth,
             year: targetYear,
             spending,
@@ -187,7 +188,7 @@ export function MonthlySpendingChart() {
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => formatCurrency(value).replace('$', '$')}
+                tickFormatter={(value) => formatCurrency(value)}
               />
               <Tooltip content={<CustomTooltip />} />
 

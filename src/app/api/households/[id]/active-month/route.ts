@@ -1,7 +1,7 @@
 import { requireHouseholdAccess } from '@/lib/auth-middleware'
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getMonthName, getCurrentMonth, getCurrentYear } from '@/lib/utils'
+import { monthName, currentMonth, currentYear } from '@/lib/date-utils'
 import { logApiError } from '@/lib/error-logger'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
@@ -80,15 +80,15 @@ export const GET = withApiLogging(
       }
 
       // Step 3: Determine the active month
-      const currentMonth = getCurrentMonth()
-      const currentYear = getCurrentYear()
+      const curMonth = currentMonth()
+      const curYear = currentYear()
 
       // If no month has 5+ days of transactions, use current month
       if (transactionMonths.length === 0) {
         const result = {
-          year: currentYear,
-          month: currentMonth,
-          monthName: getMonthName(currentMonth),
+          year: curYear,
+          month: curMonth,
+          monthName: monthName(curMonth),
           isCurrentMonth: true,
           message: 'Using current month (no month with 5+ transaction days found)',
         }
@@ -96,17 +96,17 @@ export const GET = withApiLogging(
       }
 
       const activeMonth = transactionMonths[0]
-      const isCurrentMonth = activeMonth.year === currentYear && activeMonth.month === currentMonth
+      const isCurrentMonth = activeMonth.year === curYear && activeMonth.month === curMonth
 
       const result = {
         year: activeMonth.year,
         month: activeMonth.month,
-        monthName: getMonthName(activeMonth.month),
+        monthName: monthName(activeMonth.month),
         isCurrentMonth,
         uniqueDays: Number(activeMonth.unique_days),
         message: isCurrentMonth
           ? 'Using current month'
-          : `Using ${getMonthName(activeMonth.month)} ${activeMonth.year} (most recent month with 5+ transaction days)`,
+          : `Using ${monthName(activeMonth.month)} ${activeMonth.year} (most recent month with 5+ transaction days)`,
       }
 
       return NextResponse.json(result)
@@ -121,14 +121,14 @@ export const GET = withApiLogging(
       })
 
       // Return current month as fallback with detailed error
-      const currentMonth = getCurrentMonth()
-      const currentYear = getCurrentYear()
+      const curMonth = currentMonth()
+      const curYear = currentYear()
 
       return NextResponse.json(
         {
-          year: currentYear,
-          month: currentMonth,
-          monthName: getMonthName(currentMonth),
+          year: curYear,
+          month: curMonth,
+          monthName: monthName(curMonth),
           isCurrentMonth: true,
           message: 'Using current month (error occurred while determining active month)',
           error: error instanceof Error ? error.message : 'Unknown error',

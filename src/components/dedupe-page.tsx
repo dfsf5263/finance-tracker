@@ -9,6 +9,7 @@ import { Trash2, Search, AlertTriangle, Info, AlertCircle } from 'lucide-react'
 import { useHousehold } from '@/contexts/household-context'
 import { canManageData } from '@/lib/role-utils'
 import { apiFetch } from '@/lib/http-utils'
+import { nMonthsAgoISO, todayLocal } from '@/lib/date-utils'
 import { toast } from 'sonner'
 import { DuplicateTransactionGrid } from '@/components/duplicate-transaction-grid'
 import { DuplicatePair } from '@/lib/duplicate-detector'
@@ -34,13 +35,8 @@ export function DeDupePage() {
   const { selectedHousehold, getUserRole } = useHousehold()
   const userRole = getUserRole()
   const canEdit = canManageData(userRole)
-  const [startDate, setStartDate] = useState<string>(() => {
-    // Default to 3 months ago
-    const date = new Date()
-    date.setMonth(date.getMonth() - 3)
-    return date.toISOString().split('T')[0]
-  })
-  const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [startDate, setStartDate] = useState<string>(() => nMonthsAgoISO(3))
+  const [endDate, setEndDate] = useState<string>(todayLocal())
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<DuplicateResponse | null>(null)
 

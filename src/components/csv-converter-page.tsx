@@ -16,7 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { FileSpreadsheet, FileText, AlertCircle, Download, ExternalLink, Info } from 'lucide-react'
 import { toast } from 'sonner'
-import { format } from 'date-fns'
+import { todayLocal } from '@/lib/date-utils'
 import { useHousehold } from '@/contexts/household-context'
 import { apiFetch } from '@/lib/http-utils'
 import {
@@ -317,7 +317,7 @@ export function CSVConverterPage() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      const timestamp = format(new Date(), 'yyyy-MM-dd')
+      const timestamp = todayLocal()
       a.download = `finance-tracker-import-${config.label.toLowerCase().replace(/\s+/g, '-')}-${timestamp}.xlsx`
       document.body.appendChild(a)
       a.click()

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { TrendingDown, TrendingUp, Tag, AlertCircle, AlertTriangle, Check } from 'lucide-react'
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
+import { monthStartISO, monthEndISO } from '@/lib/date-utils'
 import { useHousehold } from '@/contexts/household-context'
 import { useActiveMonth } from '@/hooks/use-active-month'
 
@@ -103,14 +104,12 @@ export function DashboardSummaryCards() {
       const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear
 
       // Current month
-      const currentStartDate = new Date(currentYear, currentMonth - 1, 1)
-        .toISOString()
-        .split('T')[0]
-      const currentEndDate = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]
+      const currentStartDate = monthStartISO(currentYear, currentMonth)
+      const currentEndDate = monthEndISO(currentYear, currentMonth)
 
       // Last month
-      const lastStartDate = new Date(lastMonthYear, lastMonth - 1, 1).toISOString().split('T')[0]
-      const lastEndDate = new Date(lastMonthYear, lastMonth, 0).toISOString().split('T')[0]
+      const lastStartDate = monthStartISO(lastMonthYear, lastMonth)
+      const lastEndDate = monthEndISO(lastMonthYear, lastMonth)
 
       const [currentResponse, lastResponse] = await Promise.all([
         fetch(
@@ -154,8 +153,8 @@ export function DashboardSummaryCards() {
     try {
       const currentYear = activeYear
       const currentMonth = activeMonth
-      const startDate = new Date(currentYear, currentMonth - 1, 1).toISOString().split('T')[0]
-      const endDate = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]
+      const startDate = monthStartISO(currentYear, currentMonth)
+      const endDate = monthEndISO(currentYear, currentMonth)
 
       const response = await fetch(
         `/api/budgets/household-budget?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&timePeriodType=month&budgetType=household`
@@ -193,8 +192,8 @@ export function DashboardSummaryCards() {
     try {
       const currentYear = activeYear
       const currentMonth = activeMonth
-      const startDate = new Date(currentYear, currentMonth - 1, 1).toISOString().split('T')[0]
-      const endDate = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]
+      const startDate = monthStartISO(currentYear, currentMonth)
+      const endDate = monthEndISO(currentYear, currentMonth)
 
       const response = await fetch(
         `/api/transactions/analytics?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&groupBy=category`
@@ -239,8 +238,8 @@ export function DashboardSummaryCards() {
     try {
       const currentYear = activeYear
       const currentMonth = activeMonth
-      const startDate = new Date(currentYear, currentMonth - 1, 1).toISOString().split('T')[0]
-      const endDate = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]
+      const startDate = monthStartISO(currentYear, currentMonth)
+      const endDate = monthEndISO(currentYear, currentMonth)
 
       const response = await fetch(
         `/api/transactions/analytics?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&groupBy=category`

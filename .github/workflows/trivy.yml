@@ -1,0 +1,43 @@
+name: Trivy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+
+env:
+  IMAGE: ghcr.io/dfsf5263/finance-tracker
+
+jobs:
+  trivy:
+    name: Trivy Image Scan
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build Docker image
+        run: docker build -t ${{ env.IMAGE }}:trivy-scan .
+
+      - name: Run Trivy image scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ env.IMAGE }}:trivy-scan
+          format: sarif
+          output: trivy.sarif
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy.sarif

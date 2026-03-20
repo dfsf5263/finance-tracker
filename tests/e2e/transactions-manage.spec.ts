@@ -1,4 +1,57 @@
 import { test, expect } from './fixtures'
+import type { Page } from '@playwright/test'
+import { displayDate, displayDateFull } from '../../src/lib/date-utils'
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+]
+
+/**
+ * Open a CustomDatePicker (identified by its visible label) and navigate the
+ * calendar to the given year/month, then click the target day.
+ */
+async function pickDate(page: Page, labelText: string, year: number, month: number, day: number) {
+  // Ensure no stale popovers from a previous picker are still in the DOM
+  await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0)
+
+  // Click the picker trigger — it lives in the same container as the label
+  await page.getByText(labelText, { exact: true }).locator('..').getByRole('button').click()
+
+  const popover = page.locator('[data-slot="popover-content"]')
+  await popover.waitFor({ state: 'visible' })
+
+  // Navigate month-by-month to the target month (guard against infinite loops)
+  for (let guard = 0; guard < 36; guard++) {
+    const captionText = await popover.getByRole('status').textContent()
+    if (!captionText) break
+    const parts = captionText.trim().split(' ')
+    const currentMonth = MONTH_NAMES.indexOf(parts[0]) + 1
+    const currentYear = parseInt(parts[1], 10)
+    if (currentYear === year && currentMonth === month) break
+    if (currentYear > year || (currentYear === year && currentMonth > month)) {
+      await popover.getByRole('button', { name: 'Go to the Previous Month' }).click()
+    } else {
+      await popover.getByRole('button', { name: 'Go to the Next Month' }).click()
+    }
+  }
+
+  const ariaLabel = displayDateFull(year, month, day)
+  await popover.getByRole('button', { name: ariaLabel }).click()
+
+  // Wait for the popover to fully close before returning
+  await expect(popover).toHaveCount(0)
+}
 
 // Unique suffix shared across dependent add → edit → delete tests
 const testId = Date.now()
@@ -80,5 +133,41 @@ test.describe('transaction management', () => {
     await page.waitForTimeout(500)
     const secondPageDesc = await page.getByRole('row').nth(1).getByRole('cell').nth(3).textContent()
     expect(firstPageDesc).not.toBe(secondPageDesc)
+  })
+
+  test('created transaction date matches the date picked in the calendar', async ({ page }) => {
+    const tzDesc = `E2E TZ Date ${Date.now()}`
+
+    await page.getByRole('heading', { name: 'Add Transaction', exact: true }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+
+    // Pick a specific date — Jan 15, 2026 — via the calendar widget
+    await pickDate(page, 'Transaction Date', 2026, 1, 15)
+
+    // Select account, category, type
+    await dialog.getByRole('combobox').filter({ hasText: /select account/i }).click()
+    await page.getByRole('option').first().click()
+    await dialog.getByRole('combobox').filter({ hasText: /select category/i }).click()
+    await page.getByRole('option').first().click()
+    await dialog.getByRole('combobox').filter({ hasText: /select type/i }).click()
+    await page.getByRole('option').first().click()
+
+    // Fill text fields
+    await dialog.getByRole('textbox', { name: /description/i }).fill(tzDesc)
+    await dialog.getByRole('spinbutton', { name: /amount/i }).fill('77.00')
+
+    await dialog.getByRole('button', { name: /create transaction/i }).click()
+    await expect(dialog).not.toBeVisible({ timeout: 10000 })
+
+    // The new transaction is in Jan 2026 but the grid defaults to the current month,
+    // so search by description to surface it on the first page.
+    await page.getByRole('textbox', { name: /search transactions/i }).fill(tzDesc)
+
+    // The grid should contain the new row with the EXACT date we picked.
+    // If dateToISOLocal() shifted ±1 day due to timezone, this assertion fails.
+    const newRow = page.getByRole('row').filter({ hasText: tzDesc })
+    await expect(newRow).toBeVisible()
+    await expect(newRow.getByRole('cell', { name: displayDate('2026-01-15') })).toBeVisible()
   })
 })

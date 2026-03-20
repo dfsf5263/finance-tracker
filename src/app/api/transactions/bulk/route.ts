@@ -6,6 +6,7 @@ import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody } from '@/lib/validation'
 import { bulkUploadRequestSchema, type BulkTransaction } from '@/lib/validation/bulk-upload'
+import { prismaDateToISO } from '@/lib/date-utils'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
 import logger from '@/lib/logger'
 // parseMMDDYYYY is no longer needed - dates are now in ISO format from validation
@@ -469,7 +470,7 @@ async function checkDuplicateTransactions(
   type ExistingRow = (typeof existingRows)[0]
   const existingMap = new Map<string, ExistingRow>()
   for (const ex of existingRows) {
-    const dateKey = ex.transactionDate.toISOString().split('T')[0]
+    const dateKey = prismaDateToISO(ex.transactionDate)
     const amountKey = parseFloat(ex.amount.toString()).toFixed(2)
     const key = `${dateKey}|${amountKey}|${ex.description}`
     existingMap.set(key, ex)
@@ -492,7 +493,7 @@ async function checkDuplicateTransactions(
           account: existing.account.name,
           amount: existing.amount.toString(),
           description: existing.description,
-          transactionDate: existing.transactionDate.toISOString().split('T')[0],
+          transactionDate: prismaDateToISO(existing.transactionDate),
         },
       })
     }

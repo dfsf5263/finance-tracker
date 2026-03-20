@@ -1,5 +1,28 @@
 import { test, expect } from './fixtures'
-import type { Locator } from '@playwright/test'
+import type { APIRequestContext, Locator } from '@playwright/test'
+
+/** Delete all PENDING @test.local invitations left over from previous runs. */
+async function cleanupTestInvitations(request: APIRequestContext) {
+  const householdsRes = await request.get('/api/households')
+  if (!householdsRes.ok()) return
+  const households = (await householdsRes.json()) as { id: string; name: string }[]
+  const hh = households.find((h) => h.name === 'E2E Test Household')
+  if (!hh) return
+
+  const invitationsRes = await request.get(`/api/households/${hh.id}/invitations`)
+  if (!invitationsRes.ok()) return
+  const invitations = (await invitationsRes.json()) as {
+    id: string
+    inviteeEmail: string
+    status: string
+  }[]
+
+  for (const inv of invitations) {
+    if (inv.inviteeEmail?.endsWith('@test.local') && inv.status === 'PENDING') {
+      await request.delete(`/api/invitations/by-id/${inv.id}`)
+    }
+  }
+}
 
 /**
  * Wait for the invitation count in the h4 heading to stabilise across
@@ -18,8 +41,12 @@ async function waitForStableCount(heading: Locator, minCount = 1): Promise<numbe
   return currCount
 }
 
+/** Matches formatted date-times like "March 27, 2026 at 3:45 PM". */
+const DATE_TIME_PATTERN = /\w+ \d{1,2}, \d{4} at \d{1,2}:\d{2}\s[AP]M/
+
 test.describe('settings — household invitations', () => {
   test.beforeEach(async ({ page }) => {
+    await cleanupTestInvitations(page.request)
     await page.goto('/dashboard/settings/household?tab=invitations')
     await expect(page.getByRole('main')).toBeVisible()
   })
@@ -46,6 +73,9 @@ test.describe('settings — household invitations', () => {
     await expect(dialog).not.toBeVisible()
 
     await expect(tabpanel.getByText(invitationLink, { exact: true })).toBeVisible({ timeout: 10000 })
+
+    // Verify the expiry date+time is displayed in a recognisable format
+    await expect(tabpanel.getByText(DATE_TIME_PATTERN).first()).toBeVisible()
   })
 
   test('cancel invitation: removed from list', async ({ page }) => {

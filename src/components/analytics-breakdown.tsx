@@ -18,15 +18,15 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Filter, Loader2 } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
 import {
-  formatCurrency,
   getDateRange,
-  getMonthName,
-  getCurrentYear,
-  getCurrentMonth,
-  getCurrentQuarter,
-  formatDateFromISO,
-} from '@/lib/utils'
+  monthName,
+  currentYear,
+  currentMonth,
+  currentQuarter,
+  displayDate,
+} from '@/lib/date-utils'
 import { useHousehold } from '@/contexts/household-context'
 
 interface AnalyticsData {
@@ -84,9 +84,9 @@ export function AnalyticsBreakdown() {
   const [groupBy, setGroupBy] = useState('category')
   const [timePeriod, setTimePeriod] = useState<TimePeriod>({
     type: 'month',
-    year: getCurrentYear(),
-    month: getCurrentMonth(),
-    quarter: getCurrentQuarter(),
+    year: currentYear(),
+    month: currentMonth(),
+    quarter: currentQuarter(),
   })
   const [typeFilter, setTypeFilter] = useState('all')
   const [types, setTypes] = useState<TransactionType[]>([])
@@ -94,7 +94,7 @@ export function AnalyticsBreakdown() {
   const [loadingTransactions, setLoadingTransactions] = useState<Record<string, boolean>>({})
 
   // Generate static year list for last 5 years
-  const yearOptions = Array.from({ length: 5 }, (_, i) => getCurrentYear() - i)
+  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear() - i)
 
   // Helper function to convert timePeriod to start/end dates
   const getDateRangeFromPeriod = (period: TimePeriod): { startDate: string; endDate: string } => {
@@ -372,7 +372,7 @@ export function AnalyticsBreakdown() {
                     <SelectContent>
                       {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
                         <SelectItem key={month} value={month.toString()}>
-                          {getMonthName(month)}
+                          {monthName(month)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -539,7 +539,7 @@ export function AnalyticsBreakdown() {
                                   {transactions[item.name].map((transaction) => (
                                     <tr key={transaction.id} className="border-b">
                                       <td className="py-2">
-                                        {formatDateFromISO(transaction.transactionDate)}
+                                        {displayDate(transaction.transactionDate)}
                                       </td>
                                       <td className="py-2">{transaction.description}</td>
                                       {groupBy !== 'account' && (

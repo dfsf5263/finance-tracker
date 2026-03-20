@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { prismaDateToISO } from '@/lib/date-utils'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
 export const GET = withApiLogging(async (request: NextRequest) => {
@@ -157,7 +158,7 @@ export const GET = withApiLogging(async (request: NextRequest) => {
 
     const formattedTransactions = topTransactions.map((t) => ({
       id: t.id,
-      date: t.transactionDate.toISOString().split('T')[0],
+      date: prismaDateToISO(t.transactionDate),
       description: t.description,
       category: t.category?.name || 'Unknown',
       type: t.type?.name || 'Unknown',

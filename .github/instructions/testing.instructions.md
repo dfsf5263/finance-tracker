@@ -76,8 +76,10 @@ beforeEach(() => {
 Projects run with dependencies:
 1. `setup` — Creates test user, saves auth state
 2. `household-setup` — Creates test household
-3. `chromium` — Main tests (authenticated)
-4. `auth-tests` — Auth-specific tests (unauthenticated)
+3. `chromium` — Main tests (authenticated, `America/New_York`)
+4. `tz-ahead` — Date-sensitive specs in `Pacific/Auckland` (UTC+13)
+5. `tz-behind` — Date-sensitive specs in `Pacific/Honolulu` (UTC-10)
+6. `auth-tests` — Auth-specific tests (unauthenticated, runs last)
 
 ### Auth State
 

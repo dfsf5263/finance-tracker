@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { Copy, Trash2, Calendar, User, UserPlus, Lock } from 'lucide-react'
 import { toast } from 'sonner'
-import { format } from 'date-fns'
+import { displayDateTimeLocal } from '@/lib/date-utils'
 import { CreateInvitationModal } from '@/components/create-invitation-modal'
 import { canViewInvitations } from '@/lib/role-utils'
 
@@ -229,9 +229,9 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
             {activeInvitations.map((invitation) => (
               <Card key={invitation.id}>
                 <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Badge variant={getStatusBadgeVariant(invitation.status)}>
                           {invitation.status}
                         </Badge>
@@ -245,26 +245,26 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
                       </div>
                       <div className="flex items-center text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4 mr-1" />
-                        Expires {format(new Date(invitation.expiresAt), 'PPP')}
+                        Expires {displayDateTimeLocal(invitation.expiresAt)}
                       </div>
-                      <div className="text-sm font-mono bg-muted p-2 rounded">
+                      <div className="truncate text-sm font-mono bg-muted p-2 rounded">
                         {window.location.origin}/invitations/{invitation.token}
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => copyInvitationLink(invitation.token)}
                       >
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copy Link
+                        <Copy className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Copy Link</span>
                       </Button>
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button variant="outline" size="sm" disabled={deleting === invitation.id}>
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
+                            <Trash2 className="h-4 w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Delete</span>
                           </Button>
                         </DialogTrigger>
                         <DialogContent>
@@ -305,9 +305,9 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
             {inactiveInvitations.map((invitation) => (
               <Card key={invitation.id} className="opacity-75">
                 <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Badge
                           variant={getStatusBadgeVariant(
                             isExpired(invitation.expiresAt) ? 'EXPIRED' : invitation.status
@@ -326,7 +326,7 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
                       <div className="flex items-center text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4 mr-1" />
                         {isExpired(invitation.expiresAt) ? 'Expired' : 'Expires'}{' '}
-                        {format(new Date(invitation.expiresAt), 'PPP')}
+                        {displayDateTimeLocal(invitation.expiresAt)}
                       </div>
                       {invitation.invitee && (
                         <div className="flex items-center text-sm text-muted-foreground">
@@ -342,8 +342,8 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
                       onClick={() => deleteInvitation(invitation.id)}
                       disabled={deleting === invitation.id}
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
+                      <Trash2 className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Delete</span>
                     </Button>
                   </div>
                 </CardContent>

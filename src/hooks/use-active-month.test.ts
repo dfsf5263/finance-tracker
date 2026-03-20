@@ -8,13 +8,13 @@ vi.mock('@/lib/http-utils', () => ({
 }))
 
 // Mock date-related utils
-vi.mock('@/lib/utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/utils')>()
+vi.mock('@/lib/date-utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/date-utils')>()
   return {
     ...actual,
-    getCurrentMonth: () => 1,
-    getCurrentYear: () => 2024,
-    getMonthName: () => 'January',
+    currentMonth: () => 1,
+    currentYear: () => 2024,
+    monthName: () => 'January',
   }
 })
 

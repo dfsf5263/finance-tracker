@@ -14,11 +14,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Filter } from 'lucide-react'
 import {
   getDateRange,
-  getMonthName,
-  getCurrentYear,
-  getCurrentMonth,
-  getCurrentQuarter,
-} from '@/lib/utils'
+  monthName,
+  currentYear,
+  currentMonth,
+  currentQuarter,
+} from '@/lib/date-utils'
 import { useHousehold } from '@/contexts/household-context'
 
 interface SankeyData {
@@ -52,15 +52,15 @@ export function AnalyticsMoneyFlow() {
   const [loading, setLoading] = useState(true)
   const [timePeriod, setTimePeriod] = useState<TimePeriod>({
     type: 'month',
-    year: getCurrentYear(),
-    month: getCurrentMonth(),
-    quarter: getCurrentQuarter(),
+    year: currentYear(),
+    month: currentMonth(),
+    quarter: currentQuarter(),
   })
   const [containerWidth, setContainerWidth] = useState(1000)
   const sankeyContainerRef = useRef<HTMLDivElement>(null)
 
   // Generate static year list for last 5 years
-  const yearOptions = Array.from({ length: 5 }, (_, i) => getCurrentYear() - i)
+  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear() - i)
 
   // Helper function to convert timePeriod to start/end dates
   const getDateRangeFromPeriod = (period: TimePeriod): { startDate: string; endDate: string } => {
@@ -222,7 +222,7 @@ export function AnalyticsMoneyFlow() {
                   <SelectContent>
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
                       <SelectItem key={month} value={month.toString()}>
-                        {getMonthName(month)}
+                        {monthName(month)}
                       </SelectItem>
                     ))}
                   </SelectContent>
