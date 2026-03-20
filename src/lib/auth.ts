@@ -89,12 +89,16 @@ function createAuthInstance(options: {
       crossSubDomainCookies: {
         enabled: false,
       },
-      useSecureCookies: options.appUrl.startsWith('https://'),
+      useSecureCookies: shouldUseSecureCookies(options.appUrl),
       database: {
         generateId: false, // Let PostgreSQL generate UUIDs automatically
       },
     },
   })
+}
+
+export function shouldUseSecureCookies(appUrl: string, nodeEnv = process.env.NODE_ENV): boolean {
+  return nodeEnv === 'production' || appUrl.startsWith('https://')
 }
 
 let authInstance: ReturnType<typeof createAuthInstance> | null = null
