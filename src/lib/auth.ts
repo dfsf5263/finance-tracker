@@ -98,7 +98,7 @@ function createAuthInstance(options: {
 }
 
 export function shouldUseSecureCookies(appUrl: string, nodeEnv = process.env.NODE_ENV): boolean {
-  return nodeEnv === 'production' || appUrl.startsWith('https://')
+  return nodeEnv === 'production'
 }
 
 let authInstance: ReturnType<typeof createAuthInstance> | null = null
