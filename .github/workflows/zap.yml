@@ -77,14 +77,21 @@ jobs:
           done
           echo "App did not become ready in time" && exit 1
 
-      - name: Verify authenticated access
+      - name: Authenticate and capture session cookie
+        id: auth
         run: |
-          COOKIE=$(curl -s -D - -o /dev/null \
+          RESPONSE=$(curl -s -D - -o /dev/null \
             -X POST http://localhost:3000/api/auth/sign-in/email \
             -H 'Content-Type: application/json' \
-            -d "{\"email\":\"${E2E_EMAIL}\",\"password\":\"${E2E_PASSWORD}\"}" \
-            | grep -i '^set-cookie:' | head -1 | sed 's/^[Ss]et-[Cc]ookie: //' | cut -d';' -f1)
-          echo "Session cookie: ${COOKIE:0:20}..."
+            -d "{\"email\":\"${E2E_EMAIL}\",\"password\":\"${E2E_PASSWORD}\"}")
+          COOKIE=$(echo "$RESPONSE" | grep -i '^set-cookie:' | head -1 \
+            | sed 's/^[Ss]et-[Cc]ookie: //' | cut -d';' -f1)
+          echo "Session cookie: ${COOKIE:0:30}..."
+          if [ -z "$COOKIE" ]; then
+            echo "::error::No session cookie returned from sign-in"
+            exit 1
+          fi
+          # Verify the cookie works
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
             -b "$COOKIE" http://localhost:3000/dashboard)
           echo "Dashboard status: $STATUS"
@@ -92,21 +99,22 @@ jobs:
             echo "::error::Authenticated access failed — expected 200, got $STATUS"
             exit 1
           fi
-
-      - name: Prepare ZAP context
-        run: |
-          ZAP_USER_NAME_B64=$(python3 -c "import base64; print(base64.b64encode(b'E2E User').decode())")
-          ZAP_USERNAME_B64=$(python3 -c "import base64, os; print(base64.b64encode(os.environ['E2E_EMAIL'].encode()).decode())")
-          ZAP_PASSWORD_B64=$(python3 -c "import base64, os; print(base64.b64encode(os.environ['E2E_PASSWORD'].encode()).decode())")
-          ZAP_USER_ENCODED="0;true;${ZAP_USER_NAME_B64};5;${ZAP_USERNAME_B64}~${ZAP_PASSWORD_B64}~"
-          sed -i "s|__ZAP_USER_ENCODED__|${ZAP_USER_ENCODED}|" .zap/finance-tracker.context
+          echo "session_cookie=$COOKIE" >> "$GITHUB_OUTPUT"
 
       - name: Run OWASP ZAP baseline scan
         uses: zaproxy/action-baseline@v0.15.0
         with:
           target: http://localhost:3000
           rules_file_name: .zap/rules.tsv
-          cmd_options: '-n /zap/wrk/.zap/finance-tracker.context -U "E2E User" -j'
+          cmd_options: >-
+            -n /zap/wrk/.zap/finance-tracker.context
+            -j
+            -z "-config replacer.full_list(0).description=auth
+            -config replacer.full_list(0).enabled=true
+            -config replacer.full_list(0).matchtype=REQ_HEADER
+            -config replacer.full_list(0).matchstr=Cookie
+            -config replacer.full_list(0).regex=false
+            -config replacer.full_list(0).replacement=${{ steps.auth.outputs.session_cookie }}"
           fail_action: false
           artifact_name: zap-baseline-report
 
@@ -115,7 +123,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: zap-baseline-log
-          path: /home/runner/work/finance-tracker/finance-tracker/zap.log
+          path: zap.log
           if-no-files-found: ignore
 
   # ---------------------------------------------------------------------------
@@ -186,14 +194,21 @@ jobs:
           done
           echo "App did not become ready in time" && exit 1
 
-      - name: Verify authenticated access
+      - name: Authenticate and capture session cookie
+        id: auth
         run: |
-          COOKIE=$(curl -s -D - -o /dev/null \
+          RESPONSE=$(curl -s -D - -o /dev/null \
             -X POST http://localhost:3000/api/auth/sign-in/email \
             -H 'Content-Type: application/json' \
-            -d "{\"email\":\"${E2E_EMAIL}\",\"password\":\"${E2E_PASSWORD}\"}" \
-            | grep -i '^set-cookie:' | head -1 | sed 's/^[Ss]et-[Cc]ookie: //' | cut -d';' -f1)
-          echo "Session cookie: ${COOKIE:0:20}..."
+            -d "{\"email\":\"${E2E_EMAIL}\",\"password\":\"${E2E_PASSWORD}\"}")
+          COOKIE=$(echo "$RESPONSE" | grep -i '^set-cookie:' | head -1 \
+            | sed 's/^[Ss]et-[Cc]ookie: //' | cut -d';' -f1)
+          echo "Session cookie: ${COOKIE:0:30}..."
+          if [ -z "$COOKIE" ]; then
+            echo "::error::No session cookie returned from sign-in"
+            exit 1
+          fi
+          # Verify the cookie works
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
             -b "$COOKIE" http://localhost:3000/dashboard)
           echo "Dashboard status: $STATUS"
@@ -201,21 +216,23 @@ jobs:
             echo "::error::Authenticated access failed — expected 200, got $STATUS"
             exit 1
           fi
-
-      - name: Prepare ZAP context
-        run: |
-          ZAP_USER_NAME_B64=$(python3 -c "import base64; print(base64.b64encode(b'E2E User').decode())")
-          ZAP_USERNAME_B64=$(python3 -c "import base64, os; print(base64.b64encode(os.environ['E2E_EMAIL'].encode()).decode())")
-          ZAP_PASSWORD_B64=$(python3 -c "import base64, os; print(base64.b64encode(os.environ['E2E_PASSWORD'].encode()).decode())")
-          ZAP_USER_ENCODED="0;true;${ZAP_USER_NAME_B64};5;${ZAP_USERNAME_B64}~${ZAP_PASSWORD_B64}~"
-          sed -i "s|__ZAP_USER_ENCODED__|${ZAP_USER_ENCODED}|" .zap/finance-tracker.context
+          echo "session_cookie=$COOKIE" >> "$GITHUB_OUTPUT"
 
       - name: Run OWASP ZAP full scan
         uses: zaproxy/action-full-scan@v0.13.0
         with:
           target: http://localhost:3000
           rules_file_name: .zap/rules.tsv
-          cmd_options: '-n /zap/wrk/.zap/finance-tracker.context -U "E2E User" -m 30 -j'
+          cmd_options: >-
+            -n /zap/wrk/.zap/finance-tracker.context
+            -m 30
+            -j
+            -z "-config replacer.full_list(0).description=auth
+            -config replacer.full_list(0).enabled=true
+            -config replacer.full_list(0).matchtype=REQ_HEADER
+            -config replacer.full_list(0).matchstr=Cookie
+            -config replacer.full_list(0).regex=false
+            -config replacer.full_list(0).replacement=${{ steps.auth.outputs.session_cookie }}"
           fail_action: false
           artifact_name: zap-full-report
 
@@ -224,5 +241,5 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: zap-full-log
-          path: /home/runner/work/finance-tracker/finance-tracker/zap.log
+          path: zap.log
           if-no-files-found: ignore

@@ -19,19 +19,9 @@
             <config>{"kvps":"&amp;","kvs":"=","struct":[]}</config>
         </postparser>
         <authentication>
-            <type>2</type>
-            <strategy>EACH_RESP</strategy>
-            <pollurl></pollurl>
-            <polldata></polldata>
-            <pollheaders></pollheaders>
-            <pollfreq>60</pollfreq>
-            <pollunits>REQUESTS</pollunits>
+            <type>0</type>
             <loggedin>\Qdashboard\E</loggedin>
             <loggedout>\Q/sign-in\E</loggedout>
-            <jsonbasedauthentication>
-                <loginurl>http://localhost:3000/api/auth/sign-in/email</loginurl>
-                <loginrequestdata>{&quot;email&quot;:&quot;{%username%}&quot;,&quot;password&quot;:&quot;{%password%}&quot;}</loginrequestdata>
-            </jsonbasedauthentication>
         </authentication>
         <session>
             <type>0</type>
@@ -45,8 +35,5 @@
                 <code>-1</code>
             </basic>
         </authorization>
-        <users>
-            <user>__ZAP_USER_ENCODED__</user>
-        </users>
     </context>
 </configuration>
