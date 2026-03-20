@@ -16,10 +16,9 @@ import {
   LogOut,
 } from 'lucide-react'
 import { HouseholdForm } from './household-form'
-import { useCRUD } from '@/hooks/useCRUD'
 import { useHousehold } from '@/contexts/household-context'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import {
   canDeleteHousehold,
   canManageHouseholdSettings,
@@ -49,23 +48,10 @@ interface Household {
 export function HouseholdsManager() {
   const router = useRouter()
   const { dbUser } = useDbUser()
-  const {
-    refreshHouseholds,
-    households: contextHouseholds,
-    isLoading: contextLoading,
-    getUserRole,
-    selectHousehold,
-  } = useHousehold()
-  const {
-    items: households,
-    formOpen,
-    editingItem: editingHousehold,
-    setFormOpen,
-    // handleCreate: Not used - we implement custom logic to bypass permission checks
-    // handleEdit: Not used - we need custom logic for households
-    closeForm,
-    fetchItems,
-  } = useCRUD<Household>('households', 'Household')
+  const { refreshHouseholds, households, getUserRole, selectHousehold } = useHousehold()
+
+  // Form state
+  const [formOpen, setFormOpen] = useState(false)
 
   // Local state for editing, leaving, and deleting
   const [localEditingHousehold, setLocalEditingHousehold] = useState<Household | undefined>()
@@ -74,24 +60,11 @@ export function HouseholdsManager() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [householdToDelete, setHouseholdToDelete] = useState<Household | null>(null)
 
-  // Track previous household count to detect creation scenarios
-  const previousCountRef = useRef<number>(contextHouseholds.length)
+  const closeForm = () => {
+    setFormOpen(false)
+    setLocalEditingHousehold(undefined)
+  }
 
-  // Monitor household context changes and refresh page data when needed
-  useEffect(() => {
-    const currentCount = contextHouseholds.length
-    const previousCount = previousCountRef.current
-
-    // If households were created (count increased) and context is not loading, refresh page data
-    if (currentCount > previousCount && !contextLoading) {
-      fetchItems()
-    }
-
-    // Update the ref for next comparison
-    previousCountRef.current = currentCount
-  }, [contextHouseholds.length, contextLoading, fetchItems])
-
-  // Custom handleEdit that bypasses useCRUD's permission check
   const handleEdit = (household: Household) => {
     setLocalEditingHousehold(household)
     setFormOpen(true)
@@ -110,12 +83,9 @@ export function HouseholdsManager() {
       })
 
       if (!error) {
-        fetchItems()
         toast.success('Household updated successfully')
-        // Refresh the household context to update sidebar and header
         await refreshHouseholds()
         closeForm()
-        setLocalEditingHousehold(undefined)
       } else {
         console.error('Failed to update household:', error)
         if (!error.includes('Rate limit exceeded')) {
@@ -133,9 +103,7 @@ export function HouseholdsManager() {
       })
 
       if (!error) {
-        fetchItems()
         toast.success('Household created successfully')
-        // Refresh the household context to update sidebar and header
         await refreshHouseholds()
         closeForm()
       } else {
@@ -155,7 +123,6 @@ export function HouseholdsManager() {
 
   // Handle successful delete
   const handleDeleteSuccess = async () => {
-    fetchItems()
     await refreshHouseholds()
     setHouseholdToDelete(null)
   }
@@ -176,8 +143,6 @@ export function HouseholdsManager() {
 
   // Handle successful leave
   const handleLeaveSuccess = async () => {
-    fetchItems()
-    // Refresh the household context to update sidebar and header
     await refreshHouseholds()
   }
 
@@ -249,7 +214,12 @@ export function HouseholdsManager() {
 
                     <div className="flex justify-end gap-1 pt-1">
                       {canManageHouseholdSettings(getUserRole(household.id)) && (
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(household)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(household)}
+                          title="Edit household"
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                       )}
@@ -310,11 +280,10 @@ export function HouseholdsManager() {
       </Card>
 
       <HouseholdForm
-        household={localEditingHousehold || editingHousehold}
+        household={localEditingHousehold}
         open={formOpen}
         onClose={() => {
           closeForm()
-          setLocalEditingHousehold(undefined)
         }}
         onSubmit={handleCreateOrUpdate}
       />
