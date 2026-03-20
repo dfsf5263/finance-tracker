@@ -21,6 +21,9 @@ function createAuthInstance(options: {
     basePath: '/api/auth',
     secret: options.betterAuthSecret,
     trustedOrigins: [new URL(options.appUrl).origin],
+    rateLimit: {
+      enabled: process.env.BETTER_AUTH_DISABLE_RATE_LIMIT !== 'true',
+    },
     database: prismaAdapter(prisma, {
       provider: 'postgresql',
     }),
