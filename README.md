@@ -7,6 +7,8 @@
 <p align="center">
   <a href="https://github.com/dfsf5263/finance-tracker/actions/workflows/ci.yml"><img src="https://github.com/dfsf5263/finance-tracker/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/dfsf5263/finance-tracker/actions/workflows/codeql.yml"><img src="https://github.com/dfsf5263/finance-tracker/actions/workflows/codeql.yml/badge.svg" alt="CodeQL" /></a>
+  <a href="https://github.com/dfsf5263/finance-tracker/actions/workflows/semgrep.yml"><img src="https://github.com/dfsf5263/finance-tracker/actions/workflows/semgrep.yml/badge.svg" alt="Semgrep" /></a>
+  <a href="https://github.com/dfsf5263/finance-tracker/actions/workflows/trivy.yml"><img src="https://github.com/dfsf5263/finance-tracker/actions/workflows/trivy.yml/badge.svg" alt="Trivy" /></a>
   <a href="https://codecov.io/gh/dfsf5263/finance-tracker"><img src="https://codecov.io/gh/dfsf5263/finance-tracker/branch/main/graph/badge.svg" alt="Coverage" /></a>
   <a href="https://github.com/dfsf5263/finance-tracker/blob/main/LICENSE"><img src="https://img.shields.io/github/license/dfsf5263/finance-tracker" alt="License" /></a>
   <a href="https://github.com/dfsf5263/finance-tracker/pkgs/container/finance-tracker"><img src="https://img.shields.io/badge/GHCR-image-blue?logo=github" alt="GHCR" /></a>
