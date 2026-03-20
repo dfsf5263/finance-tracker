@@ -1,6 +1,6 @@
 import type { APIRequestContext } from '@playwright/test'
 import path from 'path'
-import { displayDate } from '@/lib/date-utils'
+import { displayDate } from '../../src/lib/date-utils'
 import { expect, test } from './fixtures'
 
 const FIXTURES = path.resolve(__dirname, '../../test')

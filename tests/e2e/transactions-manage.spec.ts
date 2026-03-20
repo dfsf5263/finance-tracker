@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures'
 import type { Page } from '@playwright/test'
-import { displayDate, displayDateFull } from '@/lib/date-utils'
+import { displayDate, displayDateFull } from '../../src/lib/date-utils'
 
 const MONTH_NAMES = [
   'January',
