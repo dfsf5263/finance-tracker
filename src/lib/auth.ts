@@ -92,7 +92,7 @@ function createAuthInstance(options: {
       crossSubDomainCookies: {
         enabled: false,
       },
-      useSecureCookies: shouldUseSecureCookies(options.appUrl),
+      useSecureCookies: shouldUseSecureCookies(),
       database: {
         generateId: false, // Let PostgreSQL generate UUIDs automatically
       },
@@ -100,7 +100,7 @@ function createAuthInstance(options: {
   })
 }
 
-export function shouldUseSecureCookies(appUrl: string, nodeEnv = process.env.NODE_ENV): boolean {
+export function shouldUseSecureCookies(nodeEnv = process.env.NODE_ENV): boolean {
   return nodeEnv === 'production'
 }
 

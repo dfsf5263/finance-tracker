@@ -3,14 +3,14 @@ import { shouldUseSecureCookies } from '@/lib/auth'
 
 describe('shouldUseSecureCookies', () => {
   it('returns true in production', () => {
-    expect(shouldUseSecureCookies('http://internal-service:3000', 'production')).toBe(true)
+    expect(shouldUseSecureCookies('production')).toBe(true)
   })
 
-  it('returns false for https app urls outside production', () => {
-    expect(shouldUseSecureCookies('https://finance.example.com', 'development')).toBe(false)
+  it('returns false in development', () => {
+    expect(shouldUseSecureCookies('development')).toBe(false)
   })
 
-  it('returns false for http app urls outside production', () => {
-    expect(shouldUseSecureCookies('http://localhost:3000', 'development')).toBe(false)
+  it('returns false when NODE_ENV is not set', () => {
+    expect(shouldUseSecureCookies(undefined)).toBe(false)
   })
 })
