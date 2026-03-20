@@ -59,7 +59,6 @@ tests/e2e/.auth/
 playwright-report/
 playwright-report-no-email/
 test-results/
-scans/
 # Private dev notes (not for public repo)
 .dev-notes/
 # clerk configuration (can include secrets)
