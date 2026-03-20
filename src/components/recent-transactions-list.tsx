@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, Calendar, User, CreditCard } from 'lucide-rea
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
+import { monthStartISO, monthEndISO } from '@/lib/date-utils'
 import { useHousehold } from '@/contexts/household-context'
 import { useActiveMonth } from '@/hooks/use-active-month'
 
@@ -49,8 +50,8 @@ export function RecentTransactionsList() {
 
       try {
         // Calculate date range for active month
-        const startDate = new Date(activeYear, activeMonth - 1, 1).toISOString().split('T')[0]
-        const endDate = new Date(activeYear, activeMonth, 0).toISOString().split('T')[0]
+        const startDate = monthStartISO(activeYear, activeMonth)
+        const endDate = monthEndISO(activeYear, activeMonth)
 
         // Get transactions for active month with higher limit to filter client-side
         const response = await fetch(

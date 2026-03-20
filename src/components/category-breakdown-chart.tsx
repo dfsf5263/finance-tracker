@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
+import { monthStartISO, monthEndISO } from '@/lib/date-utils'
 import { useHousehold } from '@/contexts/household-context'
 import { useActiveMonth } from '@/hooks/use-active-month'
 
@@ -99,8 +100,8 @@ export function CategoryBreakdownChart() {
       try {
         const currentYear = activeYear
         const currentMonth = activeMonth
-        const startDate = new Date(currentYear, currentMonth - 1, 1).toISOString().split('T')[0]
-        const endDate = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]
+        const startDate = monthStartISO(currentYear, currentMonth)
+        const endDate = monthEndISO(currentYear, currentMonth)
 
         const response = await fetch(
           `/api/transactions/analytics?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&groupBy=category`

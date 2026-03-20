@@ -90,7 +90,7 @@ Handles rate limiting (429), error toasts, and network errors automatically.
 ## Currency & Dates
 
 - Format currency: `formatCurrency()` from `@/lib/utils`
-- Date handling: Use `date-fns` helpers and utilities from `@/lib/utils`
+- Date handling: Use string-first utilities from `@/lib/date-utils`
 - Dates are stored as DATE type (no time component) in the database
 
 ## Accessibility

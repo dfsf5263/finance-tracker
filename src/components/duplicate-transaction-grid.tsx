@@ -19,7 +19,8 @@ import {
   getDuplicateRiskLabel,
   getDuplicateBadgeVariant,
 } from '@/lib/duplicate-utils'
-import { formatCurrency, formatDateFromISO } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
+import { displayDate } from '@/lib/date-utils'
 import { useHousehold } from '@/contexts/household-context'
 import { canManageData } from '@/lib/role-utils'
 import { apiFetch } from '@/lib/http-utils'
@@ -132,7 +133,7 @@ export function DuplicateTransactionGrid({
           </div>
           <div className="flex items-center gap-1">
             <Calendar className="h-3 w-3 text-muted-foreground" />
-            <span>{formatDateFromISO(transaction.transactionDate)}</span>
+            <span>{displayDate(transaction.transactionDate)}</span>
           </div>
         </div>
 
@@ -270,7 +271,7 @@ export function DuplicateTransactionGrid({
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatDateFromISO(deleteDialog.transaction.transactionDate)}</span>
+                    <span>{displayDate(deleteDialog.transaction.transactionDate)}</span>
                   </div>
                 </div>
 

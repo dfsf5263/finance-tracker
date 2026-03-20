@@ -4,6 +4,7 @@ import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess } from '@/lib/auth-middleware'
 import { findDuplicates, getDuplicateStats } from '@/lib/duplicate-detector'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
+import { prismaDateToISO } from '@/lib/date-utils'
 
 const DUPLICATE_TRANSACTION_LIMIT = 4000
 
@@ -78,7 +79,7 @@ export const GET = withApiLogging(async (request: NextRequest) => {
     // Transform transactions to the format expected by duplicate detector
     const transformedTransactions = transactions.map((t) => ({
       id: t.id,
-      transactionDate: t.transactionDate.toISOString().split('T')[0],
+      transactionDate: prismaDateToISO(t.transactionDate),
       description: t.description,
       amount: Number(t.amount),
       account: t.account.name,

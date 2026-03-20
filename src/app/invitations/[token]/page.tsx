@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, Users, Home, Calendar, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { format } from 'date-fns'
+import { displayTimestamp } from '@/lib/date-utils'
 
 interface InvitationData {
   id: string
@@ -191,7 +191,7 @@ export default function InvitationPage() {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
-                      <span>Expires {format(new Date(invitation.expiresAt), 'PPP')}</span>
+                      <span>Expires {displayTimestamp(invitation.expiresAt)}</span>
                     </div>
                   </div>
                   <Button onClick={() => router.push('/sign-in')} className="w-full">
@@ -228,7 +228,7 @@ export default function InvitationPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
-                    <span>Expires {format(new Date(invitation.expiresAt), 'PPP')}</span>
+                    <span>Expires {displayTimestamp(invitation.expiresAt)}</span>
                   </div>
                 </div>
 

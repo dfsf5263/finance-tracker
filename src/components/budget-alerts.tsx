@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
+import { monthStartISO, monthEndISO } from '@/lib/date-utils'
 import { useHousehold } from '@/contexts/household-context'
 import { useActiveMonth } from '@/hooks/use-active-month'
 
@@ -68,8 +69,8 @@ export function BudgetAlerts() {
       try {
         const currentYear = activeYear
         const currentMonth = activeMonth
-        const startDate = new Date(currentYear, currentMonth - 1, 1).toISOString().split('T')[0]
-        const endDate = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]
+        const startDate = monthStartISO(currentYear, currentMonth)
+        const endDate = monthEndISO(currentYear, currentMonth)
 
         const newAlerts: BudgetAlert[] = []
 

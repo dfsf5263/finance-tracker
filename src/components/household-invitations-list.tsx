@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { Copy, Trash2, Calendar, User, UserPlus, Lock } from 'lucide-react'
 import { toast } from 'sonner'
-import { format } from 'date-fns'
+import { displayTimestamp } from '@/lib/date-utils'
 import { CreateInvitationModal } from '@/components/create-invitation-modal'
 import { canViewInvitations } from '@/lib/role-utils'
 
@@ -245,7 +245,7 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
                       </div>
                       <div className="flex items-center text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4 mr-1" />
-                        Expires {format(new Date(invitation.expiresAt), 'PPP')}
+                        Expires {displayTimestamp(invitation.expiresAt)}
                       </div>
                       <div className="text-sm font-mono bg-muted p-2 rounded">
                         {window.location.origin}/invitations/{invitation.token}
@@ -326,7 +326,7 @@ export function HouseholdInvitationsList({ householdId }: HouseholdInvitationsLi
                       <div className="flex items-center text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4 mr-1" />
                         {isExpired(invitation.expiresAt) ? 'Expired' : 'Expires'}{' '}
-                        {format(new Date(invitation.expiresAt), 'PPP')}
+                        {displayTimestamp(invitation.expiresAt)}
                       </div>
                       {invitation.invitee && (
                         <div className="flex items-center text-sm text-muted-foreground">

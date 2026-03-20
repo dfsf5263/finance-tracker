@@ -27,13 +27,8 @@ import {
 } from 'lucide-react'
 import Papa from 'papaparse'
 import { toast } from 'sonner'
-import {
-  formatCurrency,
-  formatDateFromISO,
-  parseMonthDayYearDate,
-  isValidMonthDayYearDate,
-  toISODateString,
-} from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
+import { displayDate, mdyToISO, isValidDateMDY, todayLocal } from '@/lib/date-utils'
 import { apiFetch } from '@/lib/http-utils'
 import { useHousehold } from '@/contexts/household-context'
 import { invalidateActiveMonthCache } from '@/hooks/use-active-month'
@@ -113,15 +108,10 @@ const headerMapping: Record<string, keyof CSVTransaction> = {
 
 // Helper function to convert MM/DD/YYYY to ISO format (YYYY-MM-DD)
 function convertCSVDateToISO(csvDate: string): string {
-  if (!csvDate || !isValidMonthDayYearDate(csvDate)) {
+  if (!csvDate || !isValidDateMDY(csvDate)) {
     return ''
   }
-  try {
-    const date = parseMonthDayYearDate(csvDate)
-    return toISODateString(date)
-  } catch {
-    return ''
-  }
+  return mdyToISO(csvDate) ?? ''
 }
 
 export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
@@ -651,7 +641,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `upload-failures-${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `upload-failures-${todayLocal()}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -1108,7 +1098,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
                     <div className="text-muted-foreground">
                       {transaction.account} • {transaction.user} •{' '}
                       {transaction.transactionDate
-                        ? formatDateFromISO(transaction.transactionDate)
+                        ? displayDate(transaction.transactionDate)
                         : 'Invalid Date'}{' '}
                       •{' '}
                       <span

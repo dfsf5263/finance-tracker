@@ -6,6 +6,7 @@ import { logApiError } from '@/lib/error-logger'
 import { requireTransactionAccess, requireTransactionWriteAccess } from '@/lib/auth-middleware'
 import { validateRequestBody, transactionUpdateSchema } from '@/lib/validation'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
+import { prismaDateToISO } from '@/lib/date-utils'
 
 export const GET = withApiLogging(
   async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
@@ -22,10 +23,10 @@ export const GET = withApiLogging(
       // Transform dates to date-only format for frontend
       const transformedTransaction = {
         ...(transaction as object),
-        transactionDate: (transaction as { transactionDate: Date }).transactionDate
-          .toISOString()
-          .split('T')[0],
-        postDate: (transaction as { postDate: Date }).postDate.toISOString().split('T')[0],
+        transactionDate: prismaDateToISO(
+          (transaction as { transactionDate: Date }).transactionDate
+        ),
+        postDate: prismaDateToISO((transaction as { postDate: Date }).postDate),
       }
 
       return NextResponse.json(transformedTransaction)
@@ -99,8 +100,8 @@ export const PUT = withApiLogging(
       // Transform dates to date-only format for frontend
       const transformedTransaction = {
         ...updatedTransaction,
-        transactionDate: updatedTransaction.transactionDate.toISOString().split('T')[0],
-        postDate: updatedTransaction.postDate.toISOString().split('T')[0],
+        transactionDate: prismaDateToISO(updatedTransaction.transactionDate),
+        postDate: prismaDateToISO(updatedTransaction.postDate),
       }
 
       return NextResponse.json(transformedTransaction)

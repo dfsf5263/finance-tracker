@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { INSTITUTIONS, parseInstitutionDate, mapCsvRow, validateHeaders } from './csv-converter'
+import { INSTITUTIONS, mapCsvRow, validateHeaders } from './csv-converter'
+import { parseInstitutionDate } from '@/lib/date-utils'
 
 describe('INSTITUTIONS config', () => {
   it('fidelity maps Date, Name, Amount and does not invert', () => {

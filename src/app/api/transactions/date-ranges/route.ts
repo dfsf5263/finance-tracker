@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentYear, getCurrentMonth } from '@/lib/utils'
+import { currentYear, currentMonth } from '@/lib/date-utils'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdAccess } from '@/lib/auth-middleware'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
@@ -40,8 +40,8 @@ export const GET = withApiLogging(async (request: NextRequest) => {
       // No transactions found
       return NextResponse.json({
         years: [],
-        currentYear: getCurrentYear(),
-        currentMonth: getCurrentMonth(),
+        currentYear: currentYear(),
+        currentMonth: currentMonth(),
       })
     }
 
@@ -56,8 +56,8 @@ export const GET = withApiLogging(async (request: NextRequest) => {
 
     return NextResponse.json({
       years,
-      currentYear: getCurrentYear(),
-      currentMonth: getCurrentMonth(),
+      currentYear: currentYear(),
+      currentMonth: currentMonth(),
     })
   } catch (error) {
     await logApiError({
