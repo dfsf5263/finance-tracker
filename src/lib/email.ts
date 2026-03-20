@@ -101,10 +101,13 @@ export async function sendInvitationEmail({
                         </p>
                         
                         <p style="margin: 0; font-size: 14px; color: #999;">
-                          This invitation will expire on ${expiresAt.toLocaleDateString('en-US', {
+                          This invitation will expire on ${expiresAt.toLocaleString('en-US', {
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true,
                           })}.
                         </p>
                       </td>

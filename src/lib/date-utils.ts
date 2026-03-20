@@ -119,6 +119,13 @@ const longDateFormatter = new Intl.DateTimeFormat('en-US', {
   timeZone: 'UTC',
 })
 
+/** Like longDateFormatter but uses the viewer's local timezone (for full timestamps). */
+const localLongDateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+})
+
 const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'long' })
 const longMonthOnlyFormatter = new Intl.DateTimeFormat('en-US', { month: 'long' })
 
@@ -137,12 +144,31 @@ export function displayDateLong(isoDate: string): string {
 }
 
 /**
- * Format a timestamp string → "January 15, 2024"
- * For non-date-only values like createdAt, expiresAt.
+ * Format a full timestamp string → "January 15, 2024" in the viewer's local timezone.
+ * For non-date-only values like createdAt.
  */
 export function displayTimestamp(isoTimestamp: string): string {
   const d = new Date(isoTimestamp)
-  return longDateFormatter.format(d)
+  return localLongDateFormatter.format(d)
+}
+
+/** Date + time in the viewer's local timezone (for expiration timestamps). */
+const localDateTimeFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+})
+
+/**
+ * Format a full timestamp string → "March 27, 2026 at 3:45 PM" in the viewer's local timezone.
+ * For time-sensitive values like invitation expiresAt.
+ */
+export function displayDateTimeLocal(isoTimestamp: string): string {
+  const d = new Date(isoTimestamp)
+  return localDateTimeFormatter.format(d)
 }
 
 /**

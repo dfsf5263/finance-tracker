@@ -13,6 +13,7 @@ import {
   displayDate,
   displayDateLong,
   displayTimestamp,
+  displayDateTimeLocal,
   displayDateFull,
   monthName,
   isValidDateISO,
@@ -196,9 +197,37 @@ describe('displayDateLong', () => {
 })
 
 describe('displayTimestamp', () => {
-  it('formats a full ISO timestamp', () => {
-    const result = displayTimestamp('2024-01-15T10:30:00.000Z')
-    expect(result).toBe('January 15, 2024')
+  it('formats a full ISO timestamp in local timezone', () => {
+    const input = '2024-06-15T12:00:00.000Z'
+    const result = displayTimestamp(input)
+    // Cross-check against the runtime's own local-TZ interpretation
+    const expected = new Intl.DateTimeFormat('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(new Date(input))
+    expect(result).toBe(expected)
+  })
+})
+
+describe('displayDateTimeLocal', () => {
+  it('formats a full ISO timestamp with date and time in local timezone', () => {
+    const input = '2024-06-15T15:45:00.000Z'
+    const result = displayDateTimeLocal(input)
+    const expected = new Intl.DateTimeFormat('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(new Date(input))
+    expect(result).toBe(expected)
+  })
+
+  it('uses 12-hour format with AM/PM', () => {
+    const result = displayDateTimeLocal('2024-06-15T08:30:00.000Z')
+    expect(result).toMatch(/AM|PM/)
   })
 })
 
