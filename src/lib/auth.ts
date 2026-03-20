@@ -89,7 +89,7 @@ function createAuthInstance(options: {
       crossSubDomainCookies: {
         enabled: false,
       },
-      useSecureCookies: process.env.NODE_ENV === 'production',
+      useSecureCookies: options.appUrl.startsWith('https://'),
       database: {
         generateId: false, // Let PostgreSQL generate UUIDs automatically
       },

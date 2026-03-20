@@ -25,7 +25,10 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         {showZapDiscovery ? (
           <div className="px-4 lg:px-6">
-            <Link className="sr-only focus:not-sr-only" href="/dashboard/zap-discovery">
+            <Link
+              className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+              href="/dashboard/zap-discovery"
+            >
               Security scan route index
             </Link>
           </div>

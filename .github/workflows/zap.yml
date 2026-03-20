@@ -77,6 +77,22 @@ jobs:
           done
           echo "App did not become ready in time" && exit 1
 
+      - name: Verify authenticated access
+        run: |
+          COOKIE=$(curl -s -D - -o /dev/null \
+            -X POST http://localhost:3000/api/auth/sign-in/email \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"${E2E_EMAIL}\",\"password\":\"${E2E_PASSWORD}\"}" \
+            | grep -i '^set-cookie:' | head -1 | sed 's/^[Ss]et-[Cc]ookie: //' | cut -d';' -f1)
+          echo "Session cookie: ${COOKIE:0:20}..."
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            -b "$COOKIE" http://localhost:3000/dashboard)
+          echo "Dashboard status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Authenticated access failed — expected 200, got $STATUS"
+            exit 1
+          fi
+
       - name: Prepare ZAP context
         run: |
           ZAP_USER_NAME_B64=$(python3 -c "import base64; print(base64.b64encode(b'E2E User').decode())")
@@ -93,6 +109,14 @@ jobs:
           cmd_options: '-n /zap/wrk/.zap/finance-tracker.context -U "E2E User" -j'
           fail_action: false
           artifact_name: zap-baseline-report
+
+      - name: Upload ZAP log
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: zap-baseline-log
+          path: /home/runner/work/finance-tracker/finance-tracker/zap.log
+          if-no-files-found: ignore
 
   # ---------------------------------------------------------------------------
   # Full scan — runs on push to main and weekly schedule (thorough, active scan)
@@ -162,6 +186,22 @@ jobs:
           done
           echo "App did not become ready in time" && exit 1
 
+      - name: Verify authenticated access
+        run: |
+          COOKIE=$(curl -s -D - -o /dev/null \
+            -X POST http://localhost:3000/api/auth/sign-in/email \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"${E2E_EMAIL}\",\"password\":\"${E2E_PASSWORD}\"}" \
+            | grep -i '^set-cookie:' | head -1 | sed 's/^[Ss]et-[Cc]ookie: //' | cut -d';' -f1)
+          echo "Session cookie: ${COOKIE:0:20}..."
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            -b "$COOKIE" http://localhost:3000/dashboard)
+          echo "Dashboard status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Authenticated access failed — expected 200, got $STATUS"
+            exit 1
+          fi
+
       - name: Prepare ZAP context
         run: |
           ZAP_USER_NAME_B64=$(python3 -c "import base64; print(base64.b64encode(b'E2E User').decode())")
@@ -178,3 +218,11 @@ jobs:
           cmd_options: '-n /zap/wrk/.zap/finance-tracker.context -U "E2E User" -m 30 -j'
           fail_action: false
           artifact_name: zap-full-report
+
+      - name: Upload ZAP log
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: zap-full-log
+          path: /home/runner/work/finance-tracker/finance-tracker/zap.log
+          if-no-files-found: ignore
