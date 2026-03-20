@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { OnboardingCard } from '@/components/onboarding-card'
 import { DashboardSummaryCards } from '@/components/dashboard-summary-cards'
 import { MonthlySpendingChart } from '@/components/monthly-spending-chart'
@@ -11,6 +12,8 @@ import { useHousehold } from '@/contexts/household-context'
 import { Calendar, HelpCircle } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
+const showZapDiscovery = process.env.NEXT_PUBLIC_ENABLE_ZAP_DISCOVERY === 'true'
+
 export default function DashboardPage() {
   const { selectedHousehold } = useHousehold()
   const { monthName, activeYear, isCurrentMonth, loading } = useActiveMonth(
@@ -20,6 +23,14 @@ export default function DashboardPage() {
   return (
     <div className="@container/main flex flex-1 flex-col gap-2">
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+        {showZapDiscovery ? (
+          <div className="px-4 lg:px-6">
+            <Link className="sr-only focus:not-sr-only" href="/dashboard/zap-discovery">
+              Security scan route index
+            </Link>
+          </div>
+        ) : null}
+
         {/* Onboarding Card */}
         <div className="px-4 lg:px-6">
           <OnboardingCard />

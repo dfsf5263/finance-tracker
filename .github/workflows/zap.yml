@@ -41,6 +41,8 @@ jobs:
       DATABASE_URL: postgresql://test:test@localhost:5432/finance_tracker_test
       BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
       APP_URL: http://localhost:3000
+      ENABLE_ZAP_DISCOVERY: 'true'
+      NEXT_PUBLIC_ENABLE_ZAP_DISCOVERY: 'true'
       E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
       E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
 
@@ -88,7 +90,7 @@ jobs:
         with:
           target: http://localhost:3000
           rules_file_name: .zap/rules.tsv
-          cmd_options: '-n /zap/wrk/.zap/finance-tracker.context -U "E2E User"'
+          cmd_options: '-n /zap/wrk/.zap/finance-tracker.context -U "E2E User" -j'
           fail_action: false
           artifact_name: zap-baseline-report
 
@@ -124,6 +126,8 @@ jobs:
       DATABASE_URL: postgresql://test:test@localhost:5432/finance_tracker_test
       BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
       APP_URL: http://localhost:3000
+      ENABLE_ZAP_DISCOVERY: 'true'
+      NEXT_PUBLIC_ENABLE_ZAP_DISCOVERY: 'true'
       E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
       E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
 
@@ -171,6 +175,6 @@ jobs:
         with:
           target: http://localhost:3000
           rules_file_name: .zap/rules.tsv
-          cmd_options: '-n /zap/wrk/.zap/finance-tracker.context -U "E2E User" -m 30'
+          cmd_options: '-n /zap/wrk/.zap/finance-tracker.context -U "E2E User" -m 30 -j'
           fail_action: false
           artifact_name: zap-full-report
