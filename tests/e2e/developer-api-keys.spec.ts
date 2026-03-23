@@ -37,7 +37,7 @@ test.describe('developer — API keys', () => {
     await expect(dialog).not.toBeVisible()
 
     // Key appears in the table by name
-    await expect(page.getByRole('cell', { name: /E2E Test Key/ })).toBeVisible()
+    await expect(page.getByRole('cell', { name: 'E2E Test Key', exact: true })).toBeVisible()
 
     // --- Verify the key authenticates API requests ---
     // Uses an isolated request context (no session cookie) to confirm the
@@ -52,6 +52,6 @@ test.describe('developer — API keys', () => {
     // --- Clean up: delete the test key ---
     const testKeyRow = page.getByRole('row', { name: /E2E Test Key/ })
     await testKeyRow.getByRole('button').click()
-    await expect(page.getByRole('cell', { name: /E2E Test Key/ })).not.toBeVisible()
+    await expect(page.getByRole('cell', { name: 'E2E Test Key', exact: true })).not.toBeVisible()
   })
 })
