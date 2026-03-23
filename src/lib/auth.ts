@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { twoFactor } from 'better-auth/plugins'
+import { apiKey } from '@better-auth/api-key'
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { sendEmailVerification } from '@/lib/email/send-verification-email'
@@ -30,6 +31,19 @@ function createAuthInstance(options: {
     plugins: [
       twoFactor({
         issuer: 'Finance Tracker',
+      }),
+      apiKey({
+        defaultPrefix: 'ft_',
+        requireName: true,
+        rateLimit: {
+          enabled: true,
+          timeWindow: 1000 * 60 * 60 * 24, // 1 day
+          maxRequests: 1000,
+        },
+        keyExpiration: {
+          defaultExpiresIn: null, // No expiry by default
+          maxExpiresIn: 365,
+        },
       }),
     ],
     user: {

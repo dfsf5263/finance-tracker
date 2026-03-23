@@ -44,6 +44,9 @@ npm-debug.log
 test/*.log
 tsconfig.tsbuildinfo
 
+# Generated OpenAPI spec
+public/openapi.json
+
 #Next.js specific
 .next/
 .next/cache/

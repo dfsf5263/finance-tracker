@@ -1,25 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
-import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
+import { validateRequestBody, bulkTypesRequestSchema } from '@/lib/validation'
 
 export const POST = withApiLogging(async (request: NextRequest) => {
   let requestData
   try {
     requestData = await request.json()
-    const { types, householdId } = requestData
 
-    if (!householdId) {
-      return NextResponse.json({ error: 'Household ID is required' }, { status: 400 })
+    const validation = validateRequestBody(bulkTypesRequestSchema, requestData)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
+    const { types, householdId } = validation.data
 
-    if (!Array.isArray(types) || types.length === 0) {
-      return NextResponse.json({ error: 'Types array is required' }, { status: 400 })
-    }
-
-    // Verify user has access to this household
-    const authResult = await requireHouseholdAccess(request, householdId)
+    // Verify user has write access to this household
+    const authResult = await requireHouseholdWriteAccess(request, householdId)
     if (authResult instanceof NextResponse) {
       return authResult
     }
@@ -35,9 +33,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     )
 
     // Filter out types that already exist (case-insensitive)
-    const typesToCreate = types.filter(
-      (type: { name: string }) => !existingNames.has(type.name.toLowerCase())
-    )
+    const typesToCreate = types.filter((type) => !existingNames.has(type.name.toLowerCase()))
 
     if (typesToCreate.length === 0) {
       return NextResponse.json({
@@ -48,7 +44,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     }
 
     // Prepare types for bulk creation
-    const typesWithHousehold = typesToCreate.map((type: { name: string; isOutflow: boolean }) => ({
+    const typesWithHousehold = typesToCreate.map((type) => ({
       name: type.name,
       isOutflow: type.isOutflow,
       householdId,
@@ -65,7 +61,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       where: {
         householdId,
         name: {
-          in: typesToCreate.map((type: { name: string }) => type.name),
+          in: typesToCreate.map((type) => type.name),
         },
       },
     })

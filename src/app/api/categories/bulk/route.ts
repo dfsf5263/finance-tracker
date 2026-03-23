@@ -1,25 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
-import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
+import { validateRequestBody, bulkCategoriesRequestSchema } from '@/lib/validation'
 
 export const POST = withApiLogging(async (request: NextRequest) => {
   let requestData
   try {
     requestData = await request.json()
-    const { categories, householdId } = requestData
 
-    if (!householdId) {
-      return NextResponse.json({ error: 'Household ID is required' }, { status: 400 })
+    const validation = validateRequestBody(bulkCategoriesRequestSchema, requestData)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
+    const { categories, householdId } = validation.data
 
-    if (!Array.isArray(categories) || categories.length === 0) {
-      return NextResponse.json({ error: 'Categories array is required' }, { status: 400 })
-    }
-
-    // Verify user has access to this household
-    const authResult = await requireHouseholdAccess(request, householdId)
+    // Verify user has write access to this household
+    const authResult = await requireHouseholdWriteAccess(request, householdId)
     if (authResult instanceof NextResponse) {
       return authResult
     }
@@ -36,7 +34,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
 
     // Filter out categories that already exist (case-insensitive)
     const categoriesToCreate = categories.filter(
-      (category: { name: string }) => !existingNames.has(category.name.toLowerCase())
+      (category) => !existingNames.has(category.name.toLowerCase())
     )
 
     if (categoriesToCreate.length === 0) {
@@ -48,7 +46,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     }
 
     // Prepare categories for bulk creation
-    const categoriesWithHousehold = categoriesToCreate.map((category: { name: string }) => ({
+    const categoriesWithHousehold = categoriesToCreate.map((category) => ({
       name: category.name,
       householdId,
     }))
@@ -64,7 +62,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       where: {
         householdId,
         name: {
-          in: categoriesToCreate.map((cat: { name: string }) => cat.name),
+          in: categoriesToCreate.map((cat) => cat.name),
         },
       },
     })

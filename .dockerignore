@@ -33,9 +33,6 @@ __tests__/
 *.spec.js
 *.spec.ts
 
-# Development scripts
-scripts/
-!scripts/weekly-summary-cron.js
 
 # Logs
 logs/
