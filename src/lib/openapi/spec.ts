@@ -150,7 +150,7 @@ export function buildOpenApiSpec() {
             page: { type: 'integer' },
             limit: { type: 'integer' },
             total: { type: 'integer' },
-            totalPages: { type: 'integer' },
+            pages: { type: 'integer' },
           },
         },
         Transaction: {
@@ -159,8 +159,8 @@ export function buildOpenApiSpec() {
             id: { type: 'string', format: 'uuid' },
             accountId: { type: 'string', format: 'uuid' },
             userId: { type: ['string', 'null'], format: 'uuid' },
-            transactionDate: { type: 'string', format: 'date-time' },
-            postDate: { type: 'string', format: 'date-time' },
+            transactionDate: { type: 'string', format: 'date' },
+            postDate: { type: 'string', format: 'date' },
             description: { type: 'string' },
             categoryId: { type: 'string', format: 'uuid' },
             typeId: { type: 'string', format: 'uuid' },
@@ -359,7 +359,7 @@ export function buildOpenApiSpec() {
             ),
           },
           responses: {
-            201: jsonResponse(
+            200: jsonResponse(
               'Bulk creation result',
               z.object({
                 message: z.string(),
@@ -645,7 +645,7 @@ export function buildOpenApiSpec() {
             ),
           },
           responses: {
-            201: jsonResponse(
+            200: jsonResponse(
               'Bulk creation result',
               z.object({
                 message: z.string(),
@@ -840,7 +840,7 @@ export function buildOpenApiSpec() {
             ),
           },
           responses: {
-            201: jsonResponse(
+            200: jsonResponse(
               'Upload result',
               z.object({
                 created: z.array(z.object({ id: z.string() })),
@@ -1104,7 +1104,7 @@ export function buildOpenApiSpec() {
             ),
           },
           responses: {
-            201: jsonResponse(
+            200: jsonResponse(
               'Bulk creation result',
               z.object({
                 message: z.string(),
@@ -1233,7 +1233,7 @@ export function buildOpenApiSpec() {
             ),
           },
           responses: {
-            201: jsonResponse(
+            200: jsonResponse(
               'Bulk creation result',
               z.object({
                 message: z.string(),
@@ -1376,7 +1376,7 @@ export function buildOpenApiSpec() {
             ),
           },
           responses: {
-            201: jsonResponse(
+            200: jsonResponse(
               'Bulk creation result',
               z.object({
                 message: z.string(),

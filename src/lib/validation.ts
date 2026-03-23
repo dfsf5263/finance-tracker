@@ -96,6 +96,44 @@ export const typeUpdateSchema = z.object({
   isOutflow: z.boolean().optional(),
 })
 
+// Bulk request schemas
+export const bulkAccountsRequestSchema = z.object({
+  householdId: z.uuidv4({ error: 'Invalid household ID format' }),
+  accounts: z
+    .array(
+      z.object({
+        name: z.string().min(1, 'Account name is required').max(100, 'Account name too long'),
+      })
+    )
+    .min(1, 'Accounts array must not be empty'),
+})
+
+export const bulkCategoriesRequestSchema = z.object({
+  householdId: z.uuidv4({ error: 'Invalid household ID format' }),
+  categories: z
+    .array(
+      z.object({
+        name: z.string().min(1, 'Category name is required').max(100, 'Category name too long'),
+        description: z.string().max(500, 'Description too long').optional(),
+        icon: z.string().max(50, 'Icon name too long').optional(),
+        color: z.string().max(20, 'Color value too long').optional(),
+      })
+    )
+    .min(1, 'Categories array must not be empty'),
+})
+
+export const bulkTypesRequestSchema = z.object({
+  householdId: z.uuidv4({ error: 'Invalid household ID format' }),
+  types: z
+    .array(
+      z.object({
+        name: z.string().min(1, 'Type name is required').max(100, 'Type name too long'),
+        isOutflow: z.boolean().optional(),
+      })
+    )
+    .min(1, 'Types array must not be empty'),
+})
+
 // Query parameter validation
 export const paginationSchema = z.object({
   page: z

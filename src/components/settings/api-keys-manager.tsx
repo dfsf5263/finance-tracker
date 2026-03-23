@@ -213,6 +213,7 @@ export function ApiKeysManager() {
                     size="icon"
                     onClick={() => handleDelete(apiKey.id)}
                     disabled={deletingId === apiKey.id}
+                    aria-label={`Delete API key ${apiKey.name}`}
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
@@ -257,7 +258,12 @@ export function ApiKeysManager() {
                 <code className="flex-1 rounded border bg-muted p-3 text-xs break-all">
                   {newKeyValue}
                 </code>
-                <Button variant="outline" size="icon" onClick={() => copyToClipboard(newKeyValue)}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => copyToClipboard(newKeyValue)}
+                  aria-label="Copy API key to clipboard"
+                >
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>

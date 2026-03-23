@@ -120,7 +120,7 @@ export const GET = withApiLogging(
         },
       })
 
-      return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
     // Note: Don't disconnect Prisma in serverless environment
   }

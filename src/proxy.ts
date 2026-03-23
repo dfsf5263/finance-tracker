@@ -70,7 +70,7 @@ export default async function proxy(req: NextRequest) {
   // Content Security Policy
   // /docs loads Scalar's API reference bundle from jsDelivr and loads
   // fonts from fonts.scalar.com.
-  const isDocsRoute = pathname === '/docs'
+  const isDocsRoute = pathname === '/docs' || pathname.startsWith('/docs/')
   const scriptSrc = isDocsRoute
     ? "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://cdn.jsdelivr.net"
     : "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com"

@@ -3,20 +3,18 @@ import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
+import { validateRequestBody, bulkAccountsRequestSchema } from '@/lib/validation'
 
 export const POST = withApiLogging(async (request: NextRequest) => {
   let requestData
   try {
     requestData = await request.json()
-    const { accounts, householdId } = requestData
 
-    if (!householdId) {
-      return NextResponse.json({ error: 'Household ID is required' }, { status: 400 })
+    const validation = validateRequestBody(bulkAccountsRequestSchema, requestData)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
-
-    if (!Array.isArray(accounts) || accounts.length === 0) {
-      return NextResponse.json({ error: 'Accounts array is required' }, { status: 400 })
-    }
+    const { accounts, householdId } = validation.data
 
     // Verify user has write access to this household
     const authResult = await requireHouseholdWriteAccess(request, householdId)
@@ -36,7 +34,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
 
     // Filter out accounts that already exist (case-insensitive)
     const accountsToCreate = accounts.filter(
-      (account: { name: string }) => !existingNames.has(account.name.toLowerCase())
+      (account) => !existingNames.has(account.name.toLowerCase())
     )
 
     if (accountsToCreate.length === 0) {
@@ -48,7 +46,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     }
 
     // Prepare accounts for bulk creation
-    const accountsWithHousehold = accountsToCreate.map((account: { name: string }) => ({
+    const accountsWithHousehold = accountsToCreate.map((account) => ({
       name: account.name,
       householdId,
     }))
@@ -64,7 +62,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       where: {
         householdId,
         name: {
-          in: accountsToCreate.map((acct: { name: string }) => acct.name),
+          in: accountsToCreate.map((acct) => acct.name),
         },
       },
     })
