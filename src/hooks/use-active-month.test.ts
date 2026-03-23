@@ -118,4 +118,20 @@ describe('useActiveMonth', () => {
     expect(result.current.activeYear).toBe(2024)
     expect(result.current.activeMonth).toBe(1)
   })
+
+  it('falls back to current month when API returns 500', async () => {
+    mockApiFetch.mockResolvedValue({
+      data: null,
+      error: 'HTTP 500: Internal server error',
+      response: new Response(null, { status: 500 }),
+    })
+
+    const { result } = renderHook(() => useActiveMonth('hh-500'))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(result.current.activeYear).toBe(2024)
+    expect(result.current.activeMonth).toBe(1)
+    expect(result.current.isCurrentMonth).toBe(true)
+    expect(result.current.error).not.toBeNull()
+  })
 })

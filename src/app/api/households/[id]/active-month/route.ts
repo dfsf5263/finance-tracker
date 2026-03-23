@@ -120,21 +120,7 @@ export const GET = withApiLogging(
         },
       })
 
-      // Return current month as fallback with detailed error
-      const curMonth = currentMonth()
-      const curYear = currentYear()
-
-      return NextResponse.json(
-        {
-          year: curYear,
-          month: curMonth,
-          monthName: monthName(curMonth),
-          isCurrentMonth: true,
-          message: 'Using current month (error occurred while determining active month)',
-          error: error instanceof Error ? error.message : 'Unknown error',
-        },
-        { status: 200 }
-      ) // Return 200 with fallback data instead of 500 error
+      return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
     }
     // Note: Don't disconnect Prisma in serverless environment
   }

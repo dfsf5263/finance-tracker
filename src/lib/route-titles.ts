@@ -18,6 +18,8 @@ export function getPageTitle(pathname: string): string {
     '/dashboard/utility/dedupe': 'Utility - DeDupe',
     '/dashboard/utility/csv-converter': 'Utility - CSV Converter',
     '/dashboard/settings': 'Settings',
+    '/dashboard/settings/api-keys': 'Settings - API Keys',
+    '/docs': 'API Documentation',
   }
 
   // Handle dynamic household settings routes
