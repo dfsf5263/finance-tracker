@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
-import { requireHouseholdAccess } from '@/lib/auth-middleware'
+import { requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
 export const POST = withApiLogging(async (request: NextRequest) => {
@@ -18,8 +18,8 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       return NextResponse.json({ error: 'Types array is required' }, { status: 400 })
     }
 
-    // Verify user has access to this household
-    const authResult = await requireHouseholdAccess(request, householdId)
+    // Verify user has write access to this household
+    const authResult = await requireHouseholdWriteAccess(request, householdId)
     if (authResult instanceof NextResponse) {
       return authResult
     }

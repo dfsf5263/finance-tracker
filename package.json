@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "npm run generate:openapi && next build",
+    "generate:openapi": "tsx scripts/generate-openapi.ts",
     "start": "next start",
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
@@ -36,6 +37,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@better-auth/api-key": "^1.5.6",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -51,13 +53,14 @@
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@scalar/nextjs-api-reference": "^0.10.4",
     "@types/d3-sankey": "^0.12.5",
     "@types/d3-scale": "^4.0.9",
     "@types/d3-selection": "^3.0.11",
     "@types/d3-shape": "^3.1.8",
     "@types/papaparse": "^5.5.2",
     "@types/pg": "^8.18.0",
-    "better-auth": "^1.5.5",
+    "better-auth": "^1.5.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "d3-sankey": "^0.12.3",
@@ -86,7 +89,8 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.1",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "zod-openapi": "^5.4.6"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.7",

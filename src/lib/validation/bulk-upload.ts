@@ -70,7 +70,7 @@ export const bulkTransactionSchema = z.object({
 
 // Main bulk upload schema
 export const bulkUploadRequestSchema = z.object({
-  householdId: z.string().uuid('Invalid household ID'),
+  householdId: z.uuidv4({ error: 'Invalid household ID' }),
   transactions: z
     .array(bulkTransactionSchema)
     .min(1, 'At least one transaction required')

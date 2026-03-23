@@ -4,6 +4,8 @@ import { mockDb } from '@/test/mocks/db'
 
 vi.mock('@/lib/db', () => ({ db: mockDb }))
 vi.mock('@/lib/auth-helpers', () => ({ getSession: vi.fn() }))
+vi.mock('@/lib/auth', () => ({ getAuth: vi.fn() }))
+vi.mock('next/headers', () => ({ headers: vi.fn() }))
 vi.mock('@/lib/role-utils', () => ({
   canManageData: vi.fn(),
 }))
@@ -24,10 +26,14 @@ import {
   requireUserWriteAccess,
 } from '@/lib/auth-middleware'
 import { getSession } from '@/lib/auth-helpers'
+import { getAuth } from '@/lib/auth'
+import { headers } from 'next/headers'
 import { canManageData } from '@/lib/role-utils'
 
 const mockGetSession = vi.mocked(getSession)
 const mockCanManageData = vi.mocked(canManageData)
+const mockGetAuth = vi.mocked(getAuth)
+const mockHeaders = vi.mocked(headers)
 
 const HOUSEHOLD_ID = 'd4e5f6a7-b8c9-4123-8efa-234567890123'
 const USER_ID = 'test-user-id'
@@ -52,6 +58,10 @@ beforeEach(() => {
   mockGetSession.mockResolvedValue({ user: { id: USER_ID } } as never)
   mockDb.user.findUnique.mockResolvedValue(dbUser as never)
   mockCanManageData.mockReturnValue(true)
+  mockHeaders.mockResolvedValue(new Headers() as never)
+  mockGetAuth.mockReturnValue({
+    api: { verifyApiKey: vi.fn().mockResolvedValue({ valid: false }) },
+  } as never)
 })
 
 describe('requireAuth', () => {
@@ -91,6 +101,68 @@ describe('requireAuth', () => {
       expect(ctx.userId).toBe(USER_ID)
       expect(ctx.user.email).toBe('test@example.com')
     }
+  })
+
+  it('falls back to API key when no session and returns AuthContext', async () => {
+    mockGetSession.mockResolvedValue(null as never)
+    mockHeaders.mockResolvedValue(new Headers({ 'x-api-key': 'ft_testkey123' }) as never)
+    mockGetAuth.mockReturnValue({
+      api: {
+        verifyApiKey: vi.fn().mockResolvedValue({
+          valid: true,
+          key: { referenceId: USER_ID },
+        }),
+      },
+    } as never)
+    mockDb.user.findUnique.mockResolvedValue(dbUser as never)
+
+    const result = await requireAuth()
+    expect(result).not.toBeInstanceOf(NextResponse)
+    const ctx = result as Exclude<Awaited<ReturnType<typeof requireAuth>>, NextResponse>
+    expect(ctx.userId).toBe(USER_ID)
+    expect(ctx.user.email).toBe('test@example.com')
+  })
+
+  it('returns 401 when API key is invalid and no session', async () => {
+    mockGetSession.mockResolvedValue(null as never)
+    mockHeaders.mockResolvedValue(new Headers({ 'x-api-key': 'ft_badkey' }) as never)
+    mockGetAuth.mockReturnValue({
+      api: {
+        verifyApiKey: vi.fn().mockResolvedValue({ valid: false }),
+      },
+    } as never)
+
+    const result = await requireAuth()
+    expect(result).toBeInstanceOf(NextResponse)
+    expect((result as NextResponse).status).toBe(401)
+  })
+
+  it('returns 401 when API key is valid but user not found', async () => {
+    mockGetSession.mockResolvedValue(null as never)
+    mockHeaders.mockResolvedValue(new Headers({ 'x-api-key': 'ft_testkey123' }) as never)
+    mockGetAuth.mockReturnValue({
+      api: {
+        verifyApiKey: vi.fn().mockResolvedValue({
+          valid: true,
+          key: { referenceId: 'nonexistent-user-id' },
+        }),
+      },
+    } as never)
+    mockDb.user.findUnique.mockResolvedValue(null as never)
+
+    const result = await requireAuth()
+    expect(result).toBeInstanceOf(NextResponse)
+    expect((result as NextResponse).status).toBe(401)
+  })
+
+  it('prefers session auth over API key when both present', async () => {
+    const verifyApiKey = vi.fn()
+    mockGetAuth.mockReturnValue({ api: { verifyApiKey } } as never)
+    mockHeaders.mockResolvedValue(new Headers({ 'x-api-key': 'ft_testkey123' }) as never)
+
+    const result = await requireAuth()
+    expect(result).not.toBeInstanceOf(NextResponse)
+    expect(verifyApiKey).not.toHaveBeenCalled()
   })
 })
 

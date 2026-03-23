@@ -16,6 +16,8 @@ const isPublicRoute = (pathname: string) => {
     '/api/auth',
     '/api/health',
     '/api/cron',
+    '/docs',
+    '/openapi.json',
   ]
 
   return publicPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
@@ -66,13 +68,23 @@ export default async function proxy(req: NextRequest) {
   response.headers.set('Permissions-Policy', 'geolocation=(), camera=(), microphone=()')
 
   // Content Security Policy
+  // /docs loads Scalar's API reference bundle from jsDelivr and loads
+  // fonts from fonts.scalar.com.
+  const isDocsRoute = pathname === '/docs'
+  const scriptSrc = isDocsRoute
+    ? "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://cdn.jsdelivr.net"
+    : "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com"
+  const connectSrc = "connect-src 'self'"
+  const fontSrc = isDocsRoute
+    ? "font-src 'self' https://fonts.gstatic.com https://fonts.scalar.com"
+    : "font-src 'self' https://fonts.gstatic.com"
   const cspHeader = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+    scriptSrc,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
-    "font-src 'self' https://fonts.gstatic.com",
-    "connect-src 'self'",
+    fontSrc,
+    connectSrc,
     "frame-src 'self' https://challenges.cloudflare.com",
     "worker-src 'self' blob:",
     "object-src 'none'",
