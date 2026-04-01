@@ -2,7 +2,7 @@ import { parseInstitutionDate } from '@/lib/date-utils'
 
 // ── Types ───────────────────────────────────────────────────
 
-export type InstitutionKey = 'fidelity' | 'amex' | 'chase'
+export type InstitutionKey = 'fidelity' | 'amex' | 'chase' | 'wellsfargo'
 
 export type MappedField = 'transactionDate' | 'postDate' | 'description' | 'amount'
 
@@ -53,6 +53,17 @@ export const INSTITUTIONS: Record<InstitutionKey, InstitutionConfig> = {
       'Post Date': 'postDate',
       Description: 'description',
       Amount: 'amount',
+    },
+    invertAmount: false,
+    dateFormat: 'mdy',
+    amountNote: 'Expenses are negative, credits are positive',
+  },
+  wellsfargo: {
+    label: 'Wells Fargo',
+    mapping: {
+      'Transaction Date': 'transactionDate',
+      Amount: 'amount',
+      Category: 'description',
     },
     invertAmount: false,
     dateFormat: 'mdy',
