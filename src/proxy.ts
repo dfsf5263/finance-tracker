@@ -49,7 +49,7 @@ export default async function proxy(req: NextRequest) {
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
     response.headers.set(
       'Access-Control-Allow-Headers',
-      'Content-Type, Authorization, X-Requested-With'
+      'Content-Type, Authorization, X-Requested-With, x-api-key'
     )
     response.headers.set('Access-Control-Allow-Credentials', 'true')
     response.headers.set('Access-Control-Max-Age', '86400')
@@ -120,6 +120,11 @@ export default async function proxy(req: NextRequest) {
       }
 
       // Allow access to 2FA route with partial auth
+      return response
+    }
+
+    // Allow API requests that carry an API key — the route handler validates the key
+    if (!sessionCookie && pathname.startsWith('/api/') && req.headers.get('x-api-key')) {
       return response
     }
 

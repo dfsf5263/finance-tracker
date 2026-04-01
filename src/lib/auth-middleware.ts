@@ -5,6 +5,7 @@ import { headers } from 'next/headers'
 import { db } from '@/lib/db'
 import { HouseholdRole } from '@prisma/client'
 import { canManageData } from '@/lib/role-utils'
+import logger from '@/lib/logger'
 
 export interface AuthContext {
   userId: string
@@ -30,16 +31,36 @@ const userSelect = {
 async function authenticateWithApiKey(): Promise<AuthContext | null> {
   const headersList = await headers()
   const apiKeyValue = headersList.get('x-api-key')
-  if (!apiKeyValue) return null
+  if (!apiKeyValue) {
+    logger.debug('[debug:apikey] no x-api-key header present')
+    return null
+  }
+
+  logger.debug({ keyPrefix: apiKeyValue.slice(0, 8) }, '[debug:apikey] verifying key')
 
   const auth = getAuth()
-  const result = await auth.api.verifyApiKey({ body: { key: apiKeyValue } })
+  let result: Awaited<ReturnType<typeof auth.api.verifyApiKey>>
+  try {
+    result = await auth.api.verifyApiKey({ body: { key: apiKeyValue } })
+  } catch (err) {
+    logger.error({ err }, '[debug:apikey] verifyApiKey threw')
+    return null
+  }
+
+  logger.debug(
+    { valid: result.valid, hasKey: !!result.key, referenceId: result.key?.referenceId },
+    '[debug:apikey] verifyApiKey result'
+  )
+
   if (!result.valid || !result.key) return null
 
   const user = await db.user.findUnique({
     where: { id: result.key.referenceId },
     select: userSelect,
   })
+
+  logger.debug({ found: !!user, referenceId: result.key.referenceId }, '[debug:apikey] user lookup')
+
   if (!user) return null
 
   return { userId: user.id, user }
