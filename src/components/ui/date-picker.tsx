@@ -36,8 +36,8 @@ export function CustomDatePicker({
       // Format as ISO date string (YYYY-MM-DD)
       const formatted = dateToISOLocal(date)
       onChange(formatted)
-      setOpen(false)
     }
+    setOpen(false)
   }
 
   return (

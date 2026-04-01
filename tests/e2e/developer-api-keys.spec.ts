@@ -13,7 +13,7 @@ test.describe('developer — API keys', () => {
 
   test('can generate a key and use it for authenticated API requests', async ({
     page,
-    request,
+    playwright,
   }) => {
     // Open create dialog
     await page.getByRole('button', { name: /create api key/i }).click()
@@ -40,14 +40,21 @@ test.describe('developer — API keys', () => {
     await expect(page.getByRole('cell', { name: 'E2E Test Key', exact: true })).toBeVisible()
 
     // --- Verify the key authenticates API requests ---
-    // Uses an isolated request context (no session cookie) to confirm the
+    // Create a fresh context with no session cookie to confirm the
     // key alone is sufficient for authentication.
-    const response = await request.get('/api/households', {
-      headers: { 'x-api-key': keyValue },
+    const apiCtx = await playwright.request.newContext({
+      baseURL: test.info().project.use.baseURL,
+      storageState: undefined,
+      extraHTTPHeaders: { 'x-api-key': keyValue },
     })
-    expect(response.status()).toBe(200)
-    const body = await response.json()
-    expect(Array.isArray(body)).toBe(true)
+    try {
+      const response = await apiCtx.get('/api/households')
+      expect(response.status()).toBe(200)
+      const body = await response.json()
+      expect(Array.isArray(body)).toBe(true)
+    } finally {
+      await apiCtx.dispose()
+    }
 
     // --- Clean up: delete the test key ---
     const testKeyRow = page.getByRole('row', { name: /E2E Test Key/ })

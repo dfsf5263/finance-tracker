@@ -146,6 +146,17 @@ export const bulkUsersRequestSchema = z.object({
     .min(1, 'Users array must not be empty'),
 })
 
+export const bulkHouseholdsRequestSchema = z.object({
+  households: z
+    .array(
+      z.object({
+        name: z.string().min(1, 'Household name is required').max(100, 'Household name too long'),
+        annualBudget: z.union([z.string(), z.number()]).optional(),
+      })
+    )
+    .min(1, 'Households array must not be empty'),
+})
+
 // Query parameter validation
 export const paginationSchema = z.object({
   page: z

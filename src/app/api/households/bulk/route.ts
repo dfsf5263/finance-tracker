@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logApiError } from '@/lib/error-logger'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
+import { validateRequestBody, bulkHouseholdsRequestSchema } from '@/lib/validation'
 
 export const POST = withApiLogging(async (request: NextRequest) => {
   let requestData
@@ -12,11 +13,11 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     const userId = authContext.userId
 
     requestData = await request.json()
-    const { households } = requestData
-
-    if (!Array.isArray(households) || households.length === 0) {
-      return NextResponse.json({ error: 'Households array is required' }, { status: 400 })
+    const validation = validateRequestBody(bulkHouseholdsRequestSchema, requestData)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
+    const { households } = validation.data
 
     // Get existing households the user owns to avoid duplicates
     const existingHouseholds = await db.userHousehold.findMany({
@@ -31,9 +32,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     )
 
     // Filter out households that already exist (case-insensitive)
-    const householdsToCreate = households.filter(
-      (h: { name: string }) => !existingNames.has(h.name.toLowerCase())
-    )
+    const householdsToCreate = households.filter((h) => !existingNames.has(h.name.toLowerCase()))
 
     if (householdsToCreate.length === 0) {
       return NextResponse.json({
@@ -46,10 +45,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     // Create each household + UserHousehold join atomically
     const created = await db.$transaction(async (tx) => {
       const results = []
-      for (const h of householdsToCreate as Array<{
-        name: string
-        annualBudget?: number | string
-      }>) {
+      for (const h of householdsToCreate) {
         const householdData: { name: string; annualBudget?: number | string } = {
           name: h.name,
         }
@@ -76,7 +72,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     return NextResponse.json({
       message: `Successfully created ${created.length} households`,
       created,
-      skipped: households.length - householdsToCreate.length,
+      skipped: households.length - created.length,
     })
   } catch (error) {
     await logApiError({

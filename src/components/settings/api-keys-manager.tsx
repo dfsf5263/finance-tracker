@@ -37,9 +37,9 @@ interface ApiKeyItem {
   start: string | null
   prefix: string | null
   enabled: boolean
-  expiresAt: Date | null
-  createdAt: Date
-  lastRequest: Date | null
+  expiresAt: string | null
+  createdAt: string
+  lastRequest: string | null
   requestCount: number
 }
 
@@ -59,7 +59,7 @@ export function ApiKeysManager() {
     try {
       const result = await authClient.apiKey.list()
       if (result.data) {
-        setApiKeys(result.data.apiKeys as ApiKeyItem[])
+        setApiKeys(result.data.apiKeys as unknown as ApiKeyItem[])
       }
     } catch {
       toast.error('Failed to load API keys')
@@ -138,7 +138,7 @@ export function ApiKeysManager() {
     setShowCreateDialog(false)
   }
 
-  const formatDate = (date: Date | null) => {
+  const formatDate = (date: string | null) => {
     if (!date) return '—'
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
