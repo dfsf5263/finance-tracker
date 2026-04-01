@@ -32,8 +32,17 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       existingAccounts.map((acct: { name: string }) => acct.name.toLowerCase())
     )
 
-    // Filter out accounts that already exist (case-insensitive)
-    const accountsToCreate = accounts.filter(
+    // De-dupe incoming accounts by name (case-insensitive), keeping first occurrence
+    const seenInRequest = new Set<string>()
+    const uniqueAccounts = accounts.filter((account) => {
+      const key = account.name.toLowerCase()
+      if (seenInRequest.has(key)) return false
+      seenInRequest.add(key)
+      return true
+    })
+
+    // Filter out accounts that already exist in the DB (case-insensitive)
+    const accountsToCreate = uniqueAccounts.filter(
       (account) => !existingNames.has(account.name.toLowerCase())
     )
 
@@ -70,7 +79,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     return NextResponse.json({
       message: `Successfully created ${createResult.count} accounts`,
       created: createdAccounts,
-      skipped: accounts.length - accountsToCreate.length,
+      skipped: accounts.length - createResult.count,
     })
   } catch (error) {
     await logApiError({

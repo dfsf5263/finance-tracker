@@ -32,8 +32,17 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       existingTypes.map((type: { name: string }) => type.name.toLowerCase())
     )
 
-    // Filter out types that already exist (case-insensitive)
-    const typesToCreate = types.filter((type) => !existingNames.has(type.name.toLowerCase()))
+    // De-dupe incoming types by name (case-insensitive), keeping first occurrence
+    const seenInRequest = new Set<string>()
+    const uniqueTypes = types.filter((type) => {
+      const key = type.name.toLowerCase()
+      if (seenInRequest.has(key)) return false
+      seenInRequest.add(key)
+      return true
+    })
+
+    // Filter out types that already exist in the DB (case-insensitive)
+    const typesToCreate = uniqueTypes.filter((type) => !existingNames.has(type.name.toLowerCase()))
 
     if (typesToCreate.length === 0) {
       return NextResponse.json({
@@ -69,7 +78,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     return NextResponse.json({
       message: `Successfully created ${createResult.count} types`,
       created: createdTypes,
-      skipped: types.length - typesToCreate.length,
+      skipped: types.length - createResult.count,
     })
   } catch (error) {
     await logApiError({

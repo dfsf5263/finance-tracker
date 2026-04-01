@@ -390,6 +390,7 @@ export function buildOpenApiSpec() {
                 message: z.string().optional(),
               })
             ),
+            500: errorResponse('Internal server error'),
             ...authResponses,
           },
         },

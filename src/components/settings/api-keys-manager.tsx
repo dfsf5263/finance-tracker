@@ -123,8 +123,12 @@ export function ApiKeysManager() {
   }
 
   const copyToClipboard = async (text: string) => {
-    await navigator.clipboard.writeText(text)
-    toast.success('Copied to clipboard')
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success('Copied to clipboard')
+    } catch {
+      toast.error('Failed to copy to clipboard')
+    }
   }
 
   const resetCreateForm = () => {
@@ -213,7 +217,7 @@ export function ApiKeysManager() {
                     size="icon"
                     onClick={() => handleDelete(apiKey.id)}
                     disabled={deletingId === apiKey.id}
-                    aria-label={`Delete API key ${apiKey.name}`}
+                    aria-label={`Delete API key ${apiKey.name ?? 'Unnamed'}`}
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>

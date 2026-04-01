@@ -40,6 +40,13 @@ describe('POST /api/users/bulk', () => {
       expect(response.status).toBe(400)
     })
 
+    it('returns 400 when householdId is not a valid UUID', async () => {
+      const response = await POST(
+        makePostRequest({ householdId: 'not-a-uuid', users: [{ name: 'Alice' }] })
+      )
+      expect(response.status).toBe(400)
+    })
+
     it('returns 400 when users array is missing', async () => {
       const response = await POST(makePostRequest({ householdId: HOUSEHOLD_ID }))
       expect(response.status).toBe(400)

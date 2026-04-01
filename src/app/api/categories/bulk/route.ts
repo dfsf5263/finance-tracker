@@ -32,8 +32,17 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       existingCategories.map((cat: { name: string }) => cat.name.toLowerCase())
     )
 
-    // Filter out categories that already exist (case-insensitive)
-    const categoriesToCreate = categories.filter(
+    // De-dupe incoming categories by name (case-insensitive), keeping first occurrence
+    const seenInRequest = new Set<string>()
+    const uniqueCategories = categories.filter((category) => {
+      const key = category.name.toLowerCase()
+      if (seenInRequest.has(key)) return false
+      seenInRequest.add(key)
+      return true
+    })
+
+    // Filter out categories that already exist in the DB (case-insensitive)
+    const categoriesToCreate = uniqueCategories.filter(
       (category) => !existingNames.has(category.name.toLowerCase())
     )
 
@@ -70,7 +79,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     return NextResponse.json({
       message: `Successfully created ${createResult.count} categories`,
       created: createdCategories,
-      skipped: categories.length - categoriesToCreate.length,
+      skipped: categories.length - createResult.count,
     })
   } catch (error) {
     await logApiError({

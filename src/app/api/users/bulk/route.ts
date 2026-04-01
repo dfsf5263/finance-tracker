@@ -3,20 +3,18 @@ import { db } from '@/lib/db'
 import { logApiError } from '@/lib/error-logger'
 import { requireHouseholdWriteAccess } from '@/lib/auth-middleware'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
+import { validateRequestBody, bulkUsersRequestSchema } from '@/lib/validation'
 
 export const POST = withApiLogging(async (request: NextRequest) => {
   let requestData
   try {
     requestData = await request.json()
-    const { users, householdId } = requestData
 
-    if (!householdId) {
-      return NextResponse.json({ error: 'Household ID is required' }, { status: 400 })
+    const validation = validateRequestBody(bulkUsersRequestSchema, requestData)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
-
-    if (!Array.isArray(users) || users.length === 0) {
-      return NextResponse.json({ error: 'Users array is required' }, { status: 400 })
-    }
+    const { users, householdId } = validation.data
 
     // Verify user has write access to this household
     const authResult = await requireHouseholdWriteAccess(request, householdId)
@@ -34,10 +32,17 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       existingUsers.map((user: { name: string }) => user.name.toLowerCase())
     )
 
-    // Filter out users that already exist (case-insensitive)
-    const usersToCreate = users.filter(
-      (user: { name: string }) => !existingNames.has(user.name.toLowerCase())
-    )
+    // De-dupe incoming users by name (case-insensitive), keeping first occurrence
+    const seenInRequest = new Set<string>()
+    const uniqueUsers = users.filter((user) => {
+      const key = user.name.toLowerCase()
+      if (seenInRequest.has(key)) return false
+      seenInRequest.add(key)
+      return true
+    })
+
+    // Filter out users that already exist in the DB (case-insensitive)
+    const usersToCreate = uniqueUsers.filter((user) => !existingNames.has(user.name.toLowerCase()))
 
     if (usersToCreate.length === 0) {
       return NextResponse.json({
@@ -48,18 +53,16 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     }
 
     // Prepare users for bulk creation
-    const usersWithHousehold = usersToCreate.map(
-      (user: { name: string; annualBudget?: number | string }) => {
-        const data: { name: string; householdId: string; annualBudget?: number | string } = {
-          name: user.name,
-          householdId,
-        }
-        if (user.annualBudget !== undefined && user.annualBudget !== null) {
-          data.annualBudget = user.annualBudget
-        }
-        return data
+    const usersWithHousehold = usersToCreate.map((user) => {
+      const data: { name: string; householdId: string; annualBudget?: number | string } = {
+        name: user.name,
+        householdId,
       }
-    )
+      if (user.annualBudget !== undefined && user.annualBudget !== null) {
+        data.annualBudget = user.annualBudget
+      }
+      return data
+    })
 
     // Bulk create users
     const createResult = await db.householdUser.createMany({
@@ -72,7 +75,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       where: {
         householdId,
         name: {
-          in: usersToCreate.map((user: { name: string }) => user.name),
+          in: usersToCreate.map((user) => user.name),
         },
       },
     })
@@ -80,7 +83,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
     return NextResponse.json({
       message: `Successfully created ${createResult.count} users`,
       created: createdUsers,
-      skipped: users.length - usersToCreate.length,
+      skipped: users.length - createResult.count,
     })
   } catch (error) {
     await logApiError({

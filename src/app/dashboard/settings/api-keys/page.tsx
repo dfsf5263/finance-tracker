@@ -1,5 +1,3 @@
-'use client'
-
 import { ApiKeysManager } from '@/components/settings/api-keys-manager'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 

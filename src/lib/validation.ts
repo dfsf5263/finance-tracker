@@ -134,6 +134,18 @@ export const bulkTypesRequestSchema = z.object({
     .min(1, 'Types array must not be empty'),
 })
 
+export const bulkUsersRequestSchema = z.object({
+  householdId: z.uuidv4({ error: 'Invalid household ID format' }),
+  users: z
+    .array(
+      z.object({
+        name: z.string().min(1, 'User name is required').max(100, 'User name too long'),
+        annualBudget: z.union([z.string(), z.number()]).optional(),
+      })
+    )
+    .min(1, 'Users array must not be empty'),
+})
+
 // Query parameter validation
 export const paginationSchema = z.object({
   page: z
