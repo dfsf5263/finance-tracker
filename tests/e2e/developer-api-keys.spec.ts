@@ -15,6 +15,8 @@ test.describe('developer — API keys', () => {
     page,
     playwright,
   }) => {
+    const keyName = `E2E Test Key ${test.info().workerIndex}-${Date.now()}`
+
     // Open create dialog
     await page.getByRole('button', { name: /create api key/i }).click()
     const dialog = page.getByRole('dialog')
@@ -22,7 +24,7 @@ test.describe('developer — API keys', () => {
     await expect(dialog.getByRole('heading', { name: 'Create API Key' })).toBeVisible()
 
     // Fill in name and submit
-    await dialog.getByLabel('Name').fill('E2E Test Key')
+    await dialog.getByLabel('Name').fill(keyName)
     await dialog.getByRole('button', { name: 'Create API Key' }).click()
 
     // Key is revealed — shown once
@@ -37,7 +39,7 @@ test.describe('developer — API keys', () => {
     await expect(dialog).not.toBeVisible()
 
     // Key appears in the table by name
-    await expect(page.getByRole('cell', { name: 'E2E Test Key', exact: true })).toBeVisible()
+    await expect(page.getByRole('cell', { name: keyName, exact: true })).toBeVisible()
 
     // --- Verify the key authenticates API requests ---
     // Create a fresh context with no session cookie to confirm the
@@ -57,8 +59,8 @@ test.describe('developer — API keys', () => {
     }
 
     // --- Clean up: delete the test key ---
-    const testKeyRow = page.getByRole('row', { name: /E2E Test Key/ })
+    const testKeyRow = page.getByRole('row', { name: new RegExp(keyName) })
     await testKeyRow.getByRole('button').click()
-    await expect(page.getByRole('cell', { name: 'E2E Test Key', exact: true })).not.toBeVisible()
+    await expect(page.getByRole('cell', { name: keyName, exact: true })).not.toBeVisible()
   })
 })

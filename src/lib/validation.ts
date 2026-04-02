@@ -80,7 +80,7 @@ export const userUpdateSchema = z.object({
 // Invitation validation schemas
 export const invitationCreateSchema = z.object({
   email: z.email({ error: 'Invalid email format' }),
-  role: z.enum(['ADMIN', 'MEMBER'], 'Invalid role'),
+  role: z.enum(['OWNER', 'MEMBER', 'VIEWER'], { error: 'Invalid role' }),
   householdId: z.uuidv4({ error: 'Invalid household ID format' }),
 })
 
