@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # ── Release tagging script ──────────────────────────────────
-# Automates post-merge release tagging and develop version bump.
+# Automates post-merge release tagging and version bump branch creation.
 #
 # Prerequisites:
-#   - develop → main merge already completed via PR
+#   - Feature branch PR already merged to main
 #   - Working tree is clean
 #   - jq is installed
 #
@@ -66,14 +66,6 @@ if [[ "$LOCAL_MAIN" != "$REMOTE_MAIN" ]]; then
   exit 1
 fi
 
-LOCAL_DEVELOP=$(git rev-parse develop)
-REMOTE_DEVELOP=$(git rev-parse origin/develop)
-if [[ "$LOCAL_DEVELOP" != "$REMOTE_DEVELOP" ]]; then
-  echo "Error: local develop ($LOCAL_DEVELOP) differs from origin/develop ($REMOTE_DEVELOP)." >&2
-  echo "Run: git checkout develop && git pull" >&2
-  exit 1
-fi
-
 # ── Read version from main ──────────────────────────────────
 
 VERSION=$(git show origin/main:package.json | jq -r .version)
@@ -101,23 +93,10 @@ echo
 
 # ── Confirm ──────────────────────────────────────────────────
 
-read -rp "Create tag ${TAG} on main and merge into develop? [y/N] " CONFIRM
+read -rp "Create tag ${TAG} on main and create version bump branch? [y/N] " CONFIRM
 if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
   echo "Aborted."
   exit 0
-fi
-
-# ── Merge main into develop ─────────────────────────────────
-# Skip if already done (idempotent re-run after a resolved conflict).
-
-echo
-run git checkout develop
-if git merge-base --is-ancestor origin/main HEAD; then
-  echo "✓ main is already merged into develop — skipping"
-else
-  echo "Merging main into develop..."
-  run git merge main --no-edit
-  echo "✓ main merged into develop"
 fi
 
 # ── Prompt for next version bump ─────────────────────────────
@@ -140,15 +119,20 @@ case "$BUMP_CHOICE" in
     ;;
 esac
 
-# ── Bump version on develop ─────────────────────────────────
+# ── Bump version on release branch ─────────────────────────
 
 echo
 echo "Bumping ${BUMP_TYPE} version..."
 if $DRY_RUN; then
   NEXT_VERSION=$(npx --yes semver "$VERSION" -i "$BUMP_TYPE")
-  echo "[dry-run] npm version ${BUMP_TYPE} --no-git-tag-version"
   echo "[dry-run] Next version would be: ${NEXT_VERSION}"
+  echo "[dry-run] git checkout -b release/version-${NEXT_VERSION} origin/main"
+  echo "[dry-run] npm version ${BUMP_TYPE} --no-git-tag-version"
+  echo "[dry-run] git commit -m 'chore: bump version to ${NEXT_VERSION}'"
+  echo "[dry-run] git push origin release/version-${NEXT_VERSION}"
 else
+  NEXT_VERSION=$(npx --yes semver "$VERSION" -i "$BUMP_TYPE")
+  run git checkout -b "release/version-${NEXT_VERSION}" origin/main
   npm version "$BUMP_TYPE" --no-git-tag-version
   NEXT_VERSION=$(jq -r .version package.json)
 fi
@@ -165,12 +149,13 @@ echo
 echo "Running npm install..."
 run npm install
 
-# ── Commit version bump ──────────────────────────────────────
+# ── Commit and push release branch ──────────────────────────
 
 echo
 echo "Committing version bump..."
 run git add package.json package-lock.json
 run git commit -m "chore: bump version to ${NEXT_VERSION}"
+run git push origin "release/version-${NEXT_VERSION}"
 
 # ── Tag main and push everything ─────────────────────────────
 # Tag and push happen LAST so nothing is irreversible until all
@@ -203,14 +188,12 @@ if ! $REMOTE_TAG_EXISTS; then
   echo "Pushing tag ${TAG}..."
   run git push origin "$TAG"
 fi
-echo "Pushing develop branch..."
-run git push origin develop
 
 echo
 echo "✓ Done!"
 echo
 echo "  Tagged:   ${TAG} on main"
-echo "  Develop:  bumped to ${NEXT_VERSION}"
+echo "  Bump PR:  release/version-${NEXT_VERSION} → main"
 echo
 REPO_URL=$(git remote get-url origin | sed 's|.*github.com[:/]||;s|\.git$||')
 echo "Check the release workflow: https://github.com/${REPO_URL}/actions/workflows/release.yml"

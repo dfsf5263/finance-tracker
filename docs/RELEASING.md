@@ -26,9 +26,9 @@ Update the version in `package.json`:
 # Edit package.json, changing version from e.g. "0.1.0" to "0.2.0"
 ```
 
-### 2. Merge to main
+### 2. Open a feature branch PR
 
-Commit the version bump and merge to `main` (via PR or direct push). This triggers a nightly build — the new code is now available at `:nightly`.
+Work on a feature branch off `main`, then open a PR and squash-merge it to `main`. This triggers a nightly build — the new code is now available at `:nightly`.
 
 ### 3. Create and push a Git tag
 
@@ -53,7 +53,7 @@ Check the [Actions tab](https://github.com/dfsf5263/finance-tracker/actions/work
 
 ### Using the release script
 
-After merging develop into main via PR, run the release script to automate tagging and version bumping:
+After your feature branch PR is merged to main, run the release script to automate tagging and version bump branch creation:
 
 ```bash
 bash scripts/release-tag.sh            # normal run
@@ -64,10 +64,10 @@ The script will:
 
 1. Verify branches are clean and in sync with origin
 2. Tag main with the version from `package.json` and push the tag
-3. Merge main back into develop
-4. Prompt for the next version bump (major / minor / patch)
+3. Prompt for the next version bump (major / minor / patch)
+4. Create a `release/version-X.Y.Z` branch off main with the bumped version
 5. Run `npm audit` and `npm install`
-6. Commit and push the version bump to develop
+6. Commit and push the release branch — open the PR to merge it to main
 
 ## What Triggers What
 

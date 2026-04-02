@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures'
-import type { Page } from '@playwright/test'
+import type { APIRequestContext, Page } from '@playwright/test'
 import { displayDate, displayDateFull } from '../../src/lib/date-utils'
 
 const MONTH_NAMES = [
@@ -57,12 +57,57 @@ async function pickDate(page: Page, labelText: string, year: number, month: numb
 const testId = Date.now()
 const addDesc = `E2E Purchase ${testId}`
 
+async function cleanupTestTransactions(request: APIRequestContext, ...descriptions: string[]) {
+  const householdsRes = await request.get('/api/households')
+  if (!householdsRes.ok()) return
+  const households = (await householdsRes.json()) as { id: string; name: string }[]
+  const hh = households.find((h) => h.name === 'E2E Test Household')
+  if (!hh) return
+
+  for (const desc of descriptions) {
+    const searchRes = await request.get(
+      `/api/transactions?householdId=${hh.id}&search=${encodeURIComponent(desc)}&limit=100`
+    )
+    if (!searchRes.ok()) continue
+    const { transactions } = (await searchRes.json()) as {
+      transactions: { id: string; description: string }[]
+    }
+    for (const tx of transactions.filter((tx) => tx.description === desc)) {
+      await request.delete(`/api/transactions/${tx.id}`)
+    }
+  }
+}
+
 test.describe('transaction management', () => {
   test.describe.configure({ mode: 'serial' })
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/dashboard/transactions/manage')
     await expect(page.getByRole('main')).toBeVisible()
+  })
+
+  test.afterAll(async ({ request }) => {
+    await cleanupTestTransactions(
+      request,
+      addDesc,
+      `E2E Edited ${testId}`,
+    )
+    // Clean up any "E2E TZ Date" transactions left from this run
+    const householdsRes = await request.get('/api/households')
+    if (!householdsRes.ok()) return
+    const households = (await householdsRes.json()) as { id: string; name: string }[]
+    const hh = households.find((h) => h.name === 'E2E Test Household')
+    if (!hh) return
+    const searchRes = await request.get(
+      `/api/transactions?householdId=${hh.id}&search=${encodeURIComponent('E2E TZ Date')}&limit=100`
+    )
+    if (!searchRes.ok()) return
+    const { transactions } = (await searchRes.json()) as {
+      transactions: { id: string; description: string }[]
+    }
+    for (const tx of transactions.filter((tx) => tx.description.startsWith('E2E TZ Date'))) {
+      await request.delete(`/api/transactions/${tx.id}`)
+    }
   })
 
   test('transaction grid loads', async ({ page }) => {

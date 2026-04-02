@@ -88,6 +88,33 @@ Transaction Date,Post Date,Description,Category,Type,Amount,Memo
 
 ---
 
+### Wells Fargo
+
+Expenses are exported as **negative** amounts. Credits are **positive** amounts.
+
+**Date format:** `MM/DD/YYYY`
+**Amount inversion:** None
+
+**CSV headers:**
+
+| Header           | Mapped To        | Notes     |
+|------------------|------------------|-----------|
+| `Transaction Date` | Transaction Date |           |
+| `Amount`         | Amount           |           |
+| `Memo`           | —                | Discarded |
+| `Description`    | -      |           |
+| `Category`       | Description                |  |
+| `Type`           | —                | Discarded |
+
+**Example row:**
+
+```csv
+Transaction Date,Amount,Memo,Description,Category,Type
+02/27/2026,-31.87,*,,BRIGHTLEAF BOOKSHOP,
+```
+
+---
+
 ## Output: Finance Tracker Excel Format
 
 The converter produces an `.xlsx` workbook with a **Transactions** sheet and a hidden **_Lists** sheet used for dropdown validations.

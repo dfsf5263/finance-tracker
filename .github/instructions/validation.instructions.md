@@ -16,19 +16,19 @@ import { z } from 'zod'
 
 export const entityCreateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
-  householdId: z.string().uuid(),
+  householdId: z.uuidv4({ error: 'Invalid household ID format' }),
   amount: z.number().or(z.string().transform(Number)),
 })
 
 export const entityUpdateSchema = entityCreateSchema.partial().extend({
-  id: z.string().uuid(),
+  id: z.uuidv4({ error: 'Invalid ID format' }),
 })
 ```
 
 ## Conventions
 
 - All string fields: set `min(1)` for required, `max()` for length limits
-- IDs: always `z.string().uuid()`
+- IDs: always `z.uuidv4({ error: '...' })` (Zod 4 — more precise than `z.string().uuid()`)
 - Amounts: accept both `number` and string-to-number transforms
 - Dates: validate as ISO strings
 - Pagination: constrain page (min 1) and pageSize (1-1000)

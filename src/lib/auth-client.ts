@@ -1,5 +1,6 @@
 import { createAuthClient } from 'better-auth/react'
 import { inferAdditionalFields, twoFactorClient } from 'better-auth/client/plugins'
+import { apiKeyClient } from '@better-auth/api-key/client'
 import type { AuthInstance } from '@/lib/auth'
 import type { Session, User } from '@/lib/auth'
 
@@ -14,6 +15,7 @@ export const authClient = createAuthClient({
         }, 100)
       },
     }),
+    apiKeyClient(),
   ],
 })
 

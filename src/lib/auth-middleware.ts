@@ -1,8 +1,11 @@
 import { getSession } from '@/lib/auth-helpers'
+import { getAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import { db } from '@/lib/db'
 import { HouseholdRole } from '@prisma/client'
 import { canManageData } from '@/lib/role-utils'
+import logger from '@/lib/logger'
 
 export interface AuthContext {
   userId: string
@@ -14,40 +17,73 @@ export interface AuthContext {
   }
 }
 
+const userSelect = {
+  id: true,
+  email: true,
+  firstName: true,
+  lastName: true,
+} as const
+
 /**
- * Middleware to verify user authentication
- * Returns the authenticated user context or an error response
+ * Attempt to authenticate via API key from the x-api-key header.
+ * Returns an AuthContext if valid, or null if no key is present / key is invalid.
+ */
+async function authenticateWithApiKey(): Promise<AuthContext | null> {
+  const headersList = await headers()
+  const apiKeyValue = headersList.get('x-api-key')
+  if (!apiKeyValue) return null
+
+  const auth = getAuth()
+  let result: Awaited<ReturnType<typeof auth.api.verifyApiKey>>
+  try {
+    result = await auth.api.verifyApiKey({ body: { key: apiKeyValue } })
+  } catch (err) {
+    logger.error({ err }, 'api key verification failed unexpectedly')
+    return null
+  }
+
+  if (!result.valid || !result.key) return null
+
+  const user = await db.user.findUnique({
+    where: { id: result.key.referenceId },
+    select: userSelect,
+  })
+  if (!user) return null
+
+  return { userId: user.id, user }
+}
+
+/**
+ * Middleware to verify user authentication.
+ * Checks session cookies first, then falls back to API key (x-api-key header).
+ * Returns the authenticated user context or an error response.
  */
 export async function requireAuth(): Promise<AuthContext | NextResponse> {
+  // 1. Try session-based auth
   const session = await getSession()
   const userId = session?.user?.id
 
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (userId) {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: userSelect,
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User account not properly synced. Please sign out and sign back in.' },
+        { status: 401 }
+      )
+    }
+
+    return { userId, user }
   }
 
-  // Get user from database
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-    },
-  })
+  // 2. Fall back to API key auth
+  const apiKeyAuth = await authenticateWithApiKey()
+  if (apiKeyAuth) return apiKeyAuth
 
-  if (!user) {
-    return NextResponse.json(
-      { error: 'User account not properly synced. Please sign out and sign back in.' },
-      { status: 401 }
-    )
-  }
-
-  return {
-    userId,
-    user,
-  }
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 }
 
 /**

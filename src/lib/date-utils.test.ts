@@ -304,6 +304,11 @@ describe('isValidDateMDY', () => {
     expect(isValidDateMDY('01/15/2024')).toBe(true)
   })
 
+  it('returns true for single-digit month and day', () => {
+    expect(isValidDateMDY('3/31/2026')).toBe(true)
+    expect(isValidDateMDY('1/5/2024')).toBe(true)
+  })
+
   it('returns false for invalid month', () => {
     expect(isValidDateMDY('13/01/2024')).toBe(false)
     expect(isValidDateMDY('00/01/2024')).toBe(false)
@@ -346,6 +351,11 @@ describe('mdyToISO', () => {
 
   it('returns empty string for invalid calendar date', () => {
     expect(mdyToISO('02/30/2024')).toBe('')
+  })
+
+  it('converts single-digit month and day to zero-padded ISO', () => {
+    expect(mdyToISO('3/31/2026')).toBe('2026-03-31')
+    expect(mdyToISO('1/5/2024')).toBe('2024-01-05')
   })
 })
 

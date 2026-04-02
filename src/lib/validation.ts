@@ -3,15 +3,15 @@ import { isValidDateISO } from './date-utils'
 
 // Transaction validation schemas
 export const transactionUpdateSchema = z.object({
-  accountId: z.string().uuid('Invalid account ID format'),
-  userId: z.string().uuid('Invalid user ID format').nullable(),
+  accountId: z.uuidv4({ error: 'Invalid account ID format' }),
+  userId: z.uuidv4({ error: 'Invalid user ID format' }).nullable(),
   transactionDate: z
     .string()
     .refine(isValidDateISO, 'Invalid transaction date format - expected YYYY-MM-DD'),
   postDate: z.string().refine(isValidDateISO, 'Invalid post date format - expected YYYY-MM-DD'),
   description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
-  categoryId: z.string().uuid('Invalid category ID format'),
-  typeId: z.string().uuid('Invalid type ID format'),
+  categoryId: z.uuidv4({ error: 'Invalid category ID format' }),
+  typeId: z.uuidv4({ error: 'Invalid type ID format' }),
   amount: z
     .union([z.string(), z.number()])
     .refine(
@@ -22,7 +22,7 @@ export const transactionUpdateSchema = z.object({
 })
 
 export const transactionCreateSchema = transactionUpdateSchema.extend({
-  householdId: z.string().uuid('Invalid household ID format'),
+  householdId: z.uuidv4({ error: 'Invalid household ID format' }),
 })
 
 // Household validation schemas
@@ -44,7 +44,7 @@ export const householdUpdateSchema = z.object({
 // Account validation schemas
 export const accountCreateSchema = z.object({
   name: z.string().min(1, 'Account name is required').max(100, 'Account name too long'),
-  householdId: z.string().uuid('Invalid household ID format'),
+  householdId: z.uuidv4({ error: 'Invalid household ID format' }),
 })
 
 export const accountUpdateSchema = z.object({
@@ -74,26 +74,87 @@ export const categoryUpdateSchema = z.object({
 export const userUpdateSchema = z.object({
   firstName: z.string().max(100, 'First name too long').optional(),
   lastName: z.string().max(100, 'Last name too long').optional(),
-  email: z.string().email('Invalid email format').optional(),
+  email: z.email({ error: 'Invalid email format' }).optional(),
 })
 
 // Invitation validation schemas
 export const invitationCreateSchema = z.object({
-  email: z.string().email('Invalid email format'),
-  role: z.enum(['ADMIN', 'MEMBER'], 'Invalid role'),
-  householdId: z.string().uuid('Invalid household ID format'),
+  email: z.email({ error: 'Invalid email format' }),
+  role: z.enum(['OWNER', 'MEMBER', 'VIEWER'], { error: 'Invalid role' }),
+  householdId: z.uuidv4({ error: 'Invalid household ID format' }),
 })
 
 // Type validation schemas
 export const typeCreateSchema = z.object({
   name: z.string().min(1, 'Type name is required').max(100, 'Type name too long'),
   isOutflow: z.boolean().optional(),
-  householdId: z.string().uuid('Invalid household ID format'),
+  householdId: z.uuidv4({ error: 'Invalid household ID format' }),
 })
 
 export const typeUpdateSchema = z.object({
   name: z.string().min(1, 'Type name is required').max(100, 'Type name too long').optional(),
   isOutflow: z.boolean().optional(),
+})
+
+// Bulk request schemas
+export const bulkAccountsRequestSchema = z.object({
+  householdId: z.uuidv4({ error: 'Invalid household ID format' }),
+  accounts: z
+    .array(
+      z.object({
+        name: z.string().min(1, 'Account name is required').max(100, 'Account name too long'),
+      })
+    )
+    .min(1, 'Accounts array must not be empty'),
+})
+
+export const bulkCategoriesRequestSchema = z.object({
+  householdId: z.uuidv4({ error: 'Invalid household ID format' }),
+  categories: z
+    .array(
+      z.object({
+        name: z.string().min(1, 'Category name is required').max(100, 'Category name too long'),
+        description: z.string().max(500, 'Description too long').optional(),
+        icon: z.string().max(50, 'Icon name too long').optional(),
+        color: z.string().max(20, 'Color value too long').optional(),
+      })
+    )
+    .min(1, 'Categories array must not be empty'),
+})
+
+export const bulkTypesRequestSchema = z.object({
+  householdId: z.uuidv4({ error: 'Invalid household ID format' }),
+  types: z
+    .array(
+      z.object({
+        name: z.string().min(1, 'Type name is required').max(100, 'Type name too long'),
+        isOutflow: z.boolean().optional(),
+      })
+    )
+    .min(1, 'Types array must not be empty'),
+})
+
+export const bulkUsersRequestSchema = z.object({
+  householdId: z.uuidv4({ error: 'Invalid household ID format' }),
+  users: z
+    .array(
+      z.object({
+        name: z.string().min(1, 'User name is required').max(100, 'User name too long'),
+        annualBudget: z.union([z.string(), z.number()]).optional(),
+      })
+    )
+    .min(1, 'Users array must not be empty'),
+})
+
+export const bulkHouseholdsRequestSchema = z.object({
+  households: z
+    .array(
+      z.object({
+        name: z.string().min(1, 'Household name is required').max(100, 'Household name too long'),
+        annualBudget: z.union([z.string(), z.number()]).optional(),
+      })
+    )
+    .min(1, 'Households array must not be empty'),
 })
 
 // Query parameter validation
@@ -115,8 +176,8 @@ export const paginationSchema = z.object({
 })
 
 export const dateRangeSchema = z.object({
-  startDate: z.string().datetime('Invalid start date format').optional(),
-  endDate: z.string().datetime('Invalid end date format').optional(),
+  startDate: z.iso.datetime({ error: 'Invalid start date format' }).optional(),
+  endDate: z.iso.datetime({ error: 'Invalid end date format' }).optional(),
 })
 
 // Utility function to validate request body

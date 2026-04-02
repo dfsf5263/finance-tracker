@@ -47,7 +47,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
 
     // Create extended schema for category that includes householdId and annualBudget
     const extendedSchema = categoryCreateSchema.extend({
-      householdId: z.string().uuid('Invalid household ID format'),
+      householdId: z.uuidv4({ error: 'Invalid household ID format' }),
       annualBudget: z.union([z.string(), z.number()]).optional(),
     })
 

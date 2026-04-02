@@ -4,9 +4,11 @@ import * as React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
+  BookOpen,
   CreditCard,
   DollarSign,
   Home,
+  Key,
   LayoutDashboard,
   List,
   Mail,
@@ -143,6 +145,18 @@ const data = {
       icon: Mail,
     },
   ],
+  developer: [
+    {
+      name: 'API Keys',
+      url: '/dashboard/settings/api-keys',
+      icon: Key,
+    },
+    {
+      name: 'API Docs',
+      url: '/docs',
+      icon: BookOpen,
+    },
+  ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -177,6 +191,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavGroup title="Definitions" items={data.definitions} />
         <NavGroup title="Utility" items={data.utility} />
         <NavGroup title="Settings" items={data.settings} />
+        <NavGroup title="Developer" items={data.developer} />
       </SidebarContent>
       <SidebarFooter>
         <NavUserErrorBoundary>

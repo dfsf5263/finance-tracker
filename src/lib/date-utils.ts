@@ -191,7 +191,7 @@ export function monthName(month: number): string {
 // ── Validation (string-based) ───────────────────────────────
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-const MDY_DATE_RE = /^(\d{2})\/(\d{2})\/(\d{4})$/
+const MDY_DATE_RE = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/
 
 /** Validate a YYYY-MM-DD string: correct format AND valid calendar date. */
 export function isValidDateISO(isoDate: string): boolean {

@@ -39,6 +39,7 @@ import { Button } from '@/components/ui/button'
 - Components: `kebab-case.tsx` (e.g., `account-form.tsx`, `budget-alerts.tsx`)
 - Hooks: `camelCase.ts` with `use` prefix (e.g., `useCRUD.ts`, `useActiveMonth.ts`) or `kebab-case.ts` with `use-` prefix (e.g., `use-active-month.ts`)
 - API routes: `route.ts` inside App Router directory structure
+- **Next.js middleware**: `src/proxy.ts` — Next.js 16 renamed the middleware entry point from `middleware.ts` to `proxy.ts`. Do not look for or create `middleware.ts`; all edge middleware logic lives in `src/proxy.ts`.
 - Tests: `*.test.ts` or `*.test.tsx` co-located with source
 - E2E tests: `*.spec.ts` in `tests/e2e/`
 
