@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils'
 import { monthStartISO, monthEndISO } from '@/lib/date-utils'
 import { useHousehold } from '@/contexts/household-context'
 import { useActiveMonth } from '@/hooks/use-active-month'
+import { useAbortController } from '@/hooks/useAbortController'
 
 interface MonthlySpendingData {
   currentMonth: number
@@ -70,23 +71,26 @@ export function DashboardSummaryCards() {
   const [topCategory, setTopCategory] = useState<TopCategoryData | null>(null)
   const [cashFlow, setCashFlow] = useState<CashFlowData | null>(null)
   const [loading, setLoading] = useState(true)
+  const { getSignal } = useAbortController()
 
   useEffect(() => {
     if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     const fetchDashboardData = async () => {
       setLoading(true)
+      const signal = getSignal()
       try {
         await Promise.all([
-          fetchMonthlySpending(),
-          fetchBudgetPerformance(),
-          fetchTopCategory(),
-          fetchCashFlow(),
+          fetchMonthlySpending(signal),
+          fetchBudgetPerformance(signal),
+          fetchTopCategory(signal),
+          fetchCashFlow(signal),
         ])
       } catch (error) {
+        if (signal.aborted) return
         console.error('Error fetching dashboard data:', error)
       } finally {
-        setLoading(false)
+        if (!signal.aborted) setLoading(false)
       }
     }
 
@@ -94,7 +98,7 @@ export function DashboardSummaryCards() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedHousehold?.id, activeMonth, activeYear])
 
-  const fetchMonthlySpending = async () => {
+  const fetchMonthlySpending = async (signal: AbortSignal) => {
     if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     try {
@@ -113,10 +117,12 @@ export function DashboardSummaryCards() {
 
       const [currentResponse, lastResponse] = await Promise.all([
         fetch(
-          `/api/transactions/analytics?householdId=${selectedHousehold.id}&startDate=${currentStartDate}&endDate=${currentEndDate}&groupBy=category`
+          `/api/transactions/analytics?householdId=${selectedHousehold.id}&startDate=${currentStartDate}&endDate=${currentEndDate}&groupBy=category`,
+          { signal }
         ),
         fetch(
-          `/api/transactions/analytics?householdId=${selectedHousehold.id}&startDate=${lastStartDate}&endDate=${lastEndDate}&groupBy=category`
+          `/api/transactions/analytics?householdId=${selectedHousehold.id}&startDate=${lastStartDate}&endDate=${lastEndDate}&groupBy=category`,
+          { signal }
         ),
       ])
 
@@ -147,7 +153,7 @@ export function DashboardSummaryCards() {
     }
   }
 
-  const fetchBudgetPerformance = async () => {
+  const fetchBudgetPerformance = async (signal: AbortSignal) => {
     if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     try {
@@ -157,7 +163,8 @@ export function DashboardSummaryCards() {
       const endDate = monthEndISO(currentYear, currentMonth)
 
       const response = await fetch(
-        `/api/budgets/household-budget?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&timePeriodType=month&budgetType=household`
+        `/api/budgets/household-budget?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&timePeriodType=month&budgetType=household`,
+        { signal }
       )
 
       if (response.ok) {
@@ -186,7 +193,7 @@ export function DashboardSummaryCards() {
     }
   }
 
-  const fetchTopCategory = async () => {
+  const fetchTopCategory = async (signal: AbortSignal) => {
     if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     try {
@@ -196,7 +203,8 @@ export function DashboardSummaryCards() {
       const endDate = monthEndISO(currentYear, currentMonth)
 
       const response = await fetch(
-        `/api/transactions/analytics?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&groupBy=category`
+        `/api/transactions/analytics?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&groupBy=category`,
+        { signal }
       )
 
       if (response.ok) {
@@ -232,7 +240,7 @@ export function DashboardSummaryCards() {
     }
   }
 
-  const fetchCashFlow = async () => {
+  const fetchCashFlow = async (signal: AbortSignal) => {
     if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     try {
@@ -242,7 +250,8 @@ export function DashboardSummaryCards() {
       const endDate = monthEndISO(currentYear, currentMonth)
 
       const response = await fetch(
-        `/api/transactions/analytics?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&groupBy=category`
+        `/api/transactions/analytics?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&groupBy=category`,
+        { signal }
       )
 
       if (response.ok) {

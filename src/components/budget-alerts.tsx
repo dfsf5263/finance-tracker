@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useAbortController } from '@/hooks/useAbortController'
 import {
   AlertTriangle,
   AlertCircle,
@@ -59,12 +60,14 @@ export function BudgetAlerts() {
   const [hasUserBudgets, setHasUserBudgets] = useState(false)
   const [hasCategoryBudgets, setHasCategoryBudgets] = useState(false)
   const [hasHouseholdBudget, setHasHouseholdBudget] = useState(false)
+  const { getSignal } = useAbortController()
 
   useEffect(() => {
     if (!selectedHousehold?.id || !activeMonth || !activeYear) return
 
     const fetchBudgetAlerts = async () => {
       setLoading(true)
+      const signal = getSignal()
 
       try {
         const currentYear = activeYear
@@ -76,7 +79,8 @@ export function BudgetAlerts() {
 
         // Fetch household budget data
         const householdResponse = await fetch(
-          `/api/budgets/household-budget?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&timePeriodType=month&budgetType=household`
+          `/api/budgets/household-budget?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&timePeriodType=month&budgetType=household`,
+          { signal }
         )
 
         if (householdResponse.ok) {
@@ -121,7 +125,8 @@ export function BudgetAlerts() {
 
         // Fetch category budget data
         const categoryResponse = await fetch(
-          `/api/budgets/household-budget?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&timePeriodType=month&budgetType=category`
+          `/api/budgets/household-budget?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&timePeriodType=month&budgetType=category`,
+          { signal }
         )
 
         if (categoryResponse.ok) {
@@ -178,7 +183,9 @@ export function BudgetAlerts() {
         }
 
         // Fetch user budget data
-        const usersResponse = await fetch(`/api/users?householdId=${selectedHousehold.id}`)
+        const usersResponse = await fetch(`/api/users?householdId=${selectedHousehold.id}`, {
+          signal,
+        })
 
         if (usersResponse.ok) {
           const users = await usersResponse.json()
@@ -192,7 +199,8 @@ export function BudgetAlerts() {
           for (const user of usersWithBudgets) {
             try {
               const userBudgetResponse = await fetch(
-                `/api/budgets/user-budget?householdId=${selectedHousehold.id}&userId=${user.id}&startDate=${startDate}&endDate=${endDate}&timePeriodType=month&includeInflow=false`
+                `/api/budgets/user-budget?householdId=${selectedHousehold.id}&userId=${user.id}&startDate=${startDate}&endDate=${endDate}&timePeriodType=month&includeInflow=false`,
+                { signal }
               )
 
               if (userBudgetResponse.ok) {
@@ -244,13 +252,15 @@ export function BudgetAlerts() {
 
         setAlerts(newAlerts)
       } catch (error) {
+        if (signal.aborted) return
         console.error('Error fetching budget alerts:', error)
       } finally {
-        setLoading(false)
+        if (!signal.aborted) setLoading(false)
       }
     }
 
     fetchBudgetAlerts()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedHousehold?.id, activeMonth, activeYear])
 
   const getAlertVariant = (severity: string) => {

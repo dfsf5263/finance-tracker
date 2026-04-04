@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useAbortController } from '@/hooks/useAbortController'
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
 import {
   Select,
@@ -100,6 +101,7 @@ export function UserBudget() {
     year: currentYear(),
     month: currentMonth(),
   })
+  const { getSignal } = useAbortController()
 
   // Static years for dropdown
   const thisYear = currentYear()
@@ -140,6 +142,7 @@ export function UserBudget() {
       setLoading(true)
       setError(null)
       setNoBudget(false)
+      const signal = getSignal()
 
       try {
         const { startDate, endDate } = getDateRange(
@@ -158,7 +161,8 @@ export function UserBudget() {
         if (startDate) params.append('startDate', startDate)
         if (endDate) params.append('endDate', endDate)
 
-        const response = await fetch(`/api/budgets/user-budget?${params}`)
+        const response = await fetch(`/api/budgets/user-budget?${params}`, { signal })
+        if (signal.aborted) return
         if (!response.ok) throw new Error('Failed to fetch budget data')
 
         const result = await response.json()
@@ -170,14 +174,16 @@ export function UserBudget() {
           setData(result)
         }
       } catch (error) {
+        if (signal.aborted) return
         console.error('Error fetching budget data:', error)
         setError('Failed to fetch budget data')
       } finally {
-        setLoading(false)
+        if (!signal.aborted) setLoading(false)
       }
     }
 
     fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedHousehold?.id, selectedUser, timePeriod, includeInflow])
 
   const handleUserChange = (userId: string) => {

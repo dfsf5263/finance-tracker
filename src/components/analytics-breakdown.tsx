@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
+import { useAbortController } from '@/hooks/useAbortController'
 import {
   Select,
   SelectContent,
@@ -92,6 +93,7 @@ export function AnalyticsBreakdown() {
   const [types, setTypes] = useState<TransactionType[]>([])
   const [transactions, setTransactions] = useState<Record<string, Transaction[]>>({})
   const [loadingTransactions, setLoadingTransactions] = useState<Record<string, boolean>>({})
+  const { getSignal } = useAbortController()
 
   // Generate static year list for last 5 years
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear() - i)
@@ -104,6 +106,7 @@ export function AnalyticsBreakdown() {
   const fetchAnalytics = async () => {
     if (!selectedHousehold) return
     setLoading(true)
+    const signal = getSignal()
     try {
       const params = new URLSearchParams({
         groupBy,
@@ -115,7 +118,8 @@ export function AnalyticsBreakdown() {
       if (dateRange.endDate) params.append('endDate', dateRange.endDate)
       if (typeFilter && typeFilter !== 'all') params.append('typeId', typeFilter)
 
-      const response = await fetch(`/api/transactions/analytics?${params}`)
+      const response = await fetch(`/api/transactions/analytics?${params}`, { signal })
+      if (signal.aborted) return
       if (response.ok) {
         const analyticsData = await response.json()
         // Transform data to ensure pie chart gets absolute values
@@ -134,9 +138,10 @@ export function AnalyticsBreakdown() {
         setData([])
       }
     } catch (error) {
+      if (signal.aborted) return
       console.error('Error fetching analytics:', error)
     } finally {
-      setLoading(false)
+      if (!signal.aborted) setLoading(false)
     }
   }
 

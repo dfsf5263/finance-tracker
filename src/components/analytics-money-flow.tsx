@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { D3Sankey } from './d3-sankey'
+import { useAbortController } from '@/hooks/useAbortController'
 import {
   Select,
   SelectContent,
@@ -58,6 +59,7 @@ export function AnalyticsMoneyFlow() {
   })
   const [containerWidth, setContainerWidth] = useState(1000)
   const sankeyContainerRef = useRef<HTMLDivElement>(null)
+  const { getSignal } = useAbortController()
 
   // Generate static year list for last 5 years
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear() - i)
@@ -70,6 +72,7 @@ export function AnalyticsMoneyFlow() {
   const fetchSankeyData = async () => {
     if (!selectedHousehold) return
     setLoading(true)
+    const signal = getSignal()
     try {
       const params = new URLSearchParams({
         householdId: selectedHousehold.id,
@@ -81,7 +84,8 @@ export function AnalyticsMoneyFlow() {
       // Note: typeFilter is intentionally not applied to Money Flow visualization
       // as it inherently separates income/expense using isOutflow flag
 
-      const response = await fetch(`/api/transactions/sankey?${params}`)
+      const response = await fetch(`/api/transactions/sankey?${params}`, { signal })
+      if (signal.aborted) return
       if (response.ok) {
         const data = await response.json()
         setSankeyData(data)
@@ -90,9 +94,10 @@ export function AnalyticsMoneyFlow() {
         setSankeyData({ nodes: [], links: [] })
       }
     } catch (error) {
+      if (signal.aborted) return
       console.error('Error fetching sankey data:', error)
     } finally {
-      setLoading(false)
+      if (!signal.aborted) setLoading(false)
     }
   }
 

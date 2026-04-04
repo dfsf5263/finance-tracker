@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useDebounce } from '@/hooks/useDebounce'
+import { useAbortController } from '@/hooks/useAbortController'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -124,6 +126,8 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     endDate: '',
     search: '',
   })
+  const debouncedSearch = useDebounce(filters.search)
+  const { getSignal } = useAbortController()
   const [filtersExpanded, setFiltersExpanded] = useState(false)
   const [showTransactionForm, setShowTransactionForm] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
@@ -134,6 +138,8 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   const fetchTransactions = async () => {
     if (!selectedHousehold) return
     setLoading(true)
+
+    const signal = getSignal()
 
     const params = new URLSearchParams({
       page: page.toString(),
@@ -147,15 +153,18 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
     if (filters.user && filters.user !== 'all') params.append('user', filters.user)
     if (filters.startDate) params.append('startDate', filters.startDate)
     if (filters.endDate) params.append('endDate', filters.endDate)
-    if (filters.search) params.append('search', filters.search)
+    if (debouncedSearch) params.append('search', debouncedSearch)
 
     const { data, error } = await apiFetch<{
       transactions: Transaction[]
       pagination: { pages: number }
     }>(`/api/transactions?${params}`, {
+      signal,
       showErrorToast: false, // Handle errors manually
       showRateLimitToast: true, // Show rate limit toasts
     })
+
+    if (signal.aborted) return
 
     if (data) {
       setTransactions(data.transactions)
@@ -228,7 +237,19 @@ export function TransactionGrid({ refreshTrigger, onRefresh }: TransactionGridPr
   useEffect(() => {
     fetchTransactions()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, filters, refreshTrigger, selectedHousehold])
+  }, [
+    page,
+    pageSize,
+    filters.category,
+    filters.type,
+    filters.account,
+    filters.user,
+    filters.startDate,
+    filters.endDate,
+    debouncedSearch,
+    refreshTrigger,
+    selectedHousehold,
+  ])
 
   useEffect(() => {
     if (selectedHousehold) {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useAbortController } from '@/hooks/useAbortController'
 import {
   BarChart,
   Bar,
@@ -200,6 +201,7 @@ export function HouseholdBudget() {
   const [categories, setCategories] = useState<Category[]>([])
   const [transactions, setTransactions] = useState<Record<string, Transaction[]>>({})
   const [loadingTransactions, setLoadingTransactions] = useState<Record<string, boolean>>({})
+  const { getSignal } = useAbortController()
 
   // Generate static year list for last 5 years
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear() - i)
@@ -233,6 +235,7 @@ export function HouseholdBudget() {
   const fetchHouseholdBudget = async () => {
     if (!selectedHousehold) return
     setLoading(true)
+    const signal = getSignal()
     try {
       const params = new URLSearchParams({
         householdId: selectedHousehold.id,
@@ -247,7 +250,8 @@ export function HouseholdBudget() {
         params.append('categoryId', categoryFilter)
       }
 
-      const response = await fetch(`/api/budgets/household-budget?${params}`)
+      const response = await fetch(`/api/budgets/household-budget?${params}`, { signal })
+      if (signal.aborted) return
       if (response.ok) {
         const householdBudgetData = await response.json()
 
@@ -272,9 +276,10 @@ export function HouseholdBudget() {
         console.error('Failed to fetch budget audit data')
       }
     } catch (error) {
+      if (signal.aborted) return
       console.error('Error fetching budget audit data:', error)
     } finally {
-      setLoading(false)
+      if (!signal.aborted) setLoading(false)
     }
   }
 
