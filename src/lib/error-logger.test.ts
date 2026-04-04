@@ -6,7 +6,7 @@ vi.mock('@/lib/logger', () => ({
   default: { info: vi.fn(), error: vi.fn() },
 }))
 
-import { logApiError } from '@/lib/error-logger'
+import { logApiError, getCorrelationId } from '@/lib/error-logger'
 
 function makeRequest(
   options: {
@@ -174,13 +174,37 @@ describe('logApiError', () => {
     expect(loggedData.correlationId).toBe('abc-123-def')
   })
 
-  it('logs null correlationId when header is absent', async () => {
+  it('falls back to Rndr-Id header when x-correlation-id is absent', async () => {
+    const request = makeRequest({
+      headers: { 'rndr-id': 'render-req-456' },
+    })
+
+    await logApiError({ request, error: new Error('err') })
+
+    const [loggedData] = vi.mocked(logger.error).mock.calls[0] as [Record<string, unknown>, string]
+    expect(loggedData.correlationId).toBe('render-req-456')
+  })
+
+  it('prefers x-correlation-id over Rndr-Id when both are present', async () => {
+    const request = makeRequest({
+      headers: { 'x-correlation-id': 'nginx-id', 'rndr-id': 'render-id' },
+    })
+
+    await logApiError({ request, error: new Error('err') })
+
+    const [loggedData] = vi.mocked(logger.error).mock.calls[0] as [Record<string, unknown>, string]
+    expect(loggedData.correlationId).toBe('nginx-id')
+  })
+
+  it('generates a UUIDv4 correlationId when no proxy header is present', async () => {
     const request = makeRequest()
 
     await logApiError({ request, error: new Error('err') })
 
     const [loggedData] = vi.mocked(logger.error).mock.calls[0] as [Record<string, unknown>, string]
-    expect(loggedData.correlationId).toBeNull()
+    expect(loggedData.correlationId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    )
   })
 
   it('handles logging failure gracefully', async () => {
@@ -238,5 +262,34 @@ describe('logApiError', () => {
     const nested = context.nested as Record<string, unknown>
     expect(nested.password).toMatch(/^se\*\*\*23$/)
     expect(nested.safe).toBe('ok')
+  })
+})
+
+describe('getCorrelationId', () => {
+  it('returns x-correlation-id when present', () => {
+    const request = makeRequest({ headers: { 'x-correlation-id': 'my-id' } })
+    expect(getCorrelationId(request)).toBe('my-id')
+  })
+
+  it('returns rndr-id when x-correlation-id is absent', () => {
+    const request = makeRequest({ headers: { 'rndr-id': 'render-id-789' } })
+    expect(getCorrelationId(request)).toBe('render-id-789')
+  })
+
+  it('prefers x-correlation-id over rndr-id', () => {
+    const request = makeRequest({ headers: { 'x-correlation-id': 'first', 'rndr-id': 'second' } })
+    expect(getCorrelationId(request)).toBe('first')
+  })
+
+  it('generates a UUIDv4 when neither header is present', () => {
+    const request = makeRequest()
+    expect(getCorrelationId(request)).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    )
+  })
+
+  it('generates a different UUID on each call when no header is present', () => {
+    const request = makeRequest()
+    expect(getCorrelationId(request)).not.toBe(getCorrelationId(request))
   })
 })

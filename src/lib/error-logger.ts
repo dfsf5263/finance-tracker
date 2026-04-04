@@ -8,11 +8,23 @@ interface LogApiErrorOptions {
   operation?: string
 }
 
+/**
+ * Resolves a correlation ID for a request using the following priority:
+ * 1. x-correlation-id — injected by nginx or upstream proxy
+ * 2. Rndr-Id — injected by Render's load balancer
+ * 3. Generated UUIDv4 — fallback for environments with no proxy header
+ */
+export function getCorrelationId(request: NextRequest): string {
+  return (
+    request.headers.get('x-correlation-id') ?? request.headers.get('rndr-id') ?? crypto.randomUUID()
+  )
+}
+
 export async function logApiError({ request, error, context, operation }: LogApiErrorOptions) {
   try {
     const err = error instanceof Error ? error : new Error(String(error))
     const body = await getRequestBody(request)
-    const correlationId = request.headers.get('x-correlation-id')
+    const correlationId = getCorrelationId(request)
     logger.error(
       {
         err,
