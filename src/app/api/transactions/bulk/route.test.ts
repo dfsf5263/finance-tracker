@@ -167,8 +167,10 @@ describe('POST /api/transactions/bulk', () => {
       // First occurrence is kept, second is flagged as duplicate
       expect(body.results.successful).toBe(1)
       expect(body.results.failed).toBe(1)
-      expect(body.results.failures[0].type).toBe('duplicate')
-      expect(body.results.failures[0].reason).toContain('Duplicate transaction within file')
+      expect(body.results.failures[0].issues[0].kind).toBe('duplicate')
+      expect(body.results.failures[0].issues[0].message).toContain(
+        'Duplicate transaction within file'
+      )
     })
   })
 
@@ -195,8 +197,10 @@ describe('POST /api/transactions/bulk', () => {
       expect(body.success).toBe(true)
       expect(body.results.successful).toBe(0)
       expect(body.results.failed).toBe(1)
-      expect(body.results.failures[0].type).toBe('duplicate')
-      expect(body.results.failures[0].reason).toContain('Duplicate transaction exists in database')
+      expect(body.results.failures[0].issues[0].kind).toBe('duplicate')
+      expect(body.results.failures[0].issues[0].message).toContain(
+        'Duplicate transaction exists in database'
+      )
       expect(body.results.failures[0].existingTransaction).toBeDefined()
     })
   })
@@ -214,7 +218,9 @@ describe('POST /api/transactions/bulk', () => {
       expect(body.success).toBe(true)
       expect(body.results.successful).toBe(0)
       expect(body.results.failed).toBe(1)
-      expect(body.results.failures[0].reason).toContain('Account "Chase Checking" not found')
+      expect(body.results.failures[0].issues[0].message).toContain(
+        'Account "Chase Checking" is not defined'
+      )
     })
 
     it('reports failure when category is not found', async () => {
@@ -227,7 +233,7 @@ describe('POST /api/transactions/bulk', () => {
 
       const body = await response.json()
       expect(body.results.failed).toBe(1)
-      expect(body.results.failures[0].reason).toContain('Category "Food" not found')
+      expect(body.results.failures[0].issues[0].message).toContain('Category "Food" is not defined')
     })
 
     it('reports failure when type is not found', async () => {
@@ -240,7 +246,7 @@ describe('POST /api/transactions/bulk', () => {
 
       const body = await response.json()
       expect(body.results.failed).toBe(1)
-      expect(body.results.failures[0].reason).toContain('Type "Purchase" not found')
+      expect(body.results.failures[0].issues[0].message).toContain('Type "Purchase" is not defined')
     })
 
     it('reports failure when user is not found', async () => {
@@ -254,7 +260,9 @@ describe('POST /api/transactions/bulk', () => {
 
       const body = await response.json()
       expect(body.results.failed).toBe(1)
-      expect(body.results.failures[0].reason).toContain('User "UnknownUser" not found')
+      expect(body.results.failures[0].issues[0].message).toContain(
+        'User "UnknownUser" is not defined'
+      )
     })
 
     it('inserts valid transactions and reports failures for invalid ones (partial insert)', async () => {
@@ -278,7 +286,9 @@ describe('POST /api/transactions/bulk', () => {
       expect(body.success).toBe(true)
       expect(body.results.successful).toBe(1)
       expect(body.results.failed).toBe(1)
-      expect(body.results.failures[0].reason).toContain('Account "Nonexistent Account" not found')
+      expect(body.results.failures[0].issues[0].message).toContain(
+        'Account "Nonexistent Account" is not defined'
+      )
       expect(body.message).toContain('1 failures')
     })
 
@@ -292,10 +302,16 @@ describe('POST /api/transactions/bulk', () => {
 
       const body = await response.json()
       expect(body.results.failed).toBe(1)
-      const reason = body.results.failures[0].reason
-      expect(reason).toContain('Account "Chase Checking" not found')
-      expect(reason).toContain('Category "Food" not found')
-      expect(reason).toContain('Type "Purchase" not found')
+      const issues = body.results.failures[0].issues
+      expect(issues.map((i: { message: string }) => i.message).join('; ')).toContain(
+        'Account "Chase Checking" is not defined'
+      )
+      expect(issues.map((i: { message: string }) => i.message).join('; ')).toContain(
+        'Category "Food" is not defined'
+      )
+      expect(issues.map((i: { message: string }) => i.message).join('; ')).toContain(
+        'Type "Purchase" is not defined'
+      )
     })
   })
 
@@ -316,8 +332,8 @@ describe('POST /api/transactions/bulk', () => {
       expect(body.success).toBe(true)
       expect(body.results.successful).toBe(0)
       expect(body.results.failed).toBe(1)
-      expect(body.results.failures[0].type).toBe('duplicate')
-      expect(body.results.failures[0].reason).toContain('Unique constraint violation')
+      expect(body.results.failures[0].issues[0].kind).toBe('duplicate')
+      expect(body.results.failures[0].issues[0].message).toContain('Unique constraint violation')
     })
 
     it('handles general database errors during transaction', async () => {
@@ -332,8 +348,8 @@ describe('POST /api/transactions/bulk', () => {
       expect(body.success).toBe(true)
       expect(body.results.successful).toBe(0)
       expect(body.results.failed).toBe(1)
-      expect(body.results.failures[0].type).toBe('validation')
-      expect(body.results.failures[0].reason).toBe('Connection lost')
+      expect(body.results.failures[0].issues[0].kind).toBe('format')
+      expect(body.results.failures[0].issues[0].message).toBe('Connection lost')
     })
 
     it('returns 500 for unexpected top-level errors', async () => {

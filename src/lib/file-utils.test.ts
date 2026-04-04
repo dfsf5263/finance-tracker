@@ -1,5 +1,6 @@
+import ExcelJS from 'exceljs'
 import { describe, it, expect } from 'vitest'
-import { isValidCsvFile, sanitizeCellValue } from './file-utils'
+import { isValidCsvFile, isValidExcelFile, parseExcelToRows, sanitizeCellValue } from './file-utils'
 
 function fakeFile(name: string, type: string): File {
   return new File(['content'], name, { type })
@@ -102,5 +103,152 @@ describe('sanitizeCellValue', () => {
 
   it('prefixes bare minus sign', () => {
     expect(sanitizeCellValue('-')).toBe("'-")
+  })
+})
+
+// ── Helper: build an in-memory .xlsx Buffer from a given worksheet setup ─────
+
+async function buildXlsx(
+  setup: (ws: ExcelJS.Worksheet) => void,
+  sheetName = 'Sheet1'
+): Promise<File> {
+  const workbook = new ExcelJS.Workbook()
+  const ws = workbook.addWorksheet(sheetName)
+  setup(ws)
+  const buffer = await workbook.xlsx.writeBuffer()
+  return new File([buffer], 'test.xlsx', {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+}
+
+describe('isValidExcelFile', () => {
+  it('accepts correct MIME + .xlsx extension', () => {
+    const file = new File([''], 'data.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    expect(isValidExcelFile(file)).toBe(true)
+  })
+
+  it('accepts empty MIME + .xlsx extension', () => {
+    const file = new File([''], 'data.xlsx', { type: '' })
+    expect(isValidExcelFile(file)).toBe(true)
+  })
+
+  it('accepts uppercase .XLSX extension', () => {
+    const file = new File([''], 'DATA.XLSX', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    expect(isValidExcelFile(file)).toBe(true)
+  })
+
+  it('rejects .xlsx with wrong MIME', () => {
+    const file = new File([''], 'data.xlsx', { type: 'application/json' })
+    expect(isValidExcelFile(file)).toBe(false)
+  })
+
+  it('rejects .csv file with xlsx MIME', () => {
+    const file = new File([''], 'data.csv', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    expect(isValidExcelFile(file)).toBe(false)
+  })
+})
+
+describe('parseExcelToRows', () => {
+  it('returns rows keyed by header', async () => {
+    const file = await buildXlsx((ws) => {
+      ws.addRow(['Description', 'Amount'])
+      ws.addRow(['Coffee', '-5.50'])
+    })
+    const rows = await parseExcelToRows(file)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]['Description']).toBe('Coffee')
+    expect(rows[0]['Amount']).toBe('-5.50')
+  })
+
+  it('formats Date-cell transaction dates as MM/DD/YYYY', async () => {
+    const file = await buildXlsx((ws) => {
+      ws.addRow(['Transaction Date'])
+      const row = ws.addRow([new Date(Date.UTC(2024, 0, 15))]) // Jan 15 2024 UTC
+      row.getCell(1).numFmt = 'mm/dd/yyyy'
+    })
+    const rows = await parseExcelToRows(file)
+    expect(rows[0]['Transaction Date']).toBe('01/15/2024')
+  })
+
+  it('passes through text-formatted date strings unchanged', async () => {
+    const file = await buildXlsx((ws) => {
+      ws.addRow(['Transaction Date'])
+      const row = ws.addRow(['01/15/2024'])
+      row.getCell(1).numFmt = '@' // text format
+    })
+    const rows = await parseExcelToRows(file)
+    expect(rows[0]['Transaction Date']).toBe('01/15/2024')
+  })
+
+  it('formats General-cell Date objects as MM/DD/YYYY', async () => {
+    const file = await buildXlsx((ws) => {
+      ws.addRow(['Transaction Date'])
+      ws.addRow([new Date(Date.UTC(2025, 5, 20))]) // Jun 20 2025 UTC — no numFmt (General)
+    })
+    const rows = await parseExcelToRows(file)
+    expect(rows[0]['Transaction Date']).toBe('06/20/2025')
+  })
+
+  it('converts numeric amount cells to string', async () => {
+    const file = await buildXlsx((ws) => {
+      ws.addRow(['Amount'])
+      ws.addRow([-25.5])
+    })
+    const rows = await parseExcelToRows(file)
+    expect(rows[0]['Amount']).toBe('-25.5')
+  })
+
+  it('passes through text amount strings unchanged', async () => {
+    const file = await buildXlsx((ws) => {
+      ws.addRow(['Amount'])
+      const row = ws.addRow(['-25.50'])
+      row.getCell(1).numFmt = '@'
+    })
+    const rows = await parseExcelToRows(file)
+    expect(rows[0]['Amount']).toBe('-25.50')
+  })
+
+  it('converts General numeric amount (integer) to string', async () => {
+    const file = await buildXlsx((ws) => {
+      ws.addRow(['Amount'])
+      ws.addRow([1250])
+    })
+    const rows = await parseExcelToRows(file)
+    expect(rows[0]['Amount']).toBe('1250')
+  })
+
+  it('skips fully empty trailing rows', async () => {
+    const file = await buildXlsx((ws) => {
+      ws.addRow(['Description', 'Amount'])
+      ws.addRow(['Coffee', '-5.50'])
+      ws.addRow([null, null]) // empty row
+    })
+    const rows = await parseExcelToRows(file)
+    expect(rows).toHaveLength(1)
+  })
+
+  it('only parses the first worksheet, ignoring _Lists sheet', async () => {
+    const workbook = new ExcelJS.Workbook()
+    const dataSheet = workbook.addWorksheet('Sheet1')
+    dataSheet.addRow(['Description'])
+    dataSheet.addRow(['Salary'])
+    const listsSheet = workbook.addWorksheet('_Lists')
+    listsSheet.addRow(['Should'])
+    listsSheet.addRow(['Be ignored'])
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const file = new File([buffer], 'test.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+
+    const rows = await parseExcelToRows(file)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]['Description']).toBe('Salary')
   })
 })
