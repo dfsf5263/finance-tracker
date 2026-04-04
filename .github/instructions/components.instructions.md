@@ -59,7 +59,7 @@ Available: accordion, alert, avatar, badge, button, calendar, card, checkbox, da
 <div className={cn('rounded-lg border p-4', isActive && 'border-primary')}>
 ```
 
-- Never use inline `style` attributes
+- Never use inline `style` attributes — **exception:** inline `style` may set CSS custom properties (`--var`) consumed by Tailwind classes, per shadcn/ui convention (e.g., `style={{ '--progress': '50%' } as React.CSSProperties}`)
 - Icons from `lucide-react`
 
 ## State & Data

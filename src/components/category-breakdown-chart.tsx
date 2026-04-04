@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils'
 import { monthStartISO, monthEndISO } from '@/lib/date-utils'
 import { useHousehold } from '@/contexts/household-context'
 import { useActiveMonth } from '@/hooks/use-active-month'
+import { useAbortController } from '@/hooks/useAbortController'
 
 interface CategoryData {
   name: string
@@ -73,6 +74,7 @@ export function CategoryBreakdownChart() {
   const [totalSpending, setTotalSpending] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { getSignal } = useAbortController()
 
   // Color palette for categories
   const colors = [
@@ -96,6 +98,7 @@ export function CategoryBreakdownChart() {
     const fetchCategoryData = async () => {
       setLoading(true)
       setError(null)
+      const signal = getSignal()
 
       try {
         const currentYear = activeYear
@@ -104,8 +107,10 @@ export function CategoryBreakdownChart() {
         const endDate = monthEndISO(currentYear, currentMonth)
 
         const response = await fetch(
-          `/api/transactions/analytics?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&groupBy=category`
+          `/api/transactions/analytics?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&groupBy=category`,
+          { signal }
         )
+        if (signal.aborted) return
 
         if (response.ok) {
           const apiData = await response.json()
@@ -166,10 +171,11 @@ export function CategoryBreakdownChart() {
           throw new Error('Failed to fetch category data')
         }
       } catch (error) {
+        if (signal.aborted) return
         console.error('Error fetching category breakdown:', error)
         setError('Failed to load category breakdown')
       } finally {
-        setLoading(false)
+        if (!signal.aborted) setLoading(false)
       }
     }
 

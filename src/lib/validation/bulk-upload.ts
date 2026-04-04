@@ -66,6 +66,8 @@ export const bulkTransactionSchema = z.object({
     .refine(reasonableAmount, 'Amount must be between -1,000,000 and 1,000,000'),
 
   memo: z.string().max(1000, 'Memo too long').transform(sanitizeText).optional(),
+
+  rowId: z.uuidv4().optional(),
 })
 
 // Main bulk upload schema

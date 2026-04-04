@@ -4,7 +4,13 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 interface TransactionAccount {
   id?: string
@@ -38,6 +44,9 @@ export function AccountForm({ account, open, onClose, onSubmit }: AccountFormPro
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{account ? 'Edit Account' : 'Add New Account'}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {account ? 'Edit an existing account' : 'Create a new account'}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

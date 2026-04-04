@@ -19,6 +19,7 @@ import {
   isValidDateISO,
   isValidDateMDY,
   mdyToISO,
+  isoToMDY,
   isNotFutureDate,
   isReasonableDate,
   currentYear,
@@ -356,6 +357,25 @@ describe('mdyToISO', () => {
   it('converts single-digit month and day to zero-padded ISO', () => {
     expect(mdyToISO('3/31/2026')).toBe('2026-03-31')
     expect(mdyToISO('1/5/2024')).toBe('2024-01-05')
+  })
+})
+
+describe('isoToMDY', () => {
+  it('converts valid ISO date to MDY', () => {
+    expect(isoToMDY('2024-01-15')).toBe('01/15/2024')
+  })
+
+  it('converts last day of year', () => {
+    expect(isoToMDY('2023-12-31')).toBe('12/31/2023')
+  })
+
+  it('preserves zero-padding', () => {
+    expect(isoToMDY('2024-03-05')).toBe('03/05/2024')
+  })
+
+  it('returns empty string for invalid input', () => {
+    expect(isoToMDY('not-a-date')).toBe('')
+    expect(isoToMDY('01/15/2024')).toBe('')
   })
 })
 

@@ -86,6 +86,24 @@ if git rev-parse "$TAG" &>/dev/null || git ls-remote --exit-code --tags origin "
   fi
 fi
 
+# ── Check for outdated dependencies ─────────────────────────
+
+echo
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ ! -f "${SCRIPT_DIR}/check-outdated-deps.sh" ]]; then
+  echo "Note: check-outdated-deps.sh not found — skipping dependency freshness check"
+elif ! bash "${SCRIPT_DIR}/check-outdated-deps.sh"; then
+  if $DRY_RUN; then
+    echo "[dry-run] skipping outdated-dep abort prompt"
+  else
+    read -rp "Proceed anyway? [y/N] " OUTDATED_CONFIRM
+    if [[ "$OUTDATED_CONFIRM" != "y" && "$OUTDATED_CONFIRM" != "Y" ]]; then
+      echo "Aborted."
+      exit 0
+    fi
+  fi
+fi
+
 echo
 echo "Version on main: ${VERSION}"
 echo "Tag to create:   ${TAG}"

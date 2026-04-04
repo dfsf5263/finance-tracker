@@ -74,6 +74,18 @@ Your financial data is some of the most sensitive information you have. Finance 
 
 > **See also:** [Health Tracker](https://github.com/dfsf5263/health-tracker) — a companion self-hosted app for tracking health data with the same privacy-first approach.
 
+## Too complicated?
+
+Render provides fully managed hosting with automatic updates, SSL, and a built-in PostgreSQL database — no server management required.
+
+<p align="center">
+  <a href="https://render.com/deploy?repo=https://github.com/dfsf5263/finance-tracker">
+    <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
+  </a>
+</p>
+
+Render provisions a web service and a PostgreSQL database automatically from [`render.yaml`](render.yaml). The app will auto-update whenever a new version is released. See [DOCKER_DEPLOYMENT.md](docs/DOCKER_DEPLOYMENT.md) for self-hosted VPS options.
+
 ## Features
 
 - 🏠 **Multi-Household Support** — Manage multiple households with role-based member access and invitations

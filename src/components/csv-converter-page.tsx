@@ -173,7 +173,7 @@ export function CSVConverterPage() {
   const [categories, setCategories] = useState<HouseholdEntity[]>([])
   const [types, setTypes] = useState<HouseholdEntity[]>([])
 
-  // ── Entity fetching (same pattern as csv-upload-page) ─────
+  // ── Entity fetching (same pattern as bulk-upload-page) ─────
 
   const fetchEntities = useCallback(
     async (endpoint: string): Promise<HouseholdEntity[]> => {
@@ -478,12 +478,12 @@ export function CSVConverterPage() {
                 using the dropdowns
               </li>
               <li>
-                Save as CSV and upload via the{' '}
+                Upload the Excel file directly (or save as CSV first) via the{' '}
                 <Link
                   href="/dashboard/transactions/upload"
                   className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
                 >
-                  CSV Upload <ExternalLink className="h-3 w-3" />
+                  Upload <ExternalLink className="h-3 w-3" />
                 </Link>{' '}
                 page
               </li>

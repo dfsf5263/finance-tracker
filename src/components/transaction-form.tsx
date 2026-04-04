@@ -11,7 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { CustomDatePicker } from '@/components/ui/date-picker'
 import { todayLocal } from '@/lib/date-utils'
 import { useHousehold } from '@/contexts/household-context'
@@ -260,6 +266,7 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>{transaction ? 'Edit Transaction' : 'Add New Transaction'}</DialogTitle>
+            <DialogDescription className="sr-only">Select a household first</DialogDescription>
           </DialogHeader>
           <div className="p-6 text-center">
             <p className="text-muted-foreground">
@@ -276,6 +283,9 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{transaction ? 'Edit Transaction' : 'Add New Transaction'}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {transaction ? 'Edit an existing transaction' : 'Create a new transaction'}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

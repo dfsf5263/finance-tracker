@@ -196,4 +196,47 @@ describe('logApiError', () => {
 
     expect(logger.error).toHaveBeenCalledTimes(2)
   })
+
+  it('reads text body when content-type is text/*', async () => {
+    const request = makeRequest({
+      method: 'POST',
+      contentType: 'text/plain',
+      body: 'hello world',
+    })
+
+    await logApiError({ request, error: new Error('err') })
+
+    const [loggedData] = vi.mocked(logger.error).mock.calls[0] as [Record<string, unknown>, string]
+    expect(loggedData.body).toBe('hello world')
+  })
+
+  it('masks non-string sensitive values as ***', async () => {
+    const request = makeRequest()
+
+    await logApiError({
+      request,
+      error: new Error('err'),
+      context: { token: 42 },
+    })
+
+    const [loggedData] = vi.mocked(logger.error).mock.calls[0] as [Record<string, unknown>, string]
+    const context = loggedData.context as Record<string, unknown>
+    expect(context.token).toBe('***')
+  })
+
+  it('recursively sanitizes nested objects in context', async () => {
+    const request = makeRequest()
+
+    await logApiError({
+      request,
+      error: new Error('err'),
+      context: { nested: { password: 'secret123', safe: 'ok' } },
+    })
+
+    const [loggedData] = vi.mocked(logger.error).mock.calls[0] as [Record<string, unknown>, string]
+    const context = loggedData.context as Record<string, unknown>
+    const nested = context.nested as Record<string, unknown>
+    expect(nested.password).toMatch(/^se\*\*\*23$/)
+    expect(nested.safe).toBe('ok')
+  })
 })

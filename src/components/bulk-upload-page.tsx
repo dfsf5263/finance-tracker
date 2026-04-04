@@ -1,7 +1,7 @@
 'use client'
 
-import { isValidCsvFile } from '@/lib/file-utils'
-import React, { useState, useCallback, useRef } from 'react'
+import { isValidCsvFile, isValidExcelFile, parseExcelToRows } from '@/lib/file-utils'
+import React, { useState, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,6 +24,7 @@ import {
   CheckCircle,
   ArrowRight,
   ExternalLink,
+  Loader2,
 } from 'lucide-react'
 import Papa from 'papaparse'
 import { toast } from 'sonner'
@@ -33,12 +34,17 @@ import { apiFetch } from '@/lib/http-utils'
 import { useHousehold } from '@/contexts/household-context'
 import { invalidateActiveMonthCache } from '@/hooks/use-active-month'
 import { canManageData } from '@/lib/role-utils'
+import {
+  FailedTransactionsGrid,
+  type FailureDetail,
+  type FailureIssue,
+} from '@/components/failed-transactions-grid'
 
-interface CSVUploadPageProps {
+interface BulkUploadPageProps {
   onUploadComplete: () => void
 }
 
-interface CSVTransaction {
+interface ParsedTransaction {
   account: string
   user: string
   transactionDate: string
@@ -48,6 +54,7 @@ interface CSVTransaction {
   type: string
   amount: string
   memo?: string
+  rowId: string
 }
 
 interface Account {
@@ -74,16 +81,9 @@ interface TransactionType {
   householdId: string
 }
 
-interface ValidationError {
-  row: number
-  field: string
-  value: string
-  message: string
-}
-
 interface ColumnMapping {
   csvHeader: string
-  mappedField: keyof CSVTransaction | 'skip'
+  mappedField: keyof ParsedTransaction | 'skip'
   confidence: 'high' | 'medium' | 'low'
   sampleData: string
 }
@@ -94,7 +94,7 @@ function normalizeHeader(header: string): string {
 }
 
 // Map normalized headers to expected field names
-const headerMapping: Record<string, keyof CSVTransaction> = {
+const headerMapping: Record<string, keyof ParsedTransaction> = {
   account: 'account',
   user: 'user',
   transactiondate: 'transactionDate',
@@ -107,14 +107,14 @@ const headerMapping: Record<string, keyof CSVTransaction> = {
 }
 
 // Helper function to convert MM/DD/YYYY to ISO format (YYYY-MM-DD)
-function convertCSVDateToISO(csvDate: string): string {
+function convertFileDateToISO(csvDate: string): string {
   if (!csvDate || !isValidDateMDY(csvDate)) {
     return ''
   }
   return mdyToISO(csvDate) ?? ''
 }
 
-export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
+export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
   const { selectedHousehold, getUserRole } = useHousehold()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const userRole = getUserRole()
@@ -124,17 +124,16 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'complete'>('upload')
   const [rawData, setRawData] = useState<Record<string, unknown>[]>([])
   const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([])
-  const [processedData, setProcessedData] = useState<CSVTransaction[]>([])
-  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([])
+  const [processedData, setProcessedData] = useState<ParsedTransaction[]>([])
+  const [clientFailures, setClientFailures] = useState<FailureDetail[]>([])
   const [uploadStats, setUploadStats] = useState<{
     total: number
     successful: number
     failed: number
     failures?: Array<{
       row: number
-      type: 'duplicate' | 'validation'
-      transaction: CSVTransaction
-      reason: string
+      transaction: ParsedTransaction
+      issues: Array<{ kind: string; fields: string[]; message: string }>
       existingTransaction?: {
         createdAt: string
         account: string
@@ -151,12 +150,47 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
   const [types, setTypes] = useState<TransactionType[]>([])
   const [entitiesLoaded, setEntitiesLoaded] = useState(false)
 
-  const processFile = (selectedFile: File) => {
-    if (selectedFile && isValidCsvFile(selectedFile)) {
+  // Preview validation state
+  const [isDryRunning, setIsDryRunning] = useState(false)
+  const [dryRunFailures, setDryRunFailures] = useState<FailureDetail[]>([])
+  const [dryRunValid, setDryRunValid] = useState<number | null>(null)
+  const [previewEditedCount, setPreviewEditedCount] = useState(0)
+  const previewEditedRowsRef = useRef<
+    Array<{
+      failure: FailureDetail
+      editedTransactionDate: string
+      editedDescription: string
+      editedAmount: string
+      editedAccount: string
+      editedUser: string
+      editedCategory: string
+      editedType: string
+    }>
+  >([])
+
+  // Complete-step failure state (for retry grid)
+  const [completeFailures, setCompleteFailures] = useState<FailureDetail[]>([])
+
+  const processFile = async (selectedFile: File) => {
+    if (isValidCsvFile(selectedFile)) {
       setFile(selectedFile)
-      parseCSV(selectedFile)
+      parseCSVFile(selectedFile)
+    } else if (isValidExcelFile(selectedFile)) {
+      setFile(selectedFile)
+      try {
+        const rows = await parseExcelToRows(selectedFile)
+        if (rows.length === 0) {
+          toast.error('The Excel file appears to be empty')
+          return
+        }
+        setRawData(rows)
+        autoMapColumns(rows)
+        setStep('mapping')
+      } catch {
+        toast.error('Failed to parse Excel file')
+      }
     } else {
-      toast.error('Please select a valid CSV file')
+      toast.error('Please select a valid CSV or Excel (.xlsx) file')
     }
   }
 
@@ -207,9 +241,9 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     openFilePicker()
   }
 
-  // ── CSV parsing ───────────────────────────────────────────
+  // ── File parsing ──────────────────────────────────────────
 
-  const parseCSV = (csvFile: File) => {
+  const parseCSVFile = (csvFile: File) => {
     Papa.parse(csvFile, {
       header: true,
       skipEmptyLines: true,
@@ -293,7 +327,10 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     if (data) setUsers(data)
   }, [selectedHousehold])
 
-  const updateColumnMapping = (csvHeader: string, mappedField: keyof CSVTransaction | 'skip') => {
+  const updateColumnMapping = (
+    csvHeader: string,
+    mappedField: keyof ParsedTransaction | 'skip'
+  ) => {
     setColumnMappings((prev) =>
       prev.map((mapping) =>
         mapping.csvHeader === csvHeader ? { ...mapping, mappedField } : mapping
@@ -315,11 +352,13 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
   }, [selectedHousehold, fetchCategories, fetchTypes, fetchAccounts, fetchUsers])
 
   const validateAndPreviewData = () => {
-    const errors: ValidationError[] = []
-    const processed: CSVTransaction[] = []
+    const failures: FailureDetail[] = []
+    const processed: ParsedTransaction[] = []
 
     rawData.forEach((row, index) => {
-      const transaction: Partial<CSVTransaction> = {}
+      const transaction: Partial<ParsedTransaction> = {
+        rowId: crypto.randomUUID(),
+      }
 
       // Map columns based on user selections
       columnMappings.forEach((mapping) => {
@@ -328,7 +367,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
 
           // Convert date fields from MM/DD/YYYY to ISO format
           if (mapping.mappedField === 'transactionDate' || mapping.mappedField === 'postDate') {
-            transaction[mapping.mappedField] = convertCSVDateToISO(value)
+            transaction[mapping.mappedField] = convertFileDateToISO(value)
           } else {
             transaction[mapping.mappedField] = value
           }
@@ -340,64 +379,54 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
         transaction.postDate = transaction.transactionDate
       }
 
-      // Validate required fields
-      const rowErrors: ValidationError[] = []
+      // Collect issues for this row
+      const rowIssues: FailureIssue[] = []
 
       if (!transaction.account?.trim()) {
-        rowErrors.push({
-          row: index + 1,
-          field: 'account',
-          value: transaction.account || '',
+        rowIssues.push({
+          kind: 'format',
+          fields: ['account'],
           message: 'Account is required',
         })
       }
 
       if (!transaction.transactionDate?.trim()) {
-        rowErrors.push({
-          row: index + 1,
-          field: 'transactionDate',
-          value: transaction.transactionDate || '',
+        rowIssues.push({
+          kind: 'format',
+          fields: ['transactionDate'],
           message: 'Transaction date is required',
         })
-      } else {
-        // Validate date format (now in ISO format)
-        if (
-          !transaction.transactionDate ||
-          !/^\d{4}-\d{2}-\d{2}$/.test(transaction.transactionDate)
-        ) {
-          rowErrors.push({
-            row: index + 1,
-            field: 'transactionDate',
-            value: transaction.transactionDate,
-            message: 'Invalid date format - expected MM/DD/YYYY',
-          })
-        }
+      } else if (
+        !transaction.transactionDate ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(transaction.transactionDate)
+      ) {
+        rowIssues.push({
+          kind: 'format',
+          fields: ['transactionDate'],
+          message: 'Invalid date format - expected MM/DD/YYYY',
+        })
       }
 
       if (!transaction.description?.trim()) {
-        rowErrors.push({
-          row: index + 1,
-          field: 'description',
-          value: transaction.description || '',
+        rowIssues.push({
+          kind: 'format',
+          fields: ['description'],
           message: 'Description is required',
         })
       }
 
       if (!transaction.amount?.trim()) {
-        rowErrors.push({
-          row: index + 1,
-          field: 'amount',
-          value: transaction.amount || '',
+        rowIssues.push({
+          kind: 'format',
+          fields: ['amount'],
           message: 'Amount is required',
         })
       } else {
-        // Validate amount is a number
         const amount = parseFloat(transaction.amount.replace(/[,$]/g, ''))
         if (isNaN(amount)) {
-          rowErrors.push({
-            row: index + 1,
-            field: 'amount',
-            value: transaction.amount,
+          rowIssues.push({
+            kind: 'format',
+            fields: ['amount'],
             message: 'Amount must be a valid number',
           })
         }
@@ -406,20 +435,18 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
       // Validate entity existence (only if entities are loaded)
       if (entitiesLoaded) {
         if (transaction.account?.trim() && !accounts.some((a) => a.name === transaction.account)) {
-          rowErrors.push({
-            row: index + 1,
-            field: 'account',
-            value: transaction.account,
-            message: `Account "${transaction.account}" is not defined. Either correct the account in your upload or add the new account on the definitions page prior to uploading your transactions.`,
+          rowIssues.push({
+            kind: 'entity',
+            fields: ['account'],
+            message: `Account "${transaction.account}" is not defined`,
           })
         }
 
         if (transaction.user?.trim() && !users.some((u) => u.name === transaction.user)) {
-          rowErrors.push({
-            row: index + 1,
-            field: 'user',
-            value: transaction.user,
-            message: `User "${transaction.user}" is not defined. Either correct the user in your upload or add the new user on the definitions page prior to uploading your transactions.`,
+          rowIssues.push({
+            kind: 'entity',
+            fields: ['user'],
+            message: `User "${transaction.user}" is not defined`,
           })
         }
 
@@ -427,34 +454,151 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
           transaction.category?.trim() &&
           !categories.some((c) => c.name === transaction.category)
         ) {
-          rowErrors.push({
-            row: index + 1,
-            field: 'category',
-            value: transaction.category,
-            message: `Category "${transaction.category}" is not defined. Either correct the category in your upload or add the new category on the definitions page prior to uploading your transactions.`,
+          rowIssues.push({
+            kind: 'entity',
+            fields: ['category'],
+            message: `Category "${transaction.category}" is not defined`,
           })
         }
 
         if (transaction.type?.trim() && !types.some((t) => t.name === transaction.type)) {
-          rowErrors.push({
-            row: index + 1,
-            field: 'type',
-            value: transaction.type,
-            message: `Type "${transaction.type}" is not defined. Either correct the transaction type in your upload or add the new type on the definitions page prior to uploading your transactions.`,
+          rowIssues.push({
+            kind: 'entity',
+            fields: ['type'],
+            message: `Type "${transaction.type}" is not defined`,
           })
         }
       }
 
-      errors.push(...rowErrors)
-
-      if (rowErrors.length === 0) {
-        processed.push(transaction as CSVTransaction)
+      if (rowIssues.length > 0) {
+        failures.push({
+          index: index,
+          row: index + 2, // +2 for header row and 0-index
+          transaction: {
+            account: transaction.account || '',
+            user: transaction.user || undefined,
+            transactionDate: transaction.transactionDate || '',
+            postDate: transaction.postDate || undefined,
+            description: transaction.description || '',
+            category: transaction.category || '',
+            type: transaction.type || '',
+            amount: transaction.amount || '',
+            memo: transaction.memo || undefined,
+            rowId: transaction.rowId,
+          },
+          issues: rowIssues,
+        })
+      } else {
+        processed.push(transaction as ParsedTransaction)
       }
     })
 
-    setValidationErrors(errors)
+    setClientFailures(failures)
     setProcessedData(processed)
     setStep('preview')
+
+    // Auto-trigger dry-run if there are valid transactions
+    if (processed.length > 0 && selectedHousehold?.id) {
+      runDryRun(processed)
+    }
+  }
+
+  const runDryRun = async (transactions: ParsedTransaction[]) => {
+    if (!selectedHousehold?.id) return
+
+    setIsDryRunning(true)
+    setDryRunFailures([])
+    setDryRunValid(null)
+    previewEditedRowsRef.current = []
+
+    const { data } = await apiFetch<{
+      success: boolean
+      results: {
+        total: number
+        valid: number
+        failed: number
+        failures: FailureDetail[]
+      }
+    }>('/api/transactions/bulk/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        transactions,
+        householdId: selectedHousehold.id,
+      }),
+      showErrorToast: true,
+      showRateLimitToast: true,
+    })
+
+    if (data?.results) {
+      setDryRunFailures(data.results.failures)
+      setDryRunValid(data.results.valid)
+    }
+
+    setIsDryRunning(false)
+  }
+
+  const handlePreviewRowsChange = useCallback(
+    (
+      rows: Array<{
+        failure: FailureDetail
+        status: string
+        editedTransactionDate: string
+        editedDescription: string
+        editedAmount: string
+        editedAccount: string
+        editedUser: string
+        editedCategory: string
+        editedType: string
+      }>
+    ) => {
+      const edited = rows.filter((r) => r.status !== 'pending')
+      previewEditedRowsRef.current = edited.map((r) => ({
+        failure: r.failure,
+        editedTransactionDate: r.editedTransactionDate,
+        editedDescription: r.editedDescription,
+        editedAmount: r.editedAmount,
+        editedAccount: r.editedAccount,
+        editedUser: r.editedUser,
+        editedCategory: r.editedCategory,
+        editedType: r.editedType,
+      }))
+      setPreviewEditedCount(edited.length)
+    },
+    []
+  )
+
+  // Build the upload payload by merging valid rows with user-edited dry-run failures
+  const buildUploadPayload = (): ParsedTransaction[] => {
+    // If no dry-run was performed, use processedData as-is
+    if (dryRunFailures.length === 0 && previewEditedRowsRef.current.length === 0) {
+      return processedData
+    }
+
+    // Start with valid rows (those that passed dry-run, i.e. not in the failure list)
+    const failureIndices = new Set(dryRunFailures.map((f) => f.index))
+    const validRows = processedData.filter((_, i) => !failureIndices.has(i))
+
+    // Add edited/modified failure rows back
+    const editedRows: ParsedTransaction[] = previewEditedRowsRef.current.map((r) => {
+      const postDate = r.failure.transaction.postDate?.trim()
+        ? r.failure.transaction.postDate
+        : r.editedTransactionDate
+      return {
+        account: r.editedAccount,
+        user: r.editedUser,
+        transactionDate: r.editedTransactionDate,
+        postDate,
+        description: r.editedDescription,
+        category: r.editedCategory,
+        type: r.editedType,
+        amount: r.editedAmount,
+        memo: r.failure.transaction.memo ?? '',
+        rowId: r.failure.transaction.rowId ?? crypto.randomUUID(),
+      }
+    })
+
+    return [...validRows, ...editedRows]
   }
 
   const uploadTransactions = async () => {
@@ -467,7 +611,10 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
       return
     }
 
-    if (!processedData || processedData.length === 0) {
+    if (
+      !processedData ||
+      (processedData.length === 0 && previewEditedRowsRef.current.length === 0)
+    ) {
       toast.error('No transaction data to upload')
       setUploading(false)
       return
@@ -482,9 +629,8 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
         failed: number
         failures: Array<{
           row: number
-          type: 'duplicate' | 'validation'
-          transaction: CSVTransaction
-          reason: string
+          transaction: ParsedTransaction
+          issues: Array<{ kind: string; fields: string[]; message: string }>
           existingTransaction?: {
             createdAt: string
             account: string
@@ -494,14 +640,13 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
           }
         }>
       }
-      validationErrors?: ValidationError[]
     }>('/api/transactions/bulk', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        transactions: processedData,
+        transactions: buildUploadPayload(),
         householdId: selectedHousehold?.id,
       }),
       showErrorToast: false, // Handle success/error toasts manually
@@ -515,6 +660,22 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
         failed: data.results?.failed || 0,
         failures: data.results?.failures || [],
       })
+
+      // Convert failures to FailureDetail format for the retry grid
+      const failures = data.results?.failures || []
+      setCompleteFailures(
+        failures.map((f, i) => ({
+          index: i,
+          row: f.row,
+          transaction: f.transaction,
+          issues: (f.issues || []).map((iss) => ({
+            kind: iss.kind as 'format' | 'entity' | 'duplicate',
+            fields: iss.fields,
+            message: iss.message,
+          })),
+          existingTransaction: f.existingTransaction,
+        }))
+      )
 
       const hasFailures = (data.results?.failed || 0) > 0
       if (hasFailures) {
@@ -542,17 +703,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
 
       // Only show toast if it's not a rate limit error (already handled by apiFetch)
       if (!error.includes('Rate limit exceeded')) {
-        // Check if we have detailed validation errors
-        const apiErrorData = errorData as
-          | { validationErrors?: ValidationError[]; details?: string }
-          | undefined
-
-        if (apiErrorData?.validationErrors && apiErrorData.validationErrors.length > 0) {
-          // Set validation errors and go back to preview step
-          setValidationErrors(apiErrorData.validationErrors)
-          toast.error(`Validation failed: ${apiErrorData.validationErrors.length} errors found`)
-          setStep('preview')
-        } else if (error.includes('Validation failed') || error.includes('validation')) {
+        if (error.includes('Validation failed') || error.includes('validation')) {
           // Fallback for generic validation errors
           toast.error('Validation errors found - please check your data')
           setStep('preview')
@@ -578,35 +729,15 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     setRawData([])
     setColumnMappings([])
     setProcessedData([])
-    setValidationErrors([])
+    setClientFailures([])
     setUploadStats({ total: 0, successful: 0, failed: 0, failures: [] })
     setIsDragOver(false)
-  }
-
-  const downloadErrorReport = () => {
-    // Helper to properly escape CSV values
-    const escapeCSV = (value: string) => {
-      if (value.includes('"') || value.includes(',') || value.includes('\n')) {
-        return `"${value.replace(/"/g, '""')}"`
-      }
-      return `"${value}"`
-    }
-
-    const csvContent = [
-      'Row,Field,Value,Error',
-      ...validationErrors.map(
-        (error) =>
-          `${error.row},${escapeCSV(error.field)},${escapeCSV(error.value)},${escapeCSV(error.message)}`
-      ),
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'validation-errors.csv'
-    a.click()
-    URL.revokeObjectURL(url)
+    setIsDryRunning(false)
+    setDryRunFailures([])
+    setDryRunValid(null)
+    setPreviewEditedCount(0)
+    previewEditedRowsRef.current = []
+    setCompleteFailures([])
   }
 
   const downloadFailureReport = () => {
@@ -621,17 +752,17 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     }
 
     const csvContent = [
-      'Row,Type,Account,Transaction Date,Description,Amount,Reason,Created Date',
+      'Row,Issues,Account,Transaction Date,Description,Amount,Created Date',
       ...uploadStats.failures.map((failure) => {
         const t = failure.transaction
+        const issuesSummary = (failure.issues || []).map((iss) => iss.message).join('; ')
         return [
           failure.row,
-          escapeCSV(failure.type),
+          escapeCSV(issuesSummary),
           escapeCSV(t.account),
           escapeCSV(t.transactionDate),
           escapeCSV(t.description),
           escapeCSV(t.amount),
-          escapeCSV(failure.reason),
           escapeCSV(failure.existingTransaction?.createdAt || ''),
         ].join(',')
       }),
@@ -645,6 +776,27 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
     a.click()
     URL.revokeObjectURL(url)
   }
+
+  // Merge client-side and server-side failures for the preview grid, deduplicating by row index
+  const mergedPreviewFailures = useMemo(() => {
+    const byIndex = new Map<number, FailureDetail>()
+    for (const f of clientFailures) {
+      byIndex.set(f.index, f)
+    }
+    for (const f of dryRunFailures) {
+      const existing = byIndex.get(f.index)
+      if (existing) {
+        // Merge issues from both sources
+        byIndex.set(f.index, {
+          ...existing,
+          issues: [...existing.issues, ...f.issues],
+        })
+      } else {
+        byIndex.set(f.index, f)
+      }
+    }
+    return Array.from(byIndex.values()).sort((a, b) => a.index - b.index)
+  }, [clientFailures, dryRunFailures])
 
   if (!selectedHousehold) {
     return (
@@ -710,10 +862,10 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
           <CardHeader className="p-6 pb-0">
             <CardTitle className="flex items-center gap-2">
               <Upload className="h-5 w-5 text-blue-600" />
-              Upload CSV File
+              Upload Transactions
             </CardTitle>
             <CardDescription>
-              Select a CSV file containing transaction data to import
+              Select a CSV or Excel file containing transaction data to import
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 pt-4 space-y-4">
@@ -736,7 +888,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
               <Input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv"
+                accept=".csv,.xlsx"
                 onChange={handleFileChange}
                 className="hidden"
                 id="csv-upload"
@@ -749,10 +901,10 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
               />
               <div className="space-y-2">
                 <div className="text-sm font-medium">
-                  {isDragOver ? 'Drop CSV file here' : 'Click to select CSV file or drag and drop'}
+                  {isDragOver ? 'Drop file here' : 'Click to select a file or drag and drop'}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Supported format: CSV files only
+                  Supported formats: CSV and Excel (.xlsx)
                 </div>
               </div>
             </label>
@@ -769,9 +921,9 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
 
             <Card className="p-4">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">CSV Instructions</CardTitle>
+                <CardTitle className="text-base">Upload Instructions</CardTitle>
                 <CardDescription className="pb-2">
-                  Your CSV file should include the following columns. Column names are
+                  Your CSV or Excel file should include the following columns. Column names are
                   case-insensitive. The order of the columns does not matter and you can map them
                   after uploading/selecting your file.
                 </CardDescription>
@@ -814,7 +966,8 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
                         Date when the transaction occurred
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Format: MM/DD/YYYY (e.g., 12/25/2024)
+                        Format: MM/DD/YYYY (e.g., 12/25/2024). Excel Date or General cells are also
+                        accepted.
                       </p>
                     </div>
                   </div>
@@ -894,7 +1047,8 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
                         Transaction amount (positive for income, negative for expenses)
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Format: Decimal number (e.g., -25.50, 1250.00)
+                        Format: Decimal number (e.g., -25.50, 1250.00). Excel Numeric or General
+                        cells are also accepted.
                       </p>
                     </div>
                   </div>
@@ -935,7 +1089,8 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
                         provided)
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Format: MM/DD/YYYY (e.g., 12/27/2024)
+                        Format: MM/DD/YYYY (e.g., 12/27/2024). Excel Date or General cells are also
+                        accepted.
                       </p>
                     </div>
                   </div>
@@ -971,7 +1126,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
               Map Columns
             </CardTitle>
             <CardDescription>
-              Map your CSV columns to the required transaction fields
+              Map your file&apos;s columns to the required transaction fields
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 pt-4 space-y-4">
@@ -993,7 +1148,7 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
                       onValueChange={(value) =>
                         updateColumnMapping(
                           mapping.csvHeader,
-                          value as keyof CSVTransaction | 'skip'
+                          value as keyof ParsedTransaction | 'skip'
                         )
                       }
                     >
@@ -1032,11 +1187,20 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
               ))}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Button variant="outline" onClick={() => setStep('upload')}>
                 Back
               </Button>
-              <Button onClick={validateAndPreviewData}>Continue to Preview</Button>
+              <Button onClick={validateAndPreviewData} disabled={!entitiesLoaded}>
+                {entitiesLoaded ? (
+                  'Continue to Preview'
+                ) : (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading household data…
+                  </>
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -1045,40 +1209,57 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
       {/* Preview Step */}
       {step === 'preview' && (
         <div className="space-y-4">
-          {validationErrors.length > 0 && (
+          {/* Dry-run validation results */}
+          {isDryRunning && (
             <Card>
-              <CardHeader className="p-6 pb-0">
-                <CardTitle className="flex items-center gap-2 text-destructive">
-                  <AlertCircle className="h-5 w-5" />
-                  Validation Errors ({validationErrors.length})
-                </CardTitle>
-                <CardDescription>
-                  The following errors must be fixed before proceeding
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 pt-4">
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {validationErrors.slice(0, 10).map((error, index) => (
-                    <div key={index} className="text-sm p-2 bg-destructive/10 rounded">
-                      Row {error.row}: {error.message} (Field: {error.field}, Value: &quot;
-                      {error.value}&quot;)
-                    </div>
-                  ))}
-                  {validationErrors.length > 10 && (
-                    <div className="text-sm text-muted-foreground">
-                      ... and {validationErrors.length - 10} more errors
-                    </div>
-                  )}
-                </div>
-                <div className="mt-4">
-                  <Button variant="outline" onClick={downloadErrorReport}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Error Report
-                  </Button>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Checking for duplicates and validating entities...
                 </div>
               </CardContent>
             </Card>
           )}
+
+          {!isDryRunning && dryRunValid !== null && dryRunFailures.length === 0 && (
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 text-green-600">
+                  <CheckCircle className="h-4 w-4" />
+                  All {dryRunValid} transactions passed server validation
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!isDryRunning &&
+            (clientFailures.length > 0 || dryRunFailures.length > 0) &&
+            selectedHousehold && (
+              <Card>
+                <CardHeader className="p-6 pb-0">
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                    <AlertCircle className="h-5 w-5" />
+                    Validation Issues ({clientFailures.length + dryRunFailures.length})
+                  </CardTitle>
+                  <CardDescription>
+                    Edit or dismiss these rows before uploading. Modified rows will be included in
+                    the upload.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-6 pt-4">
+                  <FailedTransactionsGrid
+                    failures={mergedPreviewFailures}
+                    householdId={selectedHousehold.id}
+                    mode="preview"
+                    accounts={accounts}
+                    users={users}
+                    categories={categories}
+                    types={types}
+                    onRowsChange={handlePreviewRowsChange}
+                  />
+                </CardContent>
+              </Card>
+            )}
 
           <Card>
             <CardHeader className="p-6 pb-0">
@@ -1121,16 +1302,28 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
               </div>
 
               <div className="flex gap-2 mt-4">
-                <Button variant="outline" onClick={() => setStep('mapping')}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDryRunFailures([])
+                    setDryRunValid(null)
+                    setIsDryRunning(false)
+                    setPreviewEditedCount(0)
+                    previewEditedRowsRef.current = []
+                    setStep('mapping')
+                  }}
+                >
                   Back to Mapping
                 </Button>
                 <Button
                   onClick={uploadTransactions}
-                  disabled={processedData.length === 0 || validationErrors.length > 0}
+                  disabled={
+                    (processedData.length === 0 && previewEditedCount === 0) || isDryRunning
+                  }
                 >
-                  {validationErrors.length > 0
-                    ? 'Fix Errors to Upload'
-                    : `Upload ${processedData.length} Transactions`}
+                  {isDryRunning
+                    ? 'Validating...'
+                    : `Upload ${(dryRunValid ?? processedData.length) + previewEditedCount} Transactions`}
                 </Button>
               </div>
             </CardContent>
@@ -1140,52 +1333,82 @@ export function CSVUploadPage({ onUploadComplete }: CSVUploadPageProps) {
 
       {/* Complete Step */}
       {step === 'complete' && (
-        <Card>
-          <CardHeader className="p-6 pb-0">
-            <CardTitle className="flex items-center gap-2 text-green-600">
-              <CheckCircle className="h-5 w-5" />
-              Upload Complete
-            </CardTitle>
-            <CardDescription>Transaction upload has been completed</CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 pt-4 space-y-4">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-3 bg-muted rounded-lg">
-                <div className="text-2xl font-bold">{uploadStats.total}</div>
-                <div className="text-sm text-muted-foreground">Total</div>
-              </div>
-              <div className="p-3 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{uploadStats.successful}</div>
-                <div className="text-sm text-muted-foreground">Successful</div>
-              </div>
-              <div className="p-3 bg-red-50 rounded-lg">
-                <div className="text-2xl font-bold text-red-600">{uploadStats.failed}</div>
-                <div className="text-sm text-muted-foreground">Failed</div>
-              </div>
-            </div>
-
-            {uploadStats.failed > 0 && (
-              <div className="space-y-3">
-                <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <div className="text-sm font-medium text-yellow-800">
-                    {uploadStats.failed} transactions failed to upload
-                  </div>
-                  <div className="text-xs text-yellow-700 mt-1">
-                    Download the failure report to see details and fix issues in your CSV file
-                  </div>
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="p-6 pb-0">
+              <CardTitle className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="h-5 w-5" />
+                Upload Complete
+              </CardTitle>
+              <CardDescription>Transaction upload has been completed</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 pt-4 space-y-4">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="p-3 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold">{uploadStats.total}</div>
+                  <div className="text-sm text-muted-foreground">Total</div>
                 </div>
-                <Button variant="outline" onClick={downloadFailureReport} className="w-full">
-                  <Download className="h-4 w-4 mr-2" />
-                  Get Failure Report
-                </Button>
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">{uploadStats.successful}</div>
+                  <div className="text-sm text-muted-foreground">Successful</div>
+                </div>
+                <div className="p-3 bg-red-50 rounded-lg">
+                  <div className="text-2xl font-bold text-red-600">{uploadStats.failed}</div>
+                  <div className="text-sm text-muted-foreground">Failed</div>
+                </div>
               </div>
-            )}
 
-            <Button onClick={resetUpload} className="w-full">
-              Upload Another File
-            </Button>
-          </CardContent>
-        </Card>
+              {uploadStats.failed > 0 && (
+                <div className="space-y-3">
+                  <Button variant="outline" onClick={downloadFailureReport} className="w-full">
+                    <Download className="h-4 w-4 mr-2" />
+                    Get Failure Report
+                  </Button>
+                </div>
+              )}
+
+              <Button onClick={resetUpload} className="w-full">
+                Upload Another File
+              </Button>
+            </CardContent>
+          </Card>
+
+          {completeFailures.length > 0 && selectedHousehold && (
+            <Card>
+              <CardHeader className="p-6 pb-0">
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="h-5 w-5" />
+                  Failed Transactions ({completeFailures.length})
+                </CardTitle>
+                <CardDescription>
+                  Edit and retry failed transactions, or dismiss them
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 pt-4">
+                <FailedTransactionsGrid
+                  failures={completeFailures}
+                  householdId={selectedHousehold.id}
+                  mode="complete"
+                  accounts={accounts}
+                  users={users}
+                  categories={categories}
+                  types={types}
+                  onRetryComplete={(results) => {
+                    if (results.succeeded > 0) {
+                      setUploadStats((prev) => ({
+                        ...prev,
+                        successful: prev.successful + results.succeeded,
+                        failed: prev.failed - results.succeeded,
+                      }))
+                      invalidateActiveMonthCache(selectedHousehold.id)
+                      onUploadComplete()
+                    }
+                  }}
+                />
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
     </div>
   )

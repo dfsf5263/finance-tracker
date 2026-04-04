@@ -71,9 +71,10 @@ export default async function proxy(req: NextRequest) {
   // /docs loads Scalar's API reference bundle from jsDelivr and loads
   // fonts from fonts.scalar.com.
   const isDocsRoute = pathname === '/docs' || pathname.startsWith('/docs/')
+  const isDev = process.env.NODE_ENV === 'development'
   const scriptSrc = isDocsRoute
-    ? "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://cdn.jsdelivr.net"
-    : "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com"
+    ? `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://challenges.cloudflare.com https://cdn.jsdelivr.net`
+    : `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://challenges.cloudflare.com`
   const connectSrc = "connect-src 'self'"
   const fontSrc = isDocsRoute
     ? "font-src 'self' https://fonts.gstatic.com https://fonts.scalar.com"

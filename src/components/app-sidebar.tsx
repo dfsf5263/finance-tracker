@@ -23,6 +23,7 @@ import {
   Users,
   Wallet,
   Trash2,
+  Download,
 } from 'lucide-react'
 
 import { NavMain } from '@/components/nav-main'
@@ -121,6 +122,11 @@ const data = {
       name: 'DeDupe',
       url: '/dashboard/utility/dedupe',
       icon: Trash2,
+    },
+    {
+      name: 'Export',
+      url: '/dashboard/utility/export',
+      icon: Download,
     },
   ],
   settings: [
