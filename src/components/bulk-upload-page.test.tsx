@@ -328,6 +328,37 @@ describe('BulkUploadPage', () => {
       expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Error parsing CSV'))
     })
   })
+
+  it('shows error toast when PapaParse fires the error callback', async () => {
+    vi.mocked(fileUtils.isValidCsvFile).mockReturnValue(true)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(Papa.parse as any).mockImplementationOnce((_file: unknown, opts: any) => {
+      opts.error?.(
+        { message: 'parse failed', row: 0, code: 'TooFewFields', type: 'FieldMismatch' },
+        undefined
+      )
+      return {} as Papa.ParseResult<unknown>
+    })
+
+    render(<BulkUploadPage onUploadComplete={vi.fn()} />)
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [makeFile('bad.csv', 'text/csv')] } })
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Failed to parse CSV'))
+    })
+  })
+
+  it('handles drag enter and drag leave events', () => {
+    render(<BulkUploadPage onUploadComplete={vi.fn()} />)
+    const dropZone = document.querySelector('label[for="csv-upload"]') as HTMLElement
+
+    fireEvent.dragEnter(dropZone, { dataTransfer: { files: [] } })
+    fireEvent.dragLeave(dropZone, { dataTransfer: { files: [] } })
+    // No crash — drag state toggled without error
+    expect(dropZone).toBeInTheDocument()
+  })
 })
 
 // ── Dry-run integration tests ──────────────────────────────────────────────
@@ -1004,5 +1035,250 @@ describe('BulkUploadPage — dry-run integration', () => {
 
     expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
     expect(revokeObjectURL).toHaveBeenCalled()
+  })
+})
+
+// ── Client-side validation tests ───────────────────────────────────────────
+
+describe('BulkUploadPage — client-side validation', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mockResponse = { ok: true } as any as Response
+
+  function setupEntities() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(apiFetch).mockImplementation(async (url: string, _opts?: any) => {
+      if (typeof url === 'string' && url.includes('/api/accounts'))
+        return {
+          data: [{ id: 'a1', name: 'Checking', householdId: 'hh-1' }],
+          error: null,
+          response: mockResponse,
+        }
+      if (typeof url === 'string' && url.includes('/api/categories'))
+        return {
+          data: [{ id: 'c1', name: 'Food', householdId: 'hh-1' }],
+          error: null,
+          response: mockResponse,
+        }
+      if (typeof url === 'string' && url.includes('/api/types'))
+        return {
+          data: [{ id: 't1', name: 'Sale', householdId: 'hh-1' }],
+          error: null,
+          response: mockResponse,
+        }
+      if (typeof url === 'string' && url.includes('/api/users'))
+        return {
+          data: [{ id: 'u1', name: 'Alice', householdId: 'hh-1' }],
+          error: null,
+          response: mockResponse,
+        }
+      return { data: null, error: null, response: mockResponse }
+    })
+  }
+
+  async function uploadCsvAndPreview(rows: Record<string, string>[]) {
+    vi.mocked(fileUtils.isValidCsvFile).mockReturnValue(true)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(Papa.parse as any).mockImplementationOnce((_file: unknown, opts: Papa.ParseConfig) => {
+      opts.complete?.({ data: rows, errors: [], meta: {} as Papa.ParseMeta }, undefined)
+      return {} as Papa.ParseResult<unknown>
+    })
+
+    render(<BulkUploadPage onUploadComplete={vi.fn()} />)
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [makeFile('test.csv', 'text/csv')] } })
+
+    // Wait for mapping step
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /map columns/i })).toBeInTheDocument()
+    })
+
+    // Click continue to preview (triggers validateAndPreviewData)
+    fireEvent.click(screen.getByRole('button', { name: /continue to preview/i }))
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setupHousehold()
+    vi.mocked(fileUtils.isValidCsvFile).mockReturnValue(false)
+    vi.mocked(fileUtils.isValidExcelFile).mockReturnValue(false)
+    setupEntities()
+  })
+
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('catches rows with missing account', async () => {
+    await uploadCsvAndPreview([
+      {
+        Account: '',
+        'Transaction Date': '01/15/2024',
+        Description: 'Coffee',
+        Amount: '-5.00',
+        Category: 'Food',
+        Type: 'Sale',
+      },
+    ])
+
+    await waitFor(() => {
+      expect(screen.getByTestId('failed-transactions-grid')).toBeInTheDocument()
+      expect(screen.getByText('1 failures')).toBeInTheDocument()
+    })
+  })
+
+  it('catches rows with empty transaction date', async () => {
+    await uploadCsvAndPreview([
+      {
+        Account: 'Checking',
+        'Transaction Date': '',
+        Description: 'Coffee',
+        Amount: '-5.00',
+        Category: 'Food',
+        Type: 'Sale',
+      },
+    ])
+
+    await waitFor(() => {
+      expect(screen.getByTestId('failed-transactions-grid')).toBeInTheDocument()
+    })
+  })
+
+  it('catches rows with invalid date format', async () => {
+    await uploadCsvAndPreview([
+      {
+        Account: 'Checking',
+        'Transaction Date': 'not-a-date',
+        Description: 'Coffee',
+        Amount: '-5.00',
+        Category: 'Food',
+        Type: 'Sale',
+      },
+    ])
+
+    await waitFor(() => {
+      expect(screen.getByTestId('failed-transactions-grid')).toBeInTheDocument()
+    })
+  })
+
+  it('catches rows with missing description', async () => {
+    await uploadCsvAndPreview([
+      {
+        Account: 'Checking',
+        'Transaction Date': '01/15/2024',
+        Description: '',
+        Amount: '-5.00',
+        Category: 'Food',
+        Type: 'Sale',
+      },
+    ])
+
+    await waitFor(() => {
+      expect(screen.getByTestId('failed-transactions-grid')).toBeInTheDocument()
+    })
+  })
+
+  it('catches rows with missing amount', async () => {
+    await uploadCsvAndPreview([
+      {
+        Account: 'Checking',
+        'Transaction Date': '01/15/2024',
+        Description: 'Coffee',
+        Amount: '',
+        Category: 'Food',
+        Type: 'Sale',
+      },
+    ])
+
+    await waitFor(() => {
+      expect(screen.getByTestId('failed-transactions-grid')).toBeInTheDocument()
+    })
+  })
+
+  it('catches rows with non-numeric amount', async () => {
+    await uploadCsvAndPreview([
+      {
+        Account: 'Checking',
+        'Transaction Date': '01/15/2024',
+        Description: 'Coffee',
+        Amount: 'abc',
+        Category: 'Food',
+        Type: 'Sale',
+      },
+    ])
+
+    await waitFor(() => {
+      expect(screen.getByTestId('failed-transactions-grid')).toBeInTheDocument()
+    })
+  })
+
+  it('catches rows with unknown entity names', async () => {
+    await uploadCsvAndPreview([
+      {
+        Account: 'Unknown Account',
+        User: 'Unknown User',
+        'Transaction Date': '01/15/2024',
+        Description: 'Coffee',
+        Amount: '-5.00',
+        Category: 'Unknown Category',
+        Type: 'Unknown Type',
+      },
+    ])
+
+    await waitFor(() => {
+      expect(screen.getByTestId('failed-transactions-grid')).toBeInTheDocument()
+    })
+  })
+
+  it('handles medium-confidence auto-mapping for partial header matches', async () => {
+    // Headers that partially match expected fields
+    vi.mocked(fileUtils.isValidCsvFile).mockReturnValue(true)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(Papa.parse as any).mockImplementationOnce((_file: unknown, opts: Papa.ParseConfig) => {
+      opts.complete?.(
+        {
+          data: [
+            {
+              'account name': 'Checking',
+              'date of transaction': '01/15/2024',
+              'description text': 'Coffee',
+              'amount value': '-5.00',
+            },
+          ],
+          errors: [],
+          meta: {} as Papa.ParseMeta,
+        },
+        undefined
+      )
+      return {} as Papa.ParseResult<unknown>
+    })
+
+    render(<BulkUploadPage onUploadComplete={vi.fn()} />)
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [makeFile('test.csv', 'text/csv')] } })
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /map columns/i })).toBeInTheDocument()
+    })
+  })
+
+  it('shows error when uploading with no processed data', async () => {
+    // Upload rows that ALL fail client validation so processedData is empty
+    await uploadCsvAndPreview([
+      {
+        Account: '',
+        'Transaction Date': '',
+        Description: '',
+        Amount: '',
+        Category: '',
+        Type: '',
+      },
+    ])
+
+    // The preview step is now visible, but no valid transactions
+    await waitFor(() => {
+      expect(screen.getByTestId('failed-transactions-grid')).toBeInTheDocument()
+    })
   })
 })

@@ -817,4 +817,140 @@ describe('FailedTransactionsGrid', () => {
       expect(screen.getByRole('combobox')).toBeInTheDocument()
     })
   })
+
+  describe('hasUnresolved field detection', () => {
+    it('shows fix-required badge for unresolved account field', () => {
+      render(
+        <FailedTransactionsGrid
+          failures={[
+            makeFailure({
+              issues: [
+                {
+                  kind: 'entity',
+                  fields: ['account'],
+                  message: 'Account "Chase Checking" not found',
+                },
+              ],
+              existingTransaction: undefined,
+            }),
+          ]}
+          householdId={HOUSEHOLD_ID}
+          mode="preview"
+          accounts={[{ id: 'acct-1', name: 'Savings' }]}
+        />
+      )
+
+      expect(screen.getByText('Fix required')).toBeInTheDocument()
+    })
+
+    it('shows fix-required badge for unresolved category field', () => {
+      render(
+        <FailedTransactionsGrid
+          failures={[
+            makeFailure({
+              transaction: {
+                ...makeFailure().transaction,
+                category: 'Unknown',
+              },
+              issues: [
+                {
+                  kind: 'entity',
+                  fields: ['category'],
+                  message: 'Category "Unknown" not found',
+                },
+              ],
+              existingTransaction: undefined,
+            }),
+          ]}
+          householdId={HOUSEHOLD_ID}
+          mode="preview"
+          categories={[{ id: 'cat-1', name: 'Food' }]}
+        />
+      )
+
+      expect(screen.getByText('Fix required')).toBeInTheDocument()
+    })
+
+    it('shows fix-required badge for unresolved type field', () => {
+      render(
+        <FailedTransactionsGrid
+          failures={[
+            makeFailure({
+              transaction: {
+                ...makeFailure().transaction,
+                type: 'Unknown',
+              },
+              issues: [
+                {
+                  kind: 'entity',
+                  fields: ['type'],
+                  message: 'Type "Unknown" not found',
+                },
+              ],
+              existingTransaction: undefined,
+            }),
+          ]}
+          householdId={HOUSEHOLD_ID}
+          mode="preview"
+          types={[{ id: 'type-1', name: 'Purchase' }]}
+        />
+      )
+
+      expect(screen.getByText('Fix required')).toBeInTheDocument()
+    })
+
+    it('shows fix-required badge for unresolved user field', () => {
+      render(
+        <FailedTransactionsGrid
+          failures={[
+            makeFailure({
+              transaction: {
+                ...makeFailure().transaction,
+                user: 'Unknown',
+              },
+              issues: [
+                {
+                  kind: 'entity',
+                  fields: ['user'],
+                  message: 'User "Unknown" not found',
+                },
+              ],
+              existingTransaction: undefined,
+            }),
+          ]}
+          householdId={HOUSEHOLD_ID}
+          mode="preview"
+          users={[{ id: 'u-1', name: 'Alice' }]}
+        />
+      )
+
+      expect(screen.getByText('Fix required')).toBeInTheDocument()
+    })
+
+    it('renders transaction date picker for transactionDate issue', () => {
+      render(
+        <FailedTransactionsGrid
+          failures={[
+            makeFailure({
+              issues: [
+                {
+                  kind: 'format',
+                  fields: ['transactionDate'],
+                  message: 'Invalid date format',
+                },
+              ],
+              existingTransaction: undefined,
+            }),
+          ]}
+          householdId={HOUSEHOLD_ID}
+          mode="preview"
+        />
+      )
+
+      fireEvent.click(screen.getByLabelText('Expand details'))
+
+      // CustomDatePicker renders a button trigger
+      expect(screen.getByText('Transaction Date')).toBeInTheDocument()
+    })
+  })
 })

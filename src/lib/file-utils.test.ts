@@ -308,4 +308,17 @@ describe('parseExcelToRows', () => {
     // so 'Memo' won't be present in the record.
     expect(rows[0]['Memo']).toBeUndefined()
   })
+
+  it('maps a null cell before a filled cell to empty string', async () => {
+    const file = await buildXlsx((ws) => {
+      ws.addRow(['Account', 'Description'])
+      const row = ws.addRow([])
+      row.getCell(1).value = null
+      row.getCell(2).value = 'Coffee'
+    })
+    const rows = await parseExcelToRows(file)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]['Account']).toBe('')
+    expect(rows[0]['Description']).toBe('Coffee')
+  })
 })

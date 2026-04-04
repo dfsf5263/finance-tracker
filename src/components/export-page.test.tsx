@@ -13,6 +13,38 @@ vi.mock('sonner', () => ({
   },
 }))
 
+vi.mock('exceljs', () => {
+  const mockCell = {
+    fill: undefined as unknown,
+    font: undefined as unknown,
+    alignment: undefined as unknown,
+    value: undefined as unknown,
+    dataValidation: undefined as unknown,
+  }
+  const mockRow = {
+    eachCell: vi.fn((cb: (cell: typeof mockCell) => void) => cb(mockCell)),
+    height: 0,
+  }
+  const mockColumn = { numFmt: '' }
+  const mockWorksheet = {
+    columns: [],
+    getRow: vi.fn(() => mockRow),
+    getColumn: vi.fn(() => mockColumn),
+    addRow: vi.fn(),
+    getCell: vi.fn(() => mockCell),
+  }
+  const mockBuffer = new ArrayBuffer(8)
+  class MockWorkbook {
+    creator = ''
+    created: Date | null = null
+    addWorksheet = vi.fn(() => mockWorksheet)
+    xlsx = { writeBuffer: vi.fn(async () => mockBuffer) }
+  }
+  return {
+    default: { Workbook: MockWorkbook },
+  }
+})
+
 vi.mock('@/components/ui/date-picker', () => ({
   CustomDatePicker: ({
     onChange,
@@ -385,6 +417,131 @@ describe('ExportPage', () => {
     await waitFor(() => {
       expect(screen.queryByText(/checking transaction count/i)).not.toBeInTheDocument()
       expect(screen.getByText('3 transactions')).toBeInTheDocument()
+    })
+  })
+
+  it('exports Excel and triggers download', async () => {
+    setupHousehold()
+    mockForExport(1, [mockTransaction])
+    render(<ExportPage />)
+
+    // Select Excel format
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'excel' } })
+
+    // Set dates
+    fillDates('2024-01-01', '2024-01-31')
+
+    // Wait for count to load and enable Export button
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /export/i })).not.toBeDisabled()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /export/i }))
+
+    await waitFor(() => {
+      expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+      expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('1 transactions'))
+    })
+  })
+
+  it('shows zero-transaction error when export returns no data', async () => {
+    setupHousehold()
+
+    vi.mocked(apiFetch).mockImplementation(async (url: string) => {
+      if (url.includes('limit=1&')) {
+        return {
+          data: {
+            transactions: [],
+            pagination: { page: 1, limit: 1, total: 5, pages: 1 },
+          },
+          error: null,
+          response: new Response(),
+        }
+      }
+      if (url.includes('limit=1000')) {
+        return {
+          data: {
+            transactions: [],
+            pagination: { page: 1, limit: 1000, total: 0, pages: 1 },
+          },
+          error: null,
+          response: new Response(),
+        }
+      }
+      return { data: [], error: null, response: new Response() }
+    })
+
+    render(<ExportPage />)
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'csv' } })
+    fillDates('2024-01-01', '2024-01-31')
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /export/i })).not.toBeDisabled()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /export/i }))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('No transactions found for the selected date range')
+    })
+  })
+
+  it('fetches entities when a household is selected', async () => {
+    setupHousehold()
+    mockEntityAndCountResponses(0)
+    render(<ExportPage />)
+
+    await waitFor(() => {
+      const calls = vi.mocked(apiFetch).mock.calls.map((c) => c[0] as string)
+      expect(calls.some((url) => url.includes('/api/accounts'))).toBe(true)
+      expect(calls.some((url) => url.includes('/api/users'))).toBe(true)
+      expect(calls.some((url) => url.includes('/api/categories'))).toBe(true)
+      expect(calls.some((url) => url.includes('/api/types'))).toBe(true)
+    })
+  })
+
+  it('escapes CSV fields containing commas', async () => {
+    setupHousehold()
+    mockForExport(1, [
+      {
+        ...mockTransaction,
+        description: 'Food, Drinks',
+        memo: 'has "quotes"',
+      },
+    ])
+    render(<ExportPage />)
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'csv' } })
+    fillDates('2024-01-01', '2024-01-31')
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /export/i })).not.toBeDisabled()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /export/i }))
+
+    await waitFor(() => {
+      expect(createObjectURL).toHaveBeenCalled()
+      expect(toast.success).toHaveBeenCalled()
+    })
+  })
+
+  it('handles count fetch catch path on abort', async () => {
+    setupHousehold()
+
+    vi.mocked(apiFetch).mockImplementation(async (url: string) => {
+      if (url.includes('limit=1&')) {
+        throw new Error('aborted')
+      }
+      return { data: [], error: null, response: new Response() }
+    })
+
+    render(<ExportPage />)
+    fillDates('2024-01-01', '2024-01-31')
+
+    await waitFor(() => {
+      expect(screen.queryByText(/checking transaction count/i)).not.toBeInTheDocument()
     })
   })
 })
