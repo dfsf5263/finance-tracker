@@ -207,7 +207,12 @@ test.describe('transaction management', () => {
 
     // The new transaction is in Jan 2026 but the grid defaults to the current month,
     // so search by description to surface it on the first page.
+    const searchPromise = page.waitForResponse(
+      (resp) =>
+        resp.url().includes('/api/transactions') && resp.url().includes('search') && resp.ok(),
+    )
     await page.getByRole('textbox', { name: /search transactions/i }).fill(tzDesc)
+    await searchPromise
 
     // The grid should contain the new row with the EXACT date we picked.
     // If dateToISOLocal() shifted ±1 day due to timezone, this assertion fails.

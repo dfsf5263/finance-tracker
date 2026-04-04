@@ -102,7 +102,11 @@ test.describe('settings — household invitations', () => {
     await tabpanel.getByRole('button', { name: /^delete$/i }).first().click()
     const confirmDialog = page.getByRole('dialog')
     await expect(confirmDialog).toBeVisible()
+    const deleteResponse = page.waitForResponse(
+      (resp) => resp.url().includes('/api/invitations') && resp.request().method() === 'DELETE',
+    )
     await confirmDialog.getByRole('button', { name: /^delete$/i }).click()
+    await deleteResponse
     await expect(confirmDialog).not.toBeVisible({ timeout: 10000 })
 
     // Verify heading count decremented (auto-retries)
