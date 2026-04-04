@@ -101,10 +101,11 @@ export async function parseExcelToRows(file: File): Promise<Record<string, unkno
         const result = (value as { result: unknown }).result
         if (result instanceof Date) {
           record[header] = formatDateUTC(result)
+          hasValue = true
         } else {
           record[header] = String(result ?? '')
+          hasValue = hasValue || record[header] !== ''
         }
-        hasValue = hasValue || record[header] !== ''
       } else {
         record[header] = String(value)
         hasValue = hasValue || String(value) !== ''

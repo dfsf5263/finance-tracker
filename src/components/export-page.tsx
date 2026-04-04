@@ -314,7 +314,8 @@ export function ExportPage() {
 
     while (page <= totalPages) {
       const { data, error } = await apiFetch<PaginatedResponse>(
-        `/api/transactions?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&limit=${PAGE_SIZE}&page=${page}`
+        `/api/transactions?householdId=${selectedHousehold.id}&startDate=${startDate}&endDate=${endDate}&limit=${PAGE_SIZE}&page=${page}`,
+        { showErrorToast: false }
       )
 
       if (error || !data) {
