@@ -311,7 +311,14 @@ export function FailedTransactionsGrid({
 
     setRetryingAll(true)
 
-    const transactions = retryable.map(buildRetryTransaction)
+    // Ensure every retry transaction has a rowId for reliable round-trip matching
+    const rowIdToOriginalRow = new Map<string, number>()
+    const transactions = retryable.map((row) => {
+      const tx = buildRetryTransaction(row)
+      const rowId = tx.rowId || crypto.randomUUID()
+      rowIdToOriginalRow.set(rowId, row.failure.row)
+      return { ...tx, rowId }
+    })
 
     const { data, error } = await apiFetch<{
       success: boolean
@@ -338,14 +345,16 @@ export function FailedTransactionsGrid({
     }
 
     const results = data!.results
-    const failedRowIds = new Set(
-      results.failures?.map((f) => f.transaction.rowId).filter(Boolean) ?? []
+    const failedOriginalRows = new Set(
+      (results.failures ?? [])
+        .map((f) => (f.transaction.rowId ? rowIdToOriginalRow.get(f.transaction.rowId) : undefined))
+        .filter((row): row is number => row != null)
     )
 
     setRows((prev) =>
       prev.map((r) => {
         if (r.animatingOut || r.status === 'succeeded') return r
-        if (failedRowIds.has(r.failure.transaction.rowId)) {
+        if (failedOriginalRows.has(r.failure.row)) {
           return { ...r, status: 'failed' as RowStatus }
         }
         return { ...r, status: 'succeeded' as RowStatus, animatingOut: true }

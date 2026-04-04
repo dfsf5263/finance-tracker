@@ -1,4 +1,3 @@
-import { db } from '@/lib/db'
 import { Decimal } from '@prisma/client/runtime/client'
 import type { Prisma } from '@prisma/client'
 import { prismaDateToISO } from '@/lib/date-utils'
@@ -221,6 +220,7 @@ export function filterOutEntityFailures(
  * OR query (avoids N+1 performance issues).
  */
 export async function checkDuplicateTransactions(
+  client: Prisma.TransactionClient,
   transactions: BulkTransaction[],
   householdId: string
 ): Promise<DatabaseDuplicate[]> {
@@ -251,7 +251,7 @@ export async function checkDuplicateTransactions(
     description: c.description,
   }))
 
-  const existingRows = await db.transaction.findMany({
+  const existingRows = await client.transaction.findMany({
     where: { OR: orConditions },
     select: {
       createdAt: true,

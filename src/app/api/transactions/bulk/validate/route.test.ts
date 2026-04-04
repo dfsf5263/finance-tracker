@@ -233,7 +233,7 @@ describe('POST /api/transactions/bulk/validate', () => {
 
       const body = await response.json()
       expect(body.error).toBe('Failed to validate bulk transactions')
-      expect(body.details).toBeDefined()
+      expect(body.details).toBeUndefined()
     })
   })
 })

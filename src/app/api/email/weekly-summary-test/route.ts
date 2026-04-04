@@ -80,10 +80,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
           'error generating test summary for household'
         )
         return NextResponse.json(
-          {
-            error: `Failed to generate summary for household ${userHousehold.household.name}`,
-            details: error instanceof Error ? error.message : 'Unknown error',
-          },
+          { error: `Failed to generate summary for household ${userHousehold.household.name}` },
           { status: 500 }
         )
       }

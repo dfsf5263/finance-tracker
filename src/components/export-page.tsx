@@ -411,7 +411,11 @@ export function ExportPage() {
           {/* Format select */}
           <div className="space-y-2">
             <label className="text-sm font-medium">File Format</label>
-            <Select value={format ?? ''} onValueChange={(v) => setFormat(v as ExportFormat)}>
+            <Select
+              value={format ?? ''}
+              onValueChange={(v) => setFormat(v as ExportFormat)}
+              disabled={isExporting}
+            >
               <SelectTrigger className="w-full sm:w-72">
                 <SelectValue placeholder="Select a format" />
               </SelectTrigger>
@@ -430,7 +434,7 @@ export function ExportPage() {
                 value={startDate}
                 onChange={setStartDate}
                 placeholder="Pick start date"
-                disabled={!selectedHousehold}
+                disabled={!selectedHousehold || isExporting}
               />
             </div>
             <div className="space-y-2">
@@ -439,7 +443,7 @@ export function ExportPage() {
                 value={endDate}
                 onChange={setEndDate}
                 placeholder="Pick end date"
-                disabled={!selectedHousehold}
+                disabled={!selectedHousehold || isExporting}
               />
             </div>
           </div>

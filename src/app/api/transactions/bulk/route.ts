@@ -56,7 +56,7 @@ export const POST = withApiLogging(async (request: NextRequest) => {
 
     // Check for duplicates against database (single batched query)
     const dbDupStart = Date.now()
-    const dbDuplicates = await checkDuplicateTransactions(transactions, householdId)
+    const dbDuplicates = await checkDuplicateTransactions(db, transactions, householdId)
     logger.info(
       { dbDuplicateCount: dbDuplicates.length, durationMs: Date.now() - dbDupStart },
       'bulk upload: db duplicate check complete'
@@ -347,12 +347,6 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       )
     }
 
-    return NextResponse.json(
-      {
-        error: 'Failed to create bulk transactions',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to create bulk transactions' }, { status: 500 })
   }
 })
