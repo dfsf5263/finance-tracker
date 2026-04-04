@@ -232,8 +232,9 @@ test.describe('Export utility', () => {
 
     // Read the downloaded CSV content
     const stream = await download.createReadStream()
+    expect(stream, 'download stream should not be null').not.toBeNull()
     const chunks: Buffer[] = []
-    for await (const chunk of stream) {
+    for await (const chunk of stream!) {
       chunks.push(chunk as Buffer)
     }
     const csvContent = Buffer.concat(chunks).toString('utf-8')
@@ -324,8 +325,9 @@ test.describe('Export with created transaction', () => {
 
     // 3. Verify the created transaction appears in the CSV
     const stream = await download.createReadStream()
+    expect(stream, 'download stream should not be null').not.toBeNull()
     const chunks: Buffer[] = []
-    for await (const chunk of stream) {
+    for await (const chunk of stream!) {
       chunks.push(chunk as Buffer)
     }
     const csvContent = Buffer.concat(chunks).toString('utf-8')

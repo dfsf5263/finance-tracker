@@ -89,10 +89,8 @@ vi.mock('@/components/ui/select', () => ({
   ),
 }))
 
-import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { ExportPage } from './export-page'
 import { useHousehold } from '@/contexts/household-context'
 import { apiFetch } from '@/lib/http-utils'
