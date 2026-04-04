@@ -265,8 +265,8 @@ export function TransactionForm({ transaction, open, onClose, onSubmit }: Transa
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{transaction ? 'Edit Transaction' : 'Add New Transaction'}</DialogTitle>{' '}
-            <DialogDescription className="sr-only">Select a household first</DialogDescription>{' '}
+            <DialogTitle>{transaction ? 'Edit Transaction' : 'Add New Transaction'}</DialogTitle>
+            <DialogDescription className="sr-only">Select a household first</DialogDescription>
           </DialogHeader>
           <div className="p-6 text-center">
             <p className="text-muted-foreground">
