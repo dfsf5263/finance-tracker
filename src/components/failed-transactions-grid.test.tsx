@@ -314,6 +314,29 @@ describe('FailedTransactionsGrid', () => {
       fireEvent.click(screen.getByLabelText('Next page'))
       expect(screen.getByText(/Showing 26–30 of 30/)).toBeInTheDocument()
     })
+
+    it('navigates back to previous page', () => {
+      const failures = Array.from({ length: 30 }, (_, i) =>
+        makeFailure({
+          index: i,
+          row: i + 2,
+          transaction: {
+            ...makeFailure().transaction,
+            description: `Item ${i}`,
+          },
+        })
+      )
+
+      render(
+        <FailedTransactionsGrid failures={failures} householdId={HOUSEHOLD_ID} mode="preview" />
+      )
+
+      fireEvent.click(screen.getByLabelText('Next page'))
+      expect(screen.getByText(/Showing 26–30 of 30/)).toBeInTheDocument()
+
+      fireEvent.click(screen.getByLabelText('Previous page'))
+      expect(screen.getByText(/Showing 1–25 of 30/)).toBeInTheDocument()
+    })
   })
 
   describe('preview mode', () => {
@@ -428,6 +451,140 @@ describe('FailedTransactionsGrid', () => {
       await vi.waitFor(() => {
         expect(screen.getByText('failed')).toBeInTheDocument()
       })
+    })
+
+    it('retryAll shows error toast on network failure', async () => {
+      vi.useFakeTimers()
+      vi.mocked(apiFetch).mockResolvedValueOnce({
+        data: null,
+        error: 'Network error',
+        response: new Response(),
+      } as never)
+
+      const { toast } = await import('sonner')
+
+      render(
+        <FailedTransactionsGrid
+          failures={[makeFailure()]}
+          householdId={HOUSEHOLD_ID}
+          mode="complete"
+        />
+      )
+
+      fireEvent.click(screen.getByText('Retry All'))
+
+      await vi.waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Retry failed'))
+      })
+
+      vi.useRealTimers()
+    })
+
+    it('retryAll marks rows as succeeded and calls onRetryComplete', async () => {
+      vi.useFakeTimers()
+      vi.mocked(apiFetch).mockResolvedValueOnce({
+        data: {
+          success: true,
+          results: {
+            successful: 1,
+            failed: 0,
+            failures: [],
+          },
+        },
+        error: null,
+        response: new Response(),
+      } as never)
+
+      const onRetryComplete = vi.fn()
+      const { toast } = await import('sonner')
+
+      render(
+        <FailedTransactionsGrid
+          failures={[makeFailure()]}
+          householdId={HOUSEHOLD_ID}
+          mode="complete"
+          onRetryComplete={onRetryComplete}
+        />
+      )
+
+      fireEvent.click(screen.getByText('Retry All'))
+
+      await vi.waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('1 succeeded'))
+      })
+
+      expect(onRetryComplete).toHaveBeenCalledWith({ succeeded: 1, failed: 0 })
+
+      vi.useRealTimers()
+    })
+
+    it('retryAll marks failed rows correctly when some rows fail', async () => {
+      vi.useFakeTimers()
+
+      const failure1 = makeFailure({
+        row: 2,
+        transaction: { ...makeFailure().transaction, rowId: 'row-id-1' },
+      })
+      const failure2 = makeFailure({
+        row: 3,
+        transaction: { ...makeFailure().transaction, description: 'Lunch', rowId: 'row-id-2' },
+      })
+
+      vi.mocked(apiFetch).mockResolvedValueOnce({
+        data: {
+          success: true,
+          results: {
+            successful: 1,
+            failed: 1,
+            failures: [
+              {
+                row: 3,
+                issues: [{ message: 'Still failing' }],
+                transaction: { rowId: 'row-id-2', description: 'Lunch' },
+              },
+            ],
+          },
+        },
+        error: null,
+        response: new Response(),
+      } as never)
+
+      render(
+        <FailedTransactionsGrid
+          failures={[failure1, failure2]}
+          householdId={HOUSEHOLD_ID}
+          mode="complete"
+        />
+      )
+
+      fireEvent.click(screen.getByText('Retry All'))
+
+      await vi.waitFor(() => {
+        expect(screen.getByText('failed')).toBeInTheDocument()
+      })
+
+      vi.useRealTimers()
+    })
+  })
+
+  describe('dismiss all', () => {
+    it('hides all rows when Dismiss All is clicked', async () => {
+      vi.useFakeTimers()
+
+      render(
+        <FailedTransactionsGrid
+          failures={[makeFailure()]}
+          householdId={HOUSEHOLD_ID}
+          mode="complete"
+        />
+      )
+
+      fireEvent.click(screen.getByText('Dismiss All'))
+      vi.advanceTimersByTime(300)
+
+      expect(screen.queryByText('Coffee Shop')).not.toBeInTheDocument()
+
+      vi.useRealTimers()
     })
   })
 
@@ -628,6 +785,36 @@ describe('FailedTransactionsGrid', () => {
       fireEvent.click(screen.getByLabelText('Expand details'))
 
       expect(screen.getAllByRole('combobox')).toHaveLength(3)
+    })
+
+    it('shows user dropdown when user entity is missing', () => {
+      render(
+        <FailedTransactionsGrid
+          failures={[
+            makeFailure({
+              transaction: {
+                ...makeFailure().transaction,
+                user: 'Alice',
+              },
+              issues: [
+                {
+                  kind: 'entity',
+                  fields: ['user'],
+                  message: 'User "Alice" not found',
+                },
+              ],
+              existingTransaction: undefined,
+            }),
+          ]}
+          householdId={HOUSEHOLD_ID}
+          mode="preview"
+          users={[{ id: 'u-1', name: 'Alice' }]}
+        />
+      )
+
+      fireEvent.click(screen.getByLabelText('Expand details'))
+
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
     })
   })
 })

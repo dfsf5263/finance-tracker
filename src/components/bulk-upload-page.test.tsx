@@ -1,7 +1,7 @@
 'use client'
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { BulkUploadPage } from './bulk-upload-page'
 
 // ── Module mocks ───────────────────────────────────────────────────────────
@@ -99,6 +99,10 @@ describe('BulkUploadPage', () => {
     setupHousehold()
     vi.mocked(fileUtils.isValidCsvFile).mockReturnValue(false)
     vi.mocked(fileUtils.isValidExcelFile).mockReturnValue(false)
+  })
+
+  afterEach(() => {
+    cleanup()
   })
 
   it('routes a valid CSV file through PapaParse', async () => {
@@ -220,6 +224,108 @@ describe('BulkUploadPage', () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Failed to parse Excel'))
+    })
+  })
+
+  it('shows message when no household is selected', () => {
+    vi.mocked(useHousehold).mockReturnValue({
+      selectedHousehold: null,
+      getUserRole: () => null,
+      households: [],
+      isLoading: false,
+      requiresHouseholdCreation: false,
+      selectHousehold: vi.fn(),
+      refreshHouseholds: vi.fn(),
+      triggerHouseholdCreation: vi.fn(),
+      completeHouseholdCreation: vi.fn(),
+    } as unknown as ReturnType<typeof useHousehold>)
+
+    render(<BulkUploadPage onUploadComplete={vi.fn()} />)
+    expect(screen.getByText(/please select a household/i)).toBeInTheDocument()
+  })
+
+  it('shows view-only message for VIEWER role', () => {
+    vi.mocked(useHousehold).mockReturnValue({
+      selectedHousehold: { id: 'hh-1', name: 'Test Household' },
+      getUserRole: () => 'VIEWER',
+      households: [],
+      isLoading: false,
+      requiresHouseholdCreation: false,
+      selectHousehold: vi.fn(),
+      refreshHouseholds: vi.fn(),
+      triggerHouseholdCreation: vi.fn(),
+      completeHouseholdCreation: vi.fn(),
+    } as unknown as ReturnType<typeof useHousehold>)
+
+    render(<BulkUploadPage onUploadComplete={vi.fn()} />)
+    expect(screen.getByText(/view only access/i)).toBeInTheDocument()
+  })
+
+  it('accepts a file dropped onto the upload area', async () => {
+    vi.mocked(fileUtils.isValidCsvFile).mockReturnValue(true)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(Papa.parse as any).mockImplementationOnce((_file: unknown, opts: Papa.ParseConfig) => {
+      opts.complete?.(
+        {
+          data: [
+            {
+              Account: 'Check',
+              'Transaction Date': '01/15/2024',
+              Description: 'Test',
+              Amount: '-5',
+              Category: 'Food',
+              Type: 'Sale',
+            },
+          ],
+          errors: [],
+          meta: {} as Papa.ParseMeta,
+        },
+        undefined
+      )
+      return {} as Papa.ParseResult<unknown>
+    })
+
+    render(<BulkUploadPage onUploadComplete={vi.fn()} />)
+
+    const csvFile = makeFile('transactions.csv', 'text/csv')
+    const dropZone = document.querySelector('label[for="csv-upload"]') as HTMLElement
+
+    fireEvent.dragOver(dropZone, {
+      dataTransfer: { files: [] },
+    })
+    fireEvent.drop(dropZone, {
+      dataTransfer: { files: [csvFile] },
+    })
+
+    await waitFor(() => {
+      expect(Papa.parse).toHaveBeenCalledWith(csvFile, expect.objectContaining({ header: true }))
+    })
+  })
+
+  it('shows CSV parse error toast when PapaParse returns errors', async () => {
+    vi.mocked(fileUtils.isValidCsvFile).mockReturnValue(true)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(Papa.parse as any).mockImplementationOnce((_file: unknown, opts: Papa.ParseConfig) => {
+      opts.complete?.(
+        {
+          data: [],
+          errors: [
+            { message: 'bad csv', row: 0, code: 'UndetectableDelimiter', type: 'Delimiter' },
+          ],
+          meta: {} as Papa.ParseMeta,
+        },
+        undefined
+      )
+      return {} as Papa.ParseResult<unknown>
+    })
+
+    render(<BulkUploadPage onUploadComplete={vi.fn()} />)
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [makeFile('bad.csv', 'text/csv')] } })
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Error parsing CSV'))
     })
   })
 })
@@ -657,5 +763,246 @@ describe('BulkUploadPage — dry-run integration', () => {
     expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument()
     // Upload another file button exists
     expect(screen.getByRole('button', { name: /upload another file/i })).toBeInTheDocument()
+  })
+
+  it('shows error toast and stays on preview when upload returns validation error', async () => {
+    setupEntities()
+    const originalMock = vi.mocked(apiFetch).getMockImplementation()!
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(apiFetch).mockImplementation(async (url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/validate')) {
+        return {
+          data: { success: true, results: { total: 2, valid: 2, failed: 0, failures: [] } },
+          error: null,
+          response: mockResponse,
+        }
+      }
+      if (typeof url === 'string' && url.includes('/api/transactions/bulk') && opts) {
+        return {
+          data: null,
+          error: 'Validation failed: something bad',
+          errorData: null,
+          response: mockResponse,
+        }
+      }
+      return originalMock(url, opts)
+    })
+
+    await navigateToPreview()
+
+    await waitFor(() => {
+      expect(screen.getByText(/all 2 transactions passed server validation/i)).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /upload 2 transactions/i }))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Validation errors found'))
+    })
+  })
+
+  it('shows error toast when upload returns missing entities error', async () => {
+    setupEntities()
+    const originalMock = vi.mocked(apiFetch).getMockImplementation()!
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(apiFetch).mockImplementation(async (url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/validate')) {
+        return {
+          data: { success: true, results: { total: 2, valid: 2, failed: 0, failures: [] } },
+          error: null,
+          response: mockResponse,
+        }
+      }
+      if (typeof url === 'string' && url.includes('/api/transactions/bulk') && opts) {
+        return {
+          data: null,
+          error: 'Missing entities - accounts not found',
+          errorData: null,
+          response: mockResponse,
+        }
+      }
+      return originalMock(url, opts)
+    })
+
+    await navigateToPreview()
+
+    await waitFor(() => {
+      expect(screen.getByText(/all 2 transactions passed server validation/i)).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /upload 2 transactions/i }))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Missing entities'))
+    })
+  })
+
+  it('calls onRetryComplete and updates stats when retry succeeds in COMPLETE step', async () => {
+    const onRetryComplete = vi.fn()
+
+    // First update the grid mock to capture and expose onRetryComplete
+    const { FailedTransactionsGrid } = await import('@/components/failed-transactions-grid')
+    vi.mocked(FailedTransactionsGrid).mockImplementation(
+      ({ onRetryComplete: onRC, failures, mode, onRowsChange }) => (
+        <div data-testid="failed-transactions-grid" data-mode={mode}>
+          {failures.length} failures
+          {onRC && (
+            <button
+              data-testid="simulate-retry-complete"
+              onClick={() => onRC({ succeeded: 1, failed: 0 })}
+            >
+              Simulate retry complete
+            </button>
+          )}
+          {onRowsChange && (
+            <button data-testid="simulate-row-edit" onClick={() => onRowsChange([])}>
+              Edit rows
+            </button>
+          )}
+        </div>
+      )
+    )
+
+    setupEntities()
+    const originalMock = vi.mocked(apiFetch).getMockImplementation()!
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(apiFetch).mockImplementation(async (url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/validate')) {
+        return {
+          data: { success: true, results: { total: 2, valid: 2, failed: 0, failures: [] } },
+          error: null,
+          response: mockResponse,
+        }
+      }
+      if (typeof url === 'string' && url.includes('/api/transactions/bulk') && opts) {
+        return {
+          data: {
+            success: true,
+            results: {
+              total: 2,
+              successful: 1,
+              failed: 1,
+              failures: [
+                {
+                  row: 2,
+                  transaction: csvRows[1],
+                  issues: [{ kind: 'duplicate', fields: ['description'], message: 'Duplicate' }],
+                },
+              ],
+            },
+          },
+          error: null,
+          response: mockResponse,
+        }
+      }
+      return originalMock(url, opts)
+    })
+
+    render(<BulkUploadPage onUploadComplete={onRetryComplete} />)
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    vi.mocked(fileUtils.isValidCsvFile).mockReturnValue(true)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(Papa.parse as any).mockImplementationOnce((_file: unknown, opts: Papa.ParseConfig) => {
+      opts.complete?.({ data: csvRows, errors: [], meta: {} as Papa.ParseMeta }, undefined)
+      return {} as Papa.ParseResult<unknown>
+    })
+
+    fireEvent.change(input, { target: { files: [makeFile('test.csv', 'text/csv')] } })
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /map columns/i })).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /continue to preview/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/all 2 transactions passed server validation/i)).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /upload 2 transactions/i }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /upload complete/i })).toBeInTheDocument()
+    })
+
+    // Simulate retry complete from the grid
+    fireEvent.click(screen.getByTestId('simulate-retry-complete'))
+
+    // onUploadComplete (the prop) should be called
+    await waitFor(() => {
+      expect(onRetryComplete).toHaveBeenCalled()
+    })
+  })
+
+  it('downloads failure report when failures exist', async () => {
+    const createObjectURL = vi.fn().mockReturnValue('blob:mock')
+    const revokeObjectURL = vi.fn()
+    Object.defineProperty(globalThis, 'URL', {
+      value: { createObjectURL, revokeObjectURL },
+      writable: true,
+    })
+
+    setupEntities()
+    const originalMock = vi.mocked(apiFetch).getMockImplementation()!
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(apiFetch).mockImplementation(async (url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/validate')) {
+        return {
+          data: { success: true, results: { total: 2, valid: 2, failed: 0, failures: [] } },
+          error: null,
+          response: mockResponse,
+        }
+      }
+      if (typeof url === 'string' && url.includes('/api/transactions/bulk') && opts) {
+        return {
+          data: {
+            success: true,
+            results: {
+              total: 2,
+              successful: 1,
+              failed: 1,
+              failures: [
+                {
+                  row: 2,
+                  transaction: {
+                    account: 'Checking',
+                    transactionDate: '2024-01-15',
+                    description: 'Coffee',
+                    amount: '-5.00',
+                    category: 'Food',
+                    type: 'Sale',
+                  },
+                  issues: [{ kind: 'duplicate', fields: ['description'], message: 'Duplicate' }],
+                  existingTransaction: undefined,
+                },
+              ],
+            },
+          },
+          error: null,
+          response: mockResponse,
+        }
+      }
+      return originalMock(url, opts)
+    })
+
+    await navigateToPreview()
+
+    await waitFor(() => {
+      expect(screen.getByText(/all 2 transactions passed server validation/i)).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /upload 2 transactions/i }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /upload complete/i })).toBeInTheDocument()
+    })
+
+    // Download failure report
+    const downloadBtn = screen.getByRole('button', { name: /get failure report/i })
+    fireEvent.click(downloadBtn)
+
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+    expect(revokeObjectURL).toHaveBeenCalled()
   })
 })

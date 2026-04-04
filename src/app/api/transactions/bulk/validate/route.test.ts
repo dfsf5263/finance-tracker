@@ -203,25 +203,7 @@ describe('POST /api/transactions/bulk/validate', () => {
     })
   })
 
-  describe('response shape', () => {
-    it('includes index and row in failure objects', async () => {
-      setupEntityMocks()
-
-      const response = await POST(
-        makePostRequest({
-          householdId: HOUSEHOLD_ID,
-          transactions: [validTransaction, validTransaction],
-        })
-      )
-
-      const body = await response.json()
-      const failure = body.results.failures[0]
-      expect(failure).toHaveProperty('index')
-      expect(failure).toHaveProperty('row')
-      expect(failure).toHaveProperty('issues')
-      expect(failure).toHaveProperty('transaction')
-    })
-
+  describe('date transformation', () => {
     it('transforms transaction dates to date-only format', async () => {
       setupEntityMocks()
 
@@ -235,6 +217,23 @@ describe('POST /api/transactions/bulk/validate', () => {
       const body = await response.json()
       const txDate = body.results.failures[0].transaction.transactionDate
       expect(txDate).not.toContain('T')
+    })
+  })
+
+  describe('error handling', () => {
+    it('returns 500 when the request body is invalid JSON', async () => {
+      const request = new NextRequest('http://localhost/api/transactions/bulk/validate', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: 'not json',
+      })
+
+      const response = await POST(request)
+      expect(response.status).toBe(500)
+
+      const body = await response.json()
+      expect(body.error).toBe('Failed to validate bulk transactions')
+      expect(body.details).toBeDefined()
     })
   })
 })

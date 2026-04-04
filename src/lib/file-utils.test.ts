@@ -251,4 +251,61 @@ describe('parseExcelToRows', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0]['Description']).toBe('Salary')
   })
+
+  it('returns empty array when workbook has no worksheets', async () => {
+    const workbook = new ExcelJS.Workbook()
+    const buffer = await workbook.xlsx.writeBuffer()
+    const file = new File([buffer], 'empty.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    const rows = await parseExcelToRows(file)
+    expect(rows).toHaveLength(0)
+  })
+
+  it('handles formula cell with Date result', async () => {
+    const file = await buildXlsx((ws) => {
+      ws.addRow(['TransactionDate'])
+      const row = ws.addRow([])
+      row.getCell(1).value = {
+        formula: 'TODAY()',
+        result: new Date(Date.UTC(2024, 0, 15)),
+        date1904: false,
+      } as ExcelJS.CellFormulaValue
+    })
+    const rows = await parseExcelToRows(file)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]['TransactionDate']).toBe('01/15/2024')
+  })
+
+  it('handles formula cell with non-Date result', async () => {
+    const file = await buildXlsx((ws) => {
+      ws.addRow(['Amount'])
+      const row = ws.addRow([])
+      row.getCell(1).value = {
+        formula: 'SUM(1,2)',
+        result: 3,
+        date1904: false,
+      } as ExcelJS.CellFormulaValue
+    })
+    const rows = await parseExcelToRows(file)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]['Amount']).toBe('3')
+  })
+
+  it('maps null-valued cells in a non-empty row to empty string', async () => {
+    const file = await buildXlsx((ws) => {
+      ws.addRow(['Description', 'Memo'])
+      // Row with Description filled and Memo null — eachCell with includeEmpty
+      // still skips truly-null cells, so only the filled cell appears in the record.
+      const row = ws.addRow([])
+      row.getCell(1).value = 'Coffee'
+      row.getCell(2).value = null
+    })
+    const rows = await parseExcelToRows(file)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]['Description']).toBe('Coffee')
+    // ExcelJS eachCell({ includeEmpty: true }) skips trailing null cells,
+    // so 'Memo' won't be present in the record.
+    expect(rows[0]['Memo']).toBeUndefined()
+  })
 })

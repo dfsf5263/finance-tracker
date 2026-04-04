@@ -67,6 +67,14 @@ describe('parseValidationErrors', () => {
       { row: 2, field: 'general', value: '', message: 'Something went wrong' },
     ])
   })
+
+  it('falls back to unknown field when error contains a number but no field pattern', () => {
+    const errors = parseValidationErrors('row 5 is invalid')
+    expect(errors).toHaveLength(1)
+    expect(errors[0].field).toBe('unknown')
+    expect(errors[0].row).toBe(7) // parseInt('5') + 2
+    expect(errors[0].message).toBe('row 5 is invalid')
+  })
 })
 
 describe('checkIntraFileDuplicates', () => {
