@@ -5,6 +5,14 @@ set -e
 
 echo "Starting Finance Tracker..."
 
+# --- Environment normalization ---
+# Allow platform-injected URL variables to satisfy APP_URL when not explicitly set.
+# RENDER_EXTERNAL_URL is automatically set by Render for web services.
+if [ -z "$APP_URL" ] && [ -n "$RENDER_EXTERNAL_URL" ]; then
+  export APP_URL="$RENDER_EXTERNAL_URL"
+  echo "APP_URL set from RENDER_EXTERNAL_URL: $APP_URL"
+fi
+
 # --- Database migrations ---
 if [ "$SKIP_MIGRATIONS" != "true" ]; then
   echo "Running database migrations..."
