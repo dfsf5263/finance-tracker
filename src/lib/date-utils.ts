@@ -233,6 +233,16 @@ export function mdyToISO(dateStr: string): string {
 }
 
 /**
+ * Convert YYYY-MM-DD → MM/DD/YYYY without timezone bugs.
+ * Pure string transform — inverse of mdyToISO.
+ */
+export function isoToMDY(isoDate: string): string {
+  if (!ISO_DATE_RE.test(isoDate)) return ''
+  const [yearStr, monthStr, dayStr] = isoDate.split('-')
+  return `${monthStr}/${dayStr}/${yearStr}`
+}
+
+/**
  * Returns true if the ISO date string is not in the future (compared to local today).
  * String comparison — no mixed timezone semantics.
  */
