@@ -44,6 +44,7 @@ function makeFailure(overrides: Partial<FailureDetail> = {}): FailureDetail {
       category: 'Food',
       type: 'Purchase',
       amount: '12.50',
+      rowId: 'test-row-id-0',
     },
     issues: [
       {

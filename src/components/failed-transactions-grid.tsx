@@ -50,6 +50,7 @@ export interface FailureDetail {
     type: string
     amount: string
     memo?: string
+    rowId?: string
   }
   issues: FailureIssue[]
   existingTransaction?: {
@@ -320,7 +321,7 @@ export function FailedTransactionsGrid({
         failures: Array<{
           row: number
           issues?: Array<{ message: string }>
-          transaction: { description: string }
+          transaction: { rowId?: string; description: string }
         }>
       }
     }>('/api/transactions/bulk', {
@@ -337,12 +338,14 @@ export function FailedTransactionsGrid({
     }
 
     const results = data!.results
-    const failureSet = new Set(results.failures?.map((f) => f.transaction.description) ?? [])
+    const failedRowIds = new Set(
+      results.failures?.map((f) => f.transaction.rowId).filter(Boolean) ?? []
+    )
 
     setRows((prev) =>
       prev.map((r) => {
         if (r.animatingOut || r.status === 'succeeded') return r
-        if (failureSet.has(r.editedDescription)) {
+        if (failedRowIds.has(r.failure.transaction.rowId)) {
           return { ...r, status: 'failed' as RowStatus }
         }
         return { ...r, status: 'succeeded' as RowStatus, animatingOut: true }

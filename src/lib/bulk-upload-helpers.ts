@@ -146,7 +146,8 @@ export function checkIntraFileDuplicates(transactions: BulkTransaction[]): Intra
  */
 export function getEntityValidationFailures(
   transactions: BulkTransaction[],
-  entityValidation: EntityValidationResult
+  entityValidation: EntityValidationResult,
+  originalRows?: number[]
 ): EntityValidationFailure[] {
   const failures: EntityValidationFailure[] = []
 
@@ -184,7 +185,7 @@ export function getEntityValidationFailures(
 
     if (issues.length > 0) {
       failures.push({
-        row: index + 2, // +2 for header row and 0-index
+        row: originalRows ? originalRows[index] : index + 2,
         transaction,
         issues,
       })
@@ -235,7 +236,7 @@ export async function checkDuplicateTransactions(
     const key = `${dateKey}|${amountKey}|${t.description}`
     if (!uniqueConditions.has(key)) {
       uniqueConditions.set(key, {
-        transactionDate: new Date(t.transactionDate),
+        transactionDate: isoToUtcNoon(t.transactionDate),
         amount: new Decimal(parseFloat(t.amount)),
         description: t.description,
       })

@@ -1,7 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -110,6 +116,9 @@ export function CreateInvitationModal({
             <UserPlus className="h-5 w-5" />
             Create Invitation
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Invite a member to this household
+          </DialogDescription>
         </DialogHeader>
 
         {!invitationLink ? (

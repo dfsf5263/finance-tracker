@@ -68,10 +68,16 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       ...dbDuplicates.map((d) => d.row),
     ])
 
-    // Separate valid from duplicate transactions
-    const validTransactions = transactions.filter(
-      (_, index) => !duplicateRows.has(index + 2) // +2 for header row and 0-index
-    )
+    // Separate valid from duplicate transactions, tracking original row numbers
+    const validTransactionRows: number[] = []
+    const validTransactions = transactions.filter((_, index) => {
+      const row = index + 2 // +2 for header row and 0-index
+      if (!duplicateRows.has(row)) {
+        validTransactionRows.push(row)
+        return true
+      }
+      return false
+    })
     logger.info(
       { validCount: validTransactions.length, duplicateCount: duplicateRows.size },
       'bulk upload: deduplication complete'
@@ -148,7 +154,11 @@ export const POST = withApiLogging(async (request: NextRequest) => {
 
           if (!entityValidation.valid) {
             // Add entity validation failures
-            const entityFailures = getEntityValidationFailures(validTransactions, entityValidation)
+            const entityFailures = getEntityValidationFailures(
+              validTransactions,
+              entityValidation,
+              validTransactionRows
+            )
             failures.push(...entityFailures)
             logger.warn(
               { entityFailureCount: entityFailures.length },

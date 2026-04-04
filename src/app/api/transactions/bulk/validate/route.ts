@@ -56,8 +56,16 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       ...dbDuplicates.map((d) => d.row),
     ])
 
-    // Separate valid from duplicate transactions
-    const validTransactions = transactions.filter((_, index) => !duplicateRows.has(index + 2))
+    // Separate valid from duplicate transactions, tracking original row numbers
+    const validTransactionRows: number[] = []
+    const validTransactions = transactions.filter((_, index) => {
+      const row = index + 2
+      if (!duplicateRows.has(row)) {
+        validTransactionRows.push(row)
+        return true
+      }
+      return false
+    })
 
     const failures: Array<{
       index: number
@@ -119,7 +127,11 @@ export const POST = withApiLogging(async (request: NextRequest) => {
       const entityValidation = await validateEntities(db, validTransactions, householdId)
 
       if (!entityValidation.valid) {
-        const entityFailures = getEntityValidationFailures(validTransactions, entityValidation)
+        const entityFailures = getEntityValidationFailures(
+          validTransactions,
+          entityValidation,
+          validTransactionRows
+        )
         entityFailures.forEach((ef) => {
           failures.push({
             index: ef.row - 2,

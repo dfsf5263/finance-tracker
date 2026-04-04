@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { CustomDatePicker } from '@/components/ui/date-picker'
+import { Progress } from '@/components/ui/progress'
 import { AlertCircle, Download, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { isoToMDY } from '@/lib/date-utils'
@@ -67,10 +68,16 @@ const COLUMNS = [
 // ── CSV generation ──────────────────────────────────────────
 
 function escapeCSVField(value: string): string {
-  if (value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r')) {
-    return `"${value.replace(/"/g, '""')}"`
+  const sanitized = sanitizeCellValue(value)
+  if (
+    sanitized.includes(',') ||
+    sanitized.includes('"') ||
+    sanitized.includes('\n') ||
+    sanitized.includes('\r')
+  ) {
+    return `"${sanitized.replace(/"/g, '""')}"`
   }
-  return value
+  return sanitized
 }
 
 function generateCSV(transactions: TransactionResponse[]): Blob {
@@ -483,12 +490,7 @@ export function ExportPage() {
                 Fetching transactions… {progress.fetched.toLocaleString()} /{' '}
                 {progress.total.toLocaleString()}
               </p>
-              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full bg-blue-600 transition-all duration-300"
-                  style={{ width: `${Math.round((progress.fetched / progress.total) * 100)}%` }}
-                />
-              </div>
+              <Progress value={Math.round((progress.fetched / progress.total) * 100)} />
             </div>
           )}
 

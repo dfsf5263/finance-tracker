@@ -147,6 +147,23 @@ describe('getEntityValidationFailures', () => {
     const result = getEntityValidationFailures([makeTx()], fullMaps)
     expect(result).toEqual([])
   })
+
+  it('uses originalRows for row numbers when provided', () => {
+    const txs = [makeTx({ account: 'Missing Bank' }), makeTx({ category: 'Bad' })]
+    const originalRows = [5, 8] // e.g., rows 3,4,6,7 were duplicates
+    const result = getEntityValidationFailures(txs, fullMaps, originalRows)
+    expect(result).toHaveLength(2)
+    expect(result[0].row).toBe(5)
+    expect(result[1].row).toBe(8)
+  })
+
+  it('falls back to index + 2 when originalRows is not provided', () => {
+    const txs = [makeTx({ account: 'Missing Bank' }), makeTx({ category: 'Bad' })]
+    const result = getEntityValidationFailures(txs, fullMaps)
+    expect(result).toHaveLength(2)
+    expect(result[0].row).toBe(2)
+    expect(result[1].row).toBe(3)
+  })
 })
 
 describe('filterOutEntityFailures', () => {

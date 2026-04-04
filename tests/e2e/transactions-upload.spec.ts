@@ -830,7 +830,7 @@ test.describe('retry flow — COMPLETE mode', () => {
   /**
    * Build a mock failure record matching the first base row for a given suffix.
    * The mock transaction uses ISO date strings and a string amount, matching the
-   * CSVTransaction type the client expects in the API response.
+   * ParsedTransaction type the client expects in the API response.
    */
   function buildMockFailure(suffix: string) {
     const base = getBaseRows(suffix)[0]

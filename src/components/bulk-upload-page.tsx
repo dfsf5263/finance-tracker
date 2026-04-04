@@ -44,7 +44,7 @@ interface BulkUploadPageProps {
   onUploadComplete: () => void
 }
 
-interface CSVTransaction {
+interface ParsedTransaction {
   account: string
   user: string
   transactionDate: string
@@ -54,6 +54,7 @@ interface CSVTransaction {
   type: string
   amount: string
   memo?: string
+  rowId: string
 }
 
 interface Account {
@@ -82,7 +83,7 @@ interface TransactionType {
 
 interface ColumnMapping {
   csvHeader: string
-  mappedField: keyof CSVTransaction | 'skip'
+  mappedField: keyof ParsedTransaction | 'skip'
   confidence: 'high' | 'medium' | 'low'
   sampleData: string
 }
@@ -93,7 +94,7 @@ function normalizeHeader(header: string): string {
 }
 
 // Map normalized headers to expected field names
-const headerMapping: Record<string, keyof CSVTransaction> = {
+const headerMapping: Record<string, keyof ParsedTransaction> = {
   account: 'account',
   user: 'user',
   transactiondate: 'transactionDate',
@@ -106,7 +107,7 @@ const headerMapping: Record<string, keyof CSVTransaction> = {
 }
 
 // Helper function to convert MM/DD/YYYY to ISO format (YYYY-MM-DD)
-function convertCSVDateToISO(csvDate: string): string {
+function convertFileDateToISO(csvDate: string): string {
   if (!csvDate || !isValidDateMDY(csvDate)) {
     return ''
   }
@@ -123,7 +124,7 @@ export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'complete'>('upload')
   const [rawData, setRawData] = useState<Record<string, unknown>[]>([])
   const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([])
-  const [processedData, setProcessedData] = useState<CSVTransaction[]>([])
+  const [processedData, setProcessedData] = useState<ParsedTransaction[]>([])
   const [clientFailures, setClientFailures] = useState<FailureDetail[]>([])
   const [uploadStats, setUploadStats] = useState<{
     total: number
@@ -131,7 +132,7 @@ export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
     failed: number
     failures?: Array<{
       row: number
-      transaction: CSVTransaction
+      transaction: ParsedTransaction
       issues: Array<{ kind: string; fields: string[]; message: string }>
       existingTransaction?: {
         createdAt: string
@@ -173,7 +174,7 @@ export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
   const processFile = async (selectedFile: File) => {
     if (isValidCsvFile(selectedFile)) {
       setFile(selectedFile)
-      parseCSV(selectedFile)
+      parseCSVFile(selectedFile)
     } else if (isValidExcelFile(selectedFile)) {
       setFile(selectedFile)
       try {
@@ -240,9 +241,9 @@ export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
     openFilePicker()
   }
 
-  // ── CSV parsing ───────────────────────────────────────────
+  // ── File parsing ──────────────────────────────────────────
 
-  const parseCSV = (csvFile: File) => {
+  const parseCSVFile = (csvFile: File) => {
     Papa.parse(csvFile, {
       header: true,
       skipEmptyLines: true,
@@ -326,7 +327,10 @@ export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
     if (data) setUsers(data)
   }, [selectedHousehold])
 
-  const updateColumnMapping = (csvHeader: string, mappedField: keyof CSVTransaction | 'skip') => {
+  const updateColumnMapping = (
+    csvHeader: string,
+    mappedField: keyof ParsedTransaction | 'skip'
+  ) => {
     setColumnMappings((prev) =>
       prev.map((mapping) =>
         mapping.csvHeader === csvHeader ? { ...mapping, mappedField } : mapping
@@ -349,10 +353,12 @@ export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
 
   const validateAndPreviewData = () => {
     const failures: FailureDetail[] = []
-    const processed: CSVTransaction[] = []
+    const processed: ParsedTransaction[] = []
 
     rawData.forEach((row, index) => {
-      const transaction: Partial<CSVTransaction> = {}
+      const transaction: Partial<ParsedTransaction> = {
+        rowId: crypto.randomUUID(),
+      }
 
       // Map columns based on user selections
       columnMappings.forEach((mapping) => {
@@ -361,7 +367,7 @@ export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
 
           // Convert date fields from MM/DD/YYYY to ISO format
           if (mapping.mappedField === 'transactionDate' || mapping.mappedField === 'postDate') {
-            transaction[mapping.mappedField] = convertCSVDateToISO(value)
+            transaction[mapping.mappedField] = convertFileDateToISO(value)
           } else {
             transaction[mapping.mappedField] = value
           }
@@ -478,11 +484,12 @@ export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
             type: transaction.type || '',
             amount: transaction.amount || '',
             memo: transaction.memo || undefined,
+            rowId: transaction.rowId,
           },
           issues: rowIssues,
         })
       } else {
-        processed.push(transaction as CSVTransaction)
+        processed.push(transaction as ParsedTransaction)
       }
     })
 
@@ -496,7 +503,7 @@ export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
     }
   }
 
-  const runDryRun = async (transactions: CSVTransaction[]) => {
+  const runDryRun = async (transactions: ParsedTransaction[]) => {
     if (!selectedHousehold?.id) return
 
     setIsDryRunning(true)
@@ -562,7 +569,7 @@ export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
   )
 
   // Build the upload payload by merging valid rows with user-edited dry-run failures
-  const buildUploadPayload = (): CSVTransaction[] => {
+  const buildUploadPayload = (): ParsedTransaction[] => {
     // If no dry-run was performed, use processedData as-is
     if (dryRunFailures.length === 0 && previewEditedRowsRef.current.length === 0) {
       return processedData
@@ -573,7 +580,7 @@ export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
     const validRows = processedData.filter((_, i) => !failureIndices.has(i))
 
     // Add edited/modified failure rows back
-    const editedRows: CSVTransaction[] = previewEditedRowsRef.current.map((r) => {
+    const editedRows: ParsedTransaction[] = previewEditedRowsRef.current.map((r) => {
       const postDate = r.failure.transaction.postDate?.trim()
         ? r.failure.transaction.postDate
         : r.editedTransactionDate
@@ -587,6 +594,7 @@ export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
         type: r.editedType,
         amount: r.editedAmount,
         memo: r.failure.transaction.memo ?? '',
+        rowId: r.failure.transaction.rowId ?? crypto.randomUUID(),
       }
     })
 
@@ -621,7 +629,7 @@ export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
         failed: number
         failures: Array<{
           row: number
-          transaction: CSVTransaction
+          transaction: ParsedTransaction
           issues: Array<{ kind: string; fields: string[]; message: string }>
           existingTransaction?: {
             createdAt: string
@@ -1140,7 +1148,7 @@ export function BulkUploadPage({ onUploadComplete }: BulkUploadPageProps) {
                       onValueChange={(value) =>
                         updateColumnMapping(
                           mapping.csvHeader,
-                          value as keyof CSVTransaction | 'skip'
+                          value as keyof ParsedTransaction | 'skip'
                         )
                       }
                     >
