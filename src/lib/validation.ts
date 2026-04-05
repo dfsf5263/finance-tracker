@@ -29,7 +29,7 @@ export const transactionCreateSchema = transactionUpdateSchema.extend({
 export const householdCreateSchema = z.object({
   name: z.string().min(1, 'Household name is required').max(100, 'Household name too long'),
   description: z.string().max(500, 'Description too long').optional(),
-  annualBudget: z.union([z.string(), z.number()]).optional(),
+  annualBudget: z.union([z.string(), z.number(), z.null()]).optional(),
 })
 
 export const householdUpdateSchema = z.object({
@@ -140,7 +140,7 @@ export const bulkUsersRequestSchema = z.object({
     .array(
       z.object({
         name: z.string().min(1, 'User name is required').max(100, 'User name too long'),
-        annualBudget: z.union([z.string(), z.number()]).optional(),
+        annualBudget: z.union([z.string(), z.number(), z.null()]).optional(),
       })
     )
     .min(1, 'Users array must not be empty'),
@@ -151,7 +151,7 @@ export const bulkHouseholdsRequestSchema = z.object({
     .array(
       z.object({
         name: z.string().min(1, 'Household name is required').max(100, 'Household name too long'),
-        annualBudget: z.union([z.string(), z.number()]).optional(),
+        annualBudget: z.union([z.string(), z.number(), z.null()]).optional(),
       })
     )
     .min(1, 'Households array must not be empty'),

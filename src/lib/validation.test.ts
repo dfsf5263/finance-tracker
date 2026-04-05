@@ -31,6 +31,14 @@ describe('householdCreateSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('passes with name and null annualBudget', () => {
+    const result = householdCreateSchema.safeParse({
+      name: 'My Household',
+      annualBudget: null,
+    })
+    expect(result.success).toBe(true)
+  })
+
   it('fails when name is missing', () => {
     const result = householdCreateSchema.safeParse({ annualBudget: 60000 })
     expect(result.success).toBe(false)
