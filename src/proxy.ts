@@ -105,6 +105,11 @@ export default async function proxy(req: NextRequest) {
     )
   }
 
+  // Redirect sign-up attempts when signups are disabled
+  if (process.env.DISABLE_SIGNUPS === 'true' && pathname.startsWith('/sign-up')) {
+    return NextResponse.redirect(new URL('/sign-in', req.url))
+  }
+
   // Protect all routes except public ones
   if (!isPublicRoute(pathname)) {
     // Check for Better Auth session cookie (optimistic check)

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 
-export function SignInForm() {
+export function SignInForm({ signupsEnabled = true }: { signupsEnabled?: boolean }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -98,12 +98,14 @@ export function SignInForm() {
             {isLoading ? 'Signing in...' : 'Sign in'}
           </Button>
         </form>
-        <div className="mt-4 text-center text-sm">
-          Don&apos;t have an account?{' '}
-          <Link href="/sign-up" className="underline">
-            Sign up
-          </Link>
-        </div>
+        {signupsEnabled && (
+          <div className="mt-4 text-center text-sm">
+            Don&apos;t have an account?{' '}
+            <Link href="/sign-up" className="underline">
+              Sign up
+            </Link>
+          </div>
+        )}
       </CardContent>
     </Card>
   )
