@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Mail, Info, MailX } from 'lucide-react'
 import { toast } from 'sonner'
+import { useInstanceSettings } from '@/hooks/useInstanceSettings'
 
 interface EmailSubscription {
   householdId: string
@@ -22,7 +23,8 @@ interface EmailSubscription {
   role: string
 }
 
-export function EmailSubscriptionsList({ emailEnabled = true }: { emailEnabled?: boolean }) {
+export function EmailSubscriptionsList() {
+  const { emailEnabled } = useInstanceSettings()
   const [subscriptions, setSubscriptions] = useState<EmailSubscription[]>([])
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)

@@ -15,6 +15,7 @@ const isPublicRoute = (pathname: string) => {
     '/email-verified',
     '/api/auth',
     '/api/health',
+    '/api/instance-settings',
     '/api/cron',
     '/docs',
     '/openapi.json',

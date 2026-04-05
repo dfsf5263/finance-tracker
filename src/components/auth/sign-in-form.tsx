@@ -9,14 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { useInstanceSettings } from '@/hooks/useInstanceSettings'
 
-export function SignInForm({
-  signupsEnabled = true,
-  emailEnabled = true,
-}: {
-  signupsEnabled?: boolean
-  emailEnabled?: boolean
-}) {
+export function SignInForm() {
+  const { signupsEnabled, emailEnabled } = useInstanceSettings()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
