@@ -134,8 +134,8 @@ export const POST = withApiLogging(
         },
       })
 
-      // Send invitation email if email is provided
-      if (inviteeEmail) {
+      // Send invitation email if email is provided and configured
+      if (inviteeEmail && process.env.RESEND_API_KEY) {
         const inviterName =
           invitation.inviter.firstName && invitation.inviter.lastName
             ? `${invitation.inviter.firstName} ${invitation.inviter.lastName}`

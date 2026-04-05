@@ -10,7 +10,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 
-export function SignInForm({ signupsEnabled = true }: { signupsEnabled?: boolean }) {
+export function SignInForm({
+  signupsEnabled = true,
+  emailEnabled = true,
+}: {
+  signupsEnabled?: boolean
+  emailEnabled?: boolean
+}) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -82,9 +88,11 @@ export function SignInForm({ signupsEnabled = true }: { signupsEnabled?: boolean
           <div className="grid gap-2">
             <div className="flex items-center">
               <Label htmlFor="password">Password</Label>
-              <Link href="/forgot-password" className="ml-auto inline-block text-sm underline">
-                Forgot your password?
-              </Link>
+              {emailEnabled && (
+                <Link href="/forgot-password" className="ml-auto inline-block text-sm underline">
+                  Forgot your password?
+                </Link>
+              )}
             </div>
             <Input
               id="password"
