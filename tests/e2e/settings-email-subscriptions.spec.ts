@@ -26,4 +26,11 @@ test.describe('settings — email subscriptions', () => {
     await toggle.click()
     await expect(page.getByText('Email subscription updated')).toBeVisible()
   })
+
+  test('shows Email Not Configured card when email is disabled', { tag: '@no-email' }, async ({ page }) => {
+    await expect(page.getByText(/email not configured/i)).toBeVisible()
+    await expect(page.getByText(/email features are not available/i)).toBeVisible()
+    // No toggle switches should be present
+    await expect(page.getByRole('switch')).not.toBeVisible()
+  })
 })

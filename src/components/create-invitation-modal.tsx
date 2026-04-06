@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Copy, Link, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
+import { useInstanceSettings } from '@/hooks/useInstanceSettings'
 
 interface CreateInvitationModalProps {
   householdId: string
@@ -35,6 +36,7 @@ export function CreateInvitationModal({
   onOpenChange,
   onInvitationCreated,
 }: CreateInvitationModalProps) {
+  const { emailEnabled } = useInstanceSettings()
   const [role, setRole] = useState<'OWNER' | 'MEMBER' | 'VIEWER'>('MEMBER')
   const [expiresInDays, setExpiresInDays] = useState(7)
   const [inviteeEmail, setInviteeEmail] = useState('')
@@ -185,8 +187,9 @@ export function CreateInvitationModal({
                 onChange={(e) => setInviteeEmail(e.target.value)}
               />
               <p className="text-sm text-muted-foreground">
-                If provided, an invitation email will be sent. The invitation link will still be
-                displayed.
+                {emailEnabled
+                  ? 'If provided, an invitation email will be sent. The invitation link will still be displayed.'
+                  : 'The invitation link will be displayed after creation. Email delivery is not configured on this instance.'}
               </p>
             </div>
 

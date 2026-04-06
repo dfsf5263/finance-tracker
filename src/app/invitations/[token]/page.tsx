@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, Users, Home, Calendar, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { REDIRECT_PARAM } from '@/lib/redirect-utils'
 import { displayDateTimeLocal } from '@/lib/date-utils'
 
 interface InvitationData {
@@ -194,7 +195,14 @@ export default function InvitationPage() {
                       <span>Expires {displayDateTimeLocal(invitation.expiresAt)}</span>
                     </div>
                   </div>
-                  <Button onClick={() => router.push('/sign-in')} className="w-full">
+                  <Button
+                    onClick={() => {
+                      const signInUrl = new URL('/sign-in', window.location.origin)
+                      signInUrl.searchParams.set(REDIRECT_PARAM, `/invitations/${token}`)
+                      router.push(signInUrl.pathname + signInUrl.search)
+                    }}
+                    className="w-full"
+                  >
                     Sign In to Join
                   </Button>
                 </CardContent>

@@ -8,6 +8,14 @@ import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
 export const POST = withApiLogging(async (request: NextRequest) => {
   try {
+    // If email is not configured, skip processing
+    if (!process.env.RESEND_API_KEY) {
+      return NextResponse.json(
+        { message: 'Email is not configured — skipping weekly summaries' },
+        { status: 200 }
+      )
+    }
+
     // Verify cron secret
     const authHeader = request.headers.get('authorization')
     const cronSecret = process.env.CRON_SECRET

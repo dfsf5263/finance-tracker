@@ -13,6 +13,7 @@ function createAuthInstance(options: {
   betterAuthSecret: string
   databaseUrl: string
   emailEnabled: boolean
+  signupsEnabled: boolean
 }) {
   const adapter = new PrismaPg({ connectionString: options.databaseUrl })
   const prisma = new PrismaClient({ adapter })
@@ -102,6 +103,7 @@ function createAuthInstance(options: {
       },
       passwordResetExpiration: 60 * 60, // 1 hour
     },
+    disabledPaths: options.signupsEnabled ? [] : ['/sign-up/email'],
     advanced: {
       crossSubDomainCookies: {
         enabled: false,
@@ -116,6 +118,10 @@ function createAuthInstance(options: {
 
 export function shouldUseSecureCookies(nodeEnv = process.env.NODE_ENV): boolean {
   return nodeEnv === 'production'
+}
+
+export function isSignupsEnabled(disableSignups = process.env.DISABLE_SIGNUPS): boolean {
+  return disableSignups !== 'true'
 }
 
 let authInstance: ReturnType<typeof createAuthInstance> | null = null
@@ -137,9 +143,10 @@ export function getAuth(): ReturnType<typeof createAuthInstance> {
   const betterAuthSecret = requireEnv('BETTER_AUTH_SECRET')
   const databaseUrl = requireEnv('DATABASE_URL')
   const emailEnabled = !!process.env.RESEND_API_KEY
+  const signupsEnabled = isSignupsEnabled()
 
   logger.info(
-    { appUrl, trustedOrigins: [new URL(appUrl).origin], emailEnabled },
+    { appUrl, trustedOrigins: [new URL(appUrl).origin], emailEnabled, signupsEnabled },
     'Initializing Better Auth'
   )
 
@@ -148,6 +155,7 @@ export function getAuth(): ReturnType<typeof createAuthInstance> {
     betterAuthSecret,
     databaseUrl,
     emailEnabled,
+    signupsEnabled,
   })
 
   return authInstance

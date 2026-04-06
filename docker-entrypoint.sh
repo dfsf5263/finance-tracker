@@ -48,11 +48,15 @@ if [ "$ENABLE_SEEDING" = "true" ]; then
   echo "Seeding complete."
 fi
 
-# Start the cron job in the background
-echo "Starting weekly summary cron job..."
-node scripts/weekly-summary-cron.js &
-CRON_PID=$!
-echo "Cron job started with PID: $CRON_PID"
+# Start the cron job in the background (only if email is configured)
+if [ -n "$RESEND_API_KEY" ]; then
+  echo "Starting weekly summary cron job..."
+  node scripts/weekly-summary-cron.js &
+  CRON_PID=$!
+  echo "Cron job started with PID: $CRON_PID"
+else
+  echo "RESEND_API_KEY not set — skipping weekly summary cron job."
+fi
 
 # Start the Next.js server
 echo "Starting Next.js server..."

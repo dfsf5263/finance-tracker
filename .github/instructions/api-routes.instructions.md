@@ -80,7 +80,7 @@ import { validateRequestBody, validateQueryParams } from '@/lib/validation'
 ## Error Handling
 
 - Use `logApiError()` from `@/lib/error-logger` — it sanitizes sensitive data (passwords, tokens)
-- Do not generate request IDs — the `x-correlation-id` header from the nginx reverse proxy is automatically logged by `withApiLogging` and `logApiError`
+- Do not generate request IDs manually — use `getCorrelationId(request)` from `@/lib/error-logger` which resolves `x-correlation-id` → `rndr-id` → generated UUIDv4. Both `withApiLogging` and `logApiError` use this shared function for consistent correlation across request/response and error logs
 - Return appropriate HTTP status codes: 400 (validation), 401 (unauth), 403 (forbidden), 404, 500
 - Never expose raw database errors to clients
 

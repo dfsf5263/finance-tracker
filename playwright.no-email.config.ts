@@ -4,12 +4,10 @@ import path from 'path'
 
 dotenv.config({ path: path.resolve(__dirname, '.env') })
 
-// Clear RESEND_API_KEY so test.skip(!!process.env.RESEND_API_KEY) evaluates to false
-process.env.RESEND_API_KEY = ''
-
 /**
- * Playwright config for testing sign-up without email verification.
+ * Playwright config for testing flows when email is not configured.
  * Runs a separate dev server on port 3001 with RESEND_API_KEY unset.
+ * Only tests tagged @no-email are included.
  */
 export default defineConfig({
   testDir: './tests/e2e',
@@ -27,13 +25,23 @@ export default defineConfig({
 
   projects: [
     {
+      name: 'no-email-setup',
+      testMatch: /setup\/auth\.setup\.ts/,
+    },
+    {
+      name: 'no-email-household-setup',
+      testMatch: /setup\/household\.setup\.ts/,
+      dependencies: ['no-email-setup'],
+      use: { storageState: 'tests/e2e/.auth/user.json' },
+    },
+    {
       name: 'no-email',
       use: {
         ...devices['Desktop Chrome'],
-        storageState: { cookies: [], origins: [] },
+        storageState: 'tests/e2e/.auth/user.json',
       },
-      testMatch: /auth\.spec\.ts/,
-      grep: /sign up redirects to dashboard when email verification is disabled/i,
+      grep: /@no-email/,
+      dependencies: ['no-email-household-setup'],
     },
   ],
 

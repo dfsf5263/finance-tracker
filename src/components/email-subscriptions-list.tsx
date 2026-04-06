@@ -12,8 +12,9 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Mail, Info } from 'lucide-react'
+import { Mail, Info, MailX } from 'lucide-react'
 import { toast } from 'sonner'
+import { useInstanceSettings } from '@/hooks/useInstanceSettings'
 
 interface EmailSubscription {
   householdId: string
@@ -23,6 +24,7 @@ interface EmailSubscription {
 }
 
 export function EmailSubscriptionsList() {
+  const { emailEnabled } = useInstanceSettings()
   const [subscriptions, setSubscriptions] = useState<EmailSubscription[]>([])
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)
@@ -77,6 +79,55 @@ export function EmailSubscriptionsList() {
       <Card>
         <CardContent className="p-6">
           <div className="text-center py-4">Loading email subscriptions...</div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!emailEnabled) {
+    return (
+      <Card>
+        <CardHeader className="p-6">
+          <CardTitle className="flex items-center gap-2">
+            <MailX className="h-5 w-5" />
+            Email Not Configured
+          </CardTitle>
+          <CardDescription>Email features are not available on this instance</CardDescription>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="text-center py-8 text-muted-foreground">
+            <MailX className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="mb-4">
+              To enable weekly summary emails and notifications, the instance administrator needs to
+              configure an email provider.
+            </p>
+            <div className="mx-auto max-w-md text-left text-sm space-y-2">
+              <p className="font-medium text-foreground">Setup steps:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>
+                  Create a{' '}
+                  <a
+                    href="https://resend.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    Resend
+                  </a>{' '}
+                  account
+                </li>
+                <li>Verify a sending domain</li>
+                <li>
+                  Set the <code className="bg-muted px-1 rounded text-xs">RESEND_API_KEY</code>{' '}
+                  environment variable
+                </li>
+                <li>
+                  Optionally set{' '}
+                  <code className="bg-muted px-1 rounded text-xs">RESEND_FROM_EMAIL</code>
+                </li>
+              </ol>
+            </div>
+          </div>
         </CardContent>
       </Card>
     )

@@ -59,6 +59,14 @@ export const GET = withApiLogging(async (_request: NextRequest) => {
 })
 
 export const PUT = withApiLogging(async (request: NextRequest) => {
+  // If email is not configured, prevent subscription changes
+  if (!process.env.RESEND_API_KEY) {
+    return NextResponse.json(
+      { error: 'Email is not configured for this instance' },
+      { status: 400 }
+    )
+  }
+
   let userId: string | undefined
   let data: { householdId?: string; weeklySummary?: boolean } | undefined
   try {

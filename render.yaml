@@ -29,3 +29,5 @@ services:
         sync: false
       - key: RESEND_REPLY_TO_EMAIL
         sync: false
+      - key: DISABLE_SIGNUPS
+        sync: false

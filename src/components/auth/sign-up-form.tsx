@@ -9,8 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { REDIRECT_PARAM } from '@/lib/redirect-utils'
 
-export function SignUpForm() {
+interface SignUpFormProps {
+  redirectTo?: string
+}
+
+export function SignUpForm({ redirectTo }: SignUpFormProps) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -18,18 +23,24 @@ export function SignUpForm() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
+  const destination = redirectTo || '/dashboard'
+  const redirectSuffix = redirectTo ? `&${REDIRECT_PARAM}=${encodeURIComponent(redirectTo)}` : ''
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
+      const callbackURL = redirectTo
+        ? `/email-verified?${REDIRECT_PARAM}=${encodeURIComponent(redirectTo)}`
+        : '/email-verified'
       const { data, error } = await authClient.signUp.email({
         email,
         password,
         name: `${firstName} ${lastName}`.trim(),
         firstName,
         lastName,
-        callbackURL: '/email-verified',
+        callbackURL,
       })
 
       if (error) {
@@ -39,13 +50,13 @@ export function SignUpForm() {
 
       if (data) {
         toast.success('Account created successfully!')
-        // If the user was auto signed-in (email verification disabled), go straight to dashboard
+        // If the user was auto signed-in (email verification disabled), go straight to destination
         const { data: session } = await authClient.getSession()
         if (session) {
-          router.push('/dashboard')
+          router.push(destination)
         } else {
           const emailParam = encodeURIComponent(email)
-          router.push(`/verify-email-sent?email=${emailParam}`)
+          router.push(`/verify-email-sent?email=${emailParam}${redirectSuffix}`)
         }
       }
     } catch (error) {
@@ -115,7 +126,10 @@ export function SignUpForm() {
         </form>
         <div className="mt-4 text-center text-sm">
           Already have an account?{' '}
-          <Link href="/sign-in" className="underline">
+          <Link
+            href={`/sign-in${redirectTo ? `?${REDIRECT_PARAM}=${encodeURIComponent(redirectTo)}` : ''}`}
+            className="underline"
+          >
             Sign in
           </Link>
         </div>

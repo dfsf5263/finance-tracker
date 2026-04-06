@@ -9,10 +9,7 @@ test.describe('auth flows', () => {
       await expect(page).toHaveURL(/\/sign-in/, { timeout: 15000 })
     })
 
-    test('sign up redirects to dashboard when email verification is disabled', async ({ page }) => {
-      // Skip if Resend is configured — email verification will be required in that environment
-      test.skip(!!process.env.RESEND_API_KEY, 'Email verification is enabled, sign-up requires email confirmation')
-
+    test('sign up redirects to dashboard when email verification is disabled', { tag: '@no-email' }, async ({ page }) => {
       const uniqueEmail = `signup-test-${Date.now()}@test.local`
 
       await page.goto('/sign-up')

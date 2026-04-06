@@ -1,23 +1,28 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CheckCircleIcon } from 'lucide-react'
 
-export default function EmailVerifiedPage() {
+function EmailVerifiedContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirect = searchParams.get('redirect')
+
+  const signInHref = redirect ? `/sign-in?redirect=${encodeURIComponent(redirect)}` : '/sign-in'
 
   useEffect(() => {
     // Redirect to sign-in after 5 seconds
     const timer = setTimeout(() => {
-      router.push('/sign-in')
+      router.push(signInHref)
     }, 5000)
 
     return () => clearTimeout(timer)
-  }, [router])
+  }, [router, signInHref])
 
   return (
     <Card className="mx-auto max-w-sm border-border">
@@ -36,9 +41,17 @@ export default function EmailVerifiedPage() {
           seconds.
         </p>
         <Button asChild className="w-full">
-          <Link href="/sign-in">Continue to sign in</Link>
+          <Link href={signInHref}>Continue to sign in</Link>
         </Button>
       </CardContent>
     </Card>
+  )
+}
+
+export default function EmailVerifiedPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <EmailVerifiedContent />
+    </Suspense>
   )
 }

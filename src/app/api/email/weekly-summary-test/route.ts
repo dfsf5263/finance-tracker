@@ -9,6 +9,14 @@ import logger from '@/lib/logger'
 import { withApiLogging } from '@/lib/middleware/with-api-logging'
 
 export const POST = withApiLogging(async (request: NextRequest) => {
+  // If email is not configured, return an error
+  if (!process.env.RESEND_API_KEY) {
+    return NextResponse.json(
+      { error: 'Email is not configured for this instance' },
+      { status: 400 }
+    )
+  }
+
   let userId: string | undefined
 
   try {
