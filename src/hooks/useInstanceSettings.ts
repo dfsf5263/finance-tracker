@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/http-utils'
 
 interface InstanceSettings {
   emailEnabled: boolean
@@ -20,12 +21,12 @@ function fetchSettings(): Promise<InstanceSettings> {
   if (cachedSettings) return Promise.resolve(cachedSettings)
   if (fetchPromise) return fetchPromise
 
-  fetchPromise = fetch('/api/instance-settings')
-    .then((res) => {
-      if (!res.ok) throw new Error('Failed to fetch instance settings')
-      return res.json()
-    })
-    .then((data: InstanceSettings) => {
+  fetchPromise = apiFetch<InstanceSettings>('/api/instance-settings', {
+    showErrorToast: false,
+    showRateLimitToast: false,
+  })
+    .then(({ data }) => {
+      if (!data) throw new Error('Failed to fetch instance settings')
       cachedSettings = data
       return data
     })

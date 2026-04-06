@@ -111,7 +111,15 @@ export default async function proxy(req: NextRequest) {
 
   // Redirect sign-up attempts when signups are disabled
   if (process.env.DISABLE_SIGNUPS === 'true' && pathname.startsWith('/sign-up')) {
-    return NextResponse.redirect(new URL('/sign-in', req.url))
+    const signInUrl = new URL('/sign-in', req.url)
+    const redirectParam = req.nextUrl.searchParams.get(REDIRECT_PARAM)
+    if (redirectParam) {
+      const sanitized = safeRedirectUrl(redirectParam)
+      if (sanitized) {
+        signInUrl.searchParams.set(REDIRECT_PARAM, sanitized)
+      }
+    }
+    return NextResponse.redirect(signInUrl)
   }
 
   // Protect all routes except public ones
@@ -141,9 +149,9 @@ export default async function proxy(req: NextRequest) {
     if (!sessionCookie) {
       // Redirect to sign-in for protected routes, preserving the original URL
       const signInUrl = new URL('/sign-in', req.url)
-      const returnTo = `${pathname}${req.nextUrl.search}`
-      if (safeRedirectUrl(returnTo)) {
-        signInUrl.searchParams.set(REDIRECT_PARAM, returnTo)
+      const sanitized = safeRedirectUrl(`${pathname}${req.nextUrl.search}`)
+      if (sanitized) {
+        signInUrl.searchParams.set(REDIRECT_PARAM, sanitized)
       }
       return NextResponse.redirect(signInUrl)
     }

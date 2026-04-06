@@ -137,4 +137,50 @@ describe('POST /api/households/[id]/invitations', () => {
     expect(body.role).toBe('MEMBER')
     expect(mockDb.householdInvitation.create).toHaveBeenCalledOnce()
   })
+
+  it('sends invitation email when inviteeEmail and RESEND_API_KEY are set', async () => {
+    const originalKey = process.env.RESEND_API_KEY
+    process.env.RESEND_API_KEY = 'test-key'
+    try {
+      const { sendInvitationEmail } = await import('@/lib/email')
+      const response = await POST(
+        makePostRequest({ role: 'MEMBER', inviteeEmail: 'user@example.com' }),
+        { params }
+      )
+      expect(response.status).toBe(201)
+      expect(sendInvitationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'user@example.com',
+          inviterName: 'Alice Smith',
+          householdName: 'Smith Family',
+          role: 'MEMBER',
+        })
+      )
+    } finally {
+      if (originalKey === undefined) {
+        delete process.env.RESEND_API_KEY
+      } else {
+        process.env.RESEND_API_KEY = originalKey
+      }
+    }
+  })
+
+  it('does not send email when RESEND_API_KEY is not set', async () => {
+    const originalKey = process.env.RESEND_API_KEY
+    delete process.env.RESEND_API_KEY
+    try {
+      const { sendInvitationEmail } = await import('@/lib/email')
+      vi.mocked(sendInvitationEmail).mockClear()
+      const response = await POST(
+        makePostRequest({ role: 'MEMBER', inviteeEmail: 'user@example.com' }),
+        { params }
+      )
+      expect(response.status).toBe(201)
+      expect(sendInvitationEmail).not.toHaveBeenCalled()
+    } finally {
+      if (originalKey !== undefined) {
+        process.env.RESEND_API_KEY = originalKey
+      }
+    }
+  })
 })

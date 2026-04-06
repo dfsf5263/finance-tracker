@@ -10,10 +10,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner'
 import { Loader2, ArrowLeft, CheckCircle } from 'lucide-react'
 
-export default function ForgotPasswordForm() {
+interface ForgotPasswordFormProps {
+  redirectTo?: string
+}
+
+export default function ForgotPasswordForm({ redirectTo }: ForgotPasswordFormProps) {
   const [loading, setLoading] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const [email, setEmail] = useState('')
+  const redirectSuffix = redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,7 +62,7 @@ export default function ForgotPasswordForm() {
           </p>
           <div className="space-y-2">
             <Button asChild variant="outline" className="w-full">
-              <Link href="/sign-in">
+              <Link href={`/sign-in${redirectSuffix}`}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to sign in
               </Link>
@@ -109,7 +114,7 @@ export default function ForgotPasswordForm() {
 
         <div className="mt-4 text-center">
           <Button asChild variant="ghost" size="sm">
-            <Link href="/sign-in">
+            <Link href={`/sign-in${redirectSuffix}`}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to sign in
             </Link>
