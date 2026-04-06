@@ -194,7 +194,10 @@ export default function InvitationPage() {
                       <span>Expires {displayDateTimeLocal(invitation.expiresAt)}</span>
                     </div>
                   </div>
-                  <Button onClick={() => router.push('/sign-in')} className="w-full">
+                  <Button
+                    onClick={() => router.push(`/sign-in?redirect=/invitations/${token}`)}
+                    className="w-full"
+                  >
                     Sign In to Join
                   </Button>
                 </CardContent>

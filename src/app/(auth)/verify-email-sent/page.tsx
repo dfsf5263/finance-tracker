@@ -10,6 +10,9 @@ import { MailIcon } from 'lucide-react'
 function VerifyEmailContent() {
   const searchParams = useSearchParams()
   const email = searchParams.get('email')
+  const redirect = searchParams.get('redirect')
+
+  const signInHref = redirect ? `/sign-in?redirect=${encodeURIComponent(redirect)}` : '/sign-in'
 
   return (
     <Card className="mx-auto max-w-sm border-border p-4">
@@ -31,7 +34,7 @@ function VerifyEmailContent() {
         </p>
         <div className="space-y-2">
           <Button asChild variant="outline" className="w-full">
-            <Link href="/sign-in">Back to sign in</Link>
+            <Link href={signInHref}>Back to sign in</Link>
           </Button>
         </div>
       </CardContent>

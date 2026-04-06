@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures'
 import type { APIRequestContext, Locator } from '@playwright/test'
 
-/** Delete all PENDING @test.local invitations left over from previous runs. */
+/** Delete PENDING invitations created by settings tests (si-* prefix). */
 async function cleanupTestInvitations(request: APIRequestContext) {
   const householdsRes = await request.get('/api/households')
   if (!householdsRes.ok()) return
@@ -18,7 +18,7 @@ async function cleanupTestInvitations(request: APIRequestContext) {
   }[]
 
   for (const inv of invitations) {
-    if (inv.inviteeEmail?.endsWith('@test.local') && inv.status === 'PENDING') {
+    if (inv.inviteeEmail?.startsWith('si-') && inv.status === 'PENDING') {
       await request.delete(`/api/invitations/by-id/${inv.id}`)
     }
   }
@@ -57,7 +57,7 @@ test.describe('settings — household invitations', () => {
 
   test('send invitation: appears in pending list', async ({ page }) => {
     const tabpanel = page.getByRole('tabpanel')
-    const inviteeEmail = `invited-${Date.now()}@test.local`
+    const inviteeEmail = `si-${Date.now()}@test.local`
 
     await page.getByRole('button', { name: /invite member/i }).click()
     const dialog = page.getByRole('dialog')
@@ -80,7 +80,7 @@ test.describe('settings — household invitations', () => {
 
   test('cancel invitation: removed from list', async ({ page }) => {
     const tabpanel = page.getByRole('tabpanel')
-    const countHeading = tabpanel.getByRole('heading', { level: 4 })
+    const countHeading = tabpanel.getByRole('heading', { level: 4, name: /^Active Invitations/ })
 
     // Wait for heading count to stabilise (may start at 0)
     await waitForStableCount(countHeading, 0)
@@ -89,7 +89,7 @@ test.describe('settings — household invitations', () => {
     await page.getByRole('button', { name: /invite member/i }).click()
     const createDialog = page.getByRole('dialog')
     await expect(createDialog).toBeVisible()
-    await createDialog.getByLabel(/email/i).fill('cancel-e2e@test.local')
+    await createDialog.getByLabel(/email/i).fill('si-cancel-e2e@test.local')
     await createDialog.getByRole('button', { name: /create invitation/i }).click()
     await expect(createDialog.getByRole('heading', { name: /invitation created/i })).toBeVisible({ timeout: 10000 })
     await createDialog.getByRole('button', { name: /done/i }).click()

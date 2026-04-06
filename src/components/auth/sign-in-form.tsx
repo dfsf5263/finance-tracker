@@ -10,13 +10,21 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { useInstanceSettings } from '@/hooks/useInstanceSettings'
+import { REDIRECT_PARAM, REDIRECT_STORAGE_KEY } from '@/lib/redirect-utils'
 
-export function SignInForm() {
+interface SignInFormProps {
+  redirectTo?: string
+}
+
+export function SignInForm({ redirectTo }: SignInFormProps) {
   const { signupsEnabled, emailEnabled } = useInstanceSettings()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+
+  const destination = redirectTo || '/dashboard'
+  const redirectSuffix = redirectTo ? `?${REDIRECT_PARAM}=${encodeURIComponent(redirectTo)}` : ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,7 +34,7 @@ export function SignInForm() {
       const { data, error } = await authClient.signIn.email({
         email,
         password,
-        callbackURL: '/dashboard',
+        callbackURL: destination,
       })
 
       if (error) {
@@ -44,6 +52,12 @@ export function SignInForm() {
       if (data) {
         // Check if two-factor authentication is required
         if ('twoFactorRedirect' in data && data.twoFactorRedirect) {
+          // Store redirect destination so the 2FA page can resume it after verification.
+          // The auth-client plugin fires a hard window.location.href redirect after 100ms,
+          // so sessionStorage is the only mechanism that survives the navigation.
+          if (redirectTo) {
+            sessionStorage.setItem(REDIRECT_STORAGE_KEY, redirectTo)
+          }
           toast.info('Two-factor authentication required', {
             description: 'Redirecting to verification page...',
           })
@@ -52,7 +66,7 @@ export function SignInForm() {
         }
 
         toast.success('Welcome back!')
-        router.push('/dashboard')
+        router.push(destination)
       }
     } catch (error) {
       toast.error('An unexpected error occurred')
@@ -85,7 +99,10 @@ export function SignInForm() {
             <div className="flex items-center">
               <Label htmlFor="password">Password</Label>
               {emailEnabled && (
-                <Link href="/forgot-password" className="ml-auto inline-block text-sm underline">
+                <Link
+                  href={`/forgot-password${redirectSuffix}`}
+                  className="ml-auto inline-block text-sm underline"
+                >
                   Forgot your password?
                 </Link>
               )}
@@ -105,7 +122,7 @@ export function SignInForm() {
         {signupsEnabled && (
           <div className="mt-4 text-center text-sm">
             Don&apos;t have an account?{' '}
-            <Link href="/sign-up" className="underline">
+            <Link href={`/sign-up${redirectSuffix}`} className="underline">
               Sign up
             </Link>
           </div>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getSessionCookie } from 'better-auth/cookies'
 import { standardApiSizeLimit, bulkUploadSizeLimit } from '@/lib/middleware/request-size'
+import { safeRedirectUrl, REDIRECT_PARAM } from '@/lib/redirect-utils'
 
 // Define public routes that don't require authentication
 const isPublicRoute = (pathname: string) => {
@@ -17,6 +18,8 @@ const isPublicRoute = (pathname: string) => {
     '/api/health',
     '/api/instance-settings',
     '/api/cron',
+    '/api/invitations/by-token',
+    '/invitations',
     '/docs',
     '/openapi.json',
   ]
@@ -136,8 +139,13 @@ export default async function proxy(req: NextRequest) {
     }
 
     if (!sessionCookie) {
-      // Redirect to sign-in for protected routes
-      return NextResponse.redirect(new URL('/sign-in', req.url))
+      // Redirect to sign-in for protected routes, preserving the original URL
+      const signInUrl = new URL('/sign-in', req.url)
+      const returnTo = `${pathname}${req.nextUrl.search}`
+      if (safeRedirectUrl(returnTo)) {
+        signInUrl.searchParams.set(REDIRECT_PARAM, returnTo)
+      }
+      return NextResponse.redirect(signInUrl)
     }
   }
 

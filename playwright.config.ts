@@ -12,6 +12,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 2 : undefined,
   reporter: [['html'], ['list']],
+  grepInvert: /@no-email/,
 
   use: {
     baseURL: 'http://localhost:3000',
@@ -101,6 +102,9 @@ export default defineConfig({
     env: {
       // Point the server at the E2E database, not the dev/prod one
       DATABASE_URL: process.env.DATABASE_URL_E2E ?? process.env.DATABASE_URL ?? '',
+      // Force email verification on so with-email tests always run consistently
+      RESEND_API_KEY: 'e2e-test-placeholder',
+      RESEND_FROM_EMAIL: 'e2e@test.local',
     },
   },
 })

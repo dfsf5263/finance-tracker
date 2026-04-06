@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { safeRedirectUrl, REDIRECT_STORAGE_KEY } from '@/lib/redirect-utils'
 
 export default function TwoFactorPage() {
   const [code, setCode] = useState('')
@@ -30,7 +31,10 @@ export default function TwoFactorPage() {
 
       if (data) {
         toast.success('Successfully authenticated!')
-        router.push('/dashboard')
+        // Resume the redirect that was stored before the 2FA hard-navigation
+        const stored = sessionStorage.getItem(REDIRECT_STORAGE_KEY)
+        sessionStorage.removeItem(REDIRECT_STORAGE_KEY)
+        router.push(safeRedirectUrl(stored) || '/dashboard')
       }
     } catch (error) {
       toast.error('An unexpected error occurred')
