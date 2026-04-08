@@ -13,6 +13,12 @@ if [ -z "$APP_URL" ] && [ -n "$RENDER_EXTERNAL_URL" ]; then
   echo "APP_URL set from RENDER_EXTERNAL_URL: $APP_URL"
 fi
 
+# RAILWAY_PUBLIC_DOMAIN is automatically set by Railway for web services.
+if [ -z "$APP_URL" ] && [ -n "$RAILWAY_PUBLIC_DOMAIN" ]; then
+  export APP_URL="https://$RAILWAY_PUBLIC_DOMAIN"
+  echo "APP_URL set from RAILWAY_PUBLIC_DOMAIN: $APP_URL"
+fi
+
 # --- Database migrations ---
 if [ "$SKIP_MIGRATIONS" != "true" ]; then
   echo "Running database migrations..."

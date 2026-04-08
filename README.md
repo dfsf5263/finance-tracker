@@ -15,6 +15,18 @@
 </p>
 
 <p align="center">
+  <a href="https://render.com/deploy?repo=https://github.com/dfsf5263/finance-tracker">
+    <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://railway.com/deploy/finance-tracker">
+    <img src="https://railway.com/button.svg" alt="Deploy on Railway" />
+  </a>
+  <br />
+  <em>One-click managed hosting — try for free, no credit card required. <a href="#managed-hosting">Learn more ↓</a></em>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js" alt="Next.js" />
   <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white" alt="React" />
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
@@ -72,19 +84,29 @@
 
 Your financial data is some of the most sensitive information you have. Finance Tracker is designed to run on your own hardware — a home server, a VPS, or anywhere you choose — so your transaction history, budgets, and spending patterns never leave your control. No third-party accounts, no data harvesting, no subscriptions. Just a Docker image you can deploy in minutes.
 
-> **See also:** [Health Tracker](https://github.com/dfsf5263/health-tracker) — a companion self-hosted app for tracking health data with the same privacy-first approach.
+<a name="managed-hosting"></a>
+## Managed Hosting
 
-## Too complicated?
-
-Render provides fully managed hosting with automatic updates, SSL, and a built-in PostgreSQL database — no server management required.
+Prefer not to manage your own server? Deploy to a fully managed host with automatic updates, SSL, and a built-in PostgreSQL database — no server setup required.
 
 <p align="center">
   <a href="https://render.com/deploy?repo=https://github.com/dfsf5263/finance-tracker">
     <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
   </a>
+  &nbsp;&nbsp;
+  <a href="https://railway.com/deploy/finance-tracker">
+    <img src="https://railway.com/button.svg" alt="Deploy on Railway" />
+  </a>
 </p>
 
-Render provisions a web service and a PostgreSQL database automatically from [`render.yaml`](render.yaml). The app will auto-update whenever a new version is released. See [DOCKER_DEPLOYMENT.md](docs/DOCKER_DEPLOYMENT.md) for self-hosted VPS options.
+**Render** — free tier, no credit card required. Provisions the app and PostgreSQL automatically from [`render.yaml`](render.yaml). The app will auto-update whenever a new version is released.
+
+> [!WARNING]
+> Render's free PostgreSQL instances are **wiped after 90 days**. To retain your data permanently, upgrade the database to the **Starter plan** ($7/month) in your Render dashboard under the database's Settings → Plan.
+
+**Railway** — usage-based pricing (~$5–10/month). Persistent data with no expiry. Provisions the app and PostgreSQL automatically.
+
+See [DOCKER_DEPLOYMENT.md](docs/DOCKER_DEPLOYMENT.md) for self-hosted VPS options.
 
 ## Features
 
