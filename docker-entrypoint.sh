@@ -5,6 +5,18 @@ set -e
 
 echo "Starting Finance Tracker..."
 
+# --- Debug: log platform URL variables present at startup ---
+echo "=== Platform URL variables at startup ==="
+for var in APP_URL RENDER_EXTERNAL_URL RAILWAY_PUBLIC_DOMAIN RAILWAY_STATIC_URL; do
+  val=$(eval echo \"\$$var\")
+  if [ -n "$val" ]; then
+    echo "  $var=$val"
+  else
+    echo "  $var=(not set)"
+  fi
+done
+echo "========================================="
+
 # --- Environment normalization ---
 # Allow platform-injected URL variables to satisfy APP_URL when not explicitly set.
 # RENDER_EXTERNAL_URL is automatically set by Render for web services.
