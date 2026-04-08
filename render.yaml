@@ -1,6 +1,6 @@
 databases:
   - name: finance-tracker-db
-    plan: basic-256mb
+    plan: free
     postgresMajorVersion: "17"
     databaseName: finance_tracker
     user: finance_tracker
@@ -11,7 +11,7 @@ services:
     runtime: image
     image:
       url: ghcr.io/dfsf5263/finance-tracker:latest
-    plan: starter
+    plan: free
     autoDeploy: true
     healthCheckPath: /api/health
     envVars:
