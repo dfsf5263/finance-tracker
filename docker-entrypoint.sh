@@ -17,6 +17,10 @@ for var in APP_URL RENDER_EXTERNAL_URL RAILWAY_PUBLIC_DOMAIN RAILWAY_STATIC_URL;
 done
 echo "========================================="
 
+echo "=== All environment variable keys ==="
+env | sed 's/=.*//' | sort
+echo "====================================="
+
 # --- Environment normalization ---
 # Allow platform-injected URL variables to satisfy APP_URL when not explicitly set.
 # RENDER_EXTERNAL_URL is automatically set by Render for web services.
