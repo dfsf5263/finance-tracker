@@ -251,4 +251,31 @@ describe('validateHeaders', () => {
     const headers = [' Date ', ' Name ', ' Amount ']
     expect(validateHeaders(headers, INSTITUTIONS.fidelity)).toEqual([])
   })
+
+  it('matches headers case-insensitively', () => {
+    const headers = ['DATE', 'DESCRIPTION', 'AMOUNT', 'CHECK #', 'STATUS']
+    expect(validateHeaders(headers, INSTITUTIONS.wellsfargo)).toEqual([])
+  })
+
+  it('matches headers case-insensitively for chase', () => {
+    const headers = ['transaction date', 'post date', 'description', 'amount']
+    expect(validateHeaders(headers, INSTITUTIONS.chase)).toEqual([])
+  })
+})
+
+describe('mapCsvRow case-insensitive header matching', () => {
+  it('maps a wells fargo row with uppercase headers', () => {
+    const row = {
+      DATE: '04/30/2026',
+      DESCRIPTION: 'CHASE CREDIT CRD AUTOPAY',
+      AMOUNT: '-192.80',
+      'CHECK #': '',
+      STATUS: 'Posted',
+    }
+    const result = mapCsvRow(row, INSTITUTIONS.wellsfargo)
+    expect(result.transactionDate).toBeInstanceOf(Date)
+    expect(result.transactionDate!.getUTCDate()).toBe(30)
+    expect(result.description).toBe('CHASE CREDIT CRD AUTOPAY')
+    expect(result.amount).toBe(-192.8)
+  })
 })
