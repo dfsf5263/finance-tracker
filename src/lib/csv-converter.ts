@@ -79,8 +79,14 @@ export function mapCsvRow(csvRow: Record<string, string>, config: InstitutionCon
   let description = ''
   let amount: number | null = null
 
+  // Build a case-insensitive lookup of the row's keys (trimmed, lowercased).
+  const rowByLowerKey = new Map<string, string>()
+  for (const [key, value] of Object.entries(csvRow)) {
+    rowByLowerKey.set(key.trim().toLowerCase(), value)
+  }
+
   for (const [csvCol, field] of Object.entries(config.mapping)) {
-    const raw = csvRow[csvCol]?.trim() ?? ''
+    const raw = rowByLowerKey.get(csvCol.trim().toLowerCase())?.trim() ?? ''
     switch (field) {
       case 'transactionDate':
         transactionDate = parseInstitutionDate(raw, config.dateFormat)
@@ -106,5 +112,6 @@ export function mapCsvRow(csvRow: Record<string, string>, config: InstitutionCon
 
 export function validateHeaders(csvHeaders: string[], config: InstitutionConfig): string[] {
   const expectedHeaders = Object.keys(config.mapping)
-  return expectedHeaders.filter((h) => !csvHeaders.some((ch) => ch.trim() === h))
+  const normalized = csvHeaders.map((ch) => ch.trim().toLowerCase())
+  return expectedHeaders.filter((h) => !normalized.includes(h.trim().toLowerCase()))
 }
