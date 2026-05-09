@@ -61,9 +61,9 @@ export const INSTITUTIONS: Record<InstitutionKey, InstitutionConfig> = {
   wellsfargo: {
     label: 'Wells Fargo',
     mapping: {
-      'Transaction Date': 'transactionDate',
+      Date: 'transactionDate',
+      Description: 'description',
       Amount: 'amount',
-      Category: 'description',
     },
     invertAmount: false,
     dateFormat: 'mdy',

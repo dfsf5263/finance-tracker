@@ -97,20 +97,19 @@ Expenses are exported as **negative** amounts. Credits are **positive** amounts.
 
 **CSV headers:**
 
-| Header           | Mapped To        | Notes     |
-|------------------|------------------|-----------|
-| `Transaction Date` | Transaction Date |           |
-| `Amount`         | Amount           |           |
-| `Memo`           | —                | Discarded |
-| `Description`    | -      |           |
-| `Category`       | Description                |  |
-| `Type`           | —                | Discarded |
+| Header        | Mapped To        | Notes     |
+|---------------|------------------|-----------|
+| `Date`        | Transaction Date |           |
+| `Description` | Description      |           |
+| `Amount`      | Amount           |           |
+| `Check #`     | —                | Discarded |
+| `Status`      | —                | Discarded |
 
 **Example row:**
 
 ```csv
-Transaction Date,Amount,Memo,Description,Category,Type
-02/27/2026,-31.87,*,,BRIGHTLEAF BOOKSHOP,
+Date,Description,Amount,Check #,Status
+02/27/2026,BRIGHTLEAF BOOKSHOP,-31.87,,Posted
 ```
 
 ---
