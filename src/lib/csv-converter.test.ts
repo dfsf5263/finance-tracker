@@ -40,13 +40,13 @@ describe('INSTITUTIONS config', () => {
     expect(cfg.dateFormat).toBe('mdy')
   })
 
-  it('wellsfargo maps Transaction Date, Amount, Category (as description) and does not invert', () => {
+  it('wellsfargo maps Date, Description, Amount and does not invert', () => {
     const cfg = INSTITUTIONS.wellsfargo
     expect(cfg.label).toBe('Wells Fargo')
     expect(cfg.mapping).toEqual({
-      'Transaction Date': 'transactionDate',
+      Date: 'transactionDate',
+      Description: 'description',
       Amount: 'amount',
-      Category: 'description',
     })
     expect(cfg.invertAmount).toBe(false)
     expect(cfg.dateFormat).toBe('mdy')
@@ -165,14 +165,13 @@ describe('mapCsvRow', () => {
     expect(result.amount).toBe(1916.14)
   })
 
-  it('maps a wells fargo expense row (Category used as description)', () => {
+  it('maps a wells fargo expense row (Description used as description)', () => {
     const row = {
-      'Transaction Date': '02/27/2026',
+      Date: '02/27/2026',
+      Description: 'BRIGHTLEAF BOOKSHOP',
       Amount: '-31.87',
-      Memo: '*',
-      Description: '',
-      Category: 'BRIGHTLEAF BOOKSHOP',
-      Type: '',
+      'Check #': '',
+      Status: 'Posted',
     }
     const result = mapCsvRow(row, INSTITUTIONS.wellsfargo)
     expect(result.transactionDate).toBeInstanceOf(Date)
@@ -184,12 +183,11 @@ describe('mapCsvRow', () => {
 
   it('maps a wells fargo credit row (positive amount stays positive)', () => {
     const row = {
-      'Transaction Date': '02/28/2026',
+      Date: '02/28/2026',
+      Description: 'DIRECT DEPOSIT',
       Amount: '500.00',
-      Memo: '',
-      Description: '',
-      Category: 'DIRECT DEPOSIT',
-      Type: '',
+      'Check #': '',
+      Status: 'Posted',
     }
     const result = mapCsvRow(row, INSTITUTIONS.wellsfargo)
     expect(result.amount).toBe(500.0)
